@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Adjustment{% endblock %}
+
+{% block style %}
+<style>
+  .form-container {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 600px;
+    margin: 20px auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+
+  .form-control {
+    margin-bottom: 15px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .btn-success {
+    background-color: #28a745;
+    color: white;
+  }
+
+  .btn-success:hover {
+    background-color: #218838;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <h3>Stock Adjustment</h3>
+  <form method="post" id="stockAdjustmentForm">
+    {% csrf_token %}
+
+    <label for="product">Product</label>
+    <select name="product" id="product" class="form-control" required>
+      <option value="">-- Select Product --</option>
+      <option value="product1">Product A</option>
+      <option value="product2">Product B</option>
+      <!-- Dynamically load products from DB -->
+    </select>
+
+    <label for="adjustmentType">Adjustment Type</label>
+    <select name="adjustmentType" id="adjustmentType" class="form-control" required>
+      <option value="">-- Select Type --</option>
+      <option value="add">Add Stock</option>
+      <option value="subtract">Subtract Stock</option>
+    </select>
+
+    <label for="quantity">Quantity</label>
+    <input type="number" name="quantity" id="quantity" min="1" class="form-control" required>
+
+    <label for="reason">Reason</label>
+    <select name="reason" id="reason" class="form-control" required>
+      <option value="">-- Select Reason --</option>
+      <option value="damaged">Damaged</option>
+      <option value="lost">Lost</option>
+      <option value="expired">Expired</option>
+      <option value="inventory_correction">Inventory Correction</option>
+      <option value="manual_adjustment">Manual Adjustment</option>
+    </select>
+
+    <label for="remarks">Remarks</label>
+    <textarea name="remarks" id="remarks" class="form-control" rows="3"></textarea>
+
+    <button type="submit" class="btn btn-success mt-2">Submit Adjustment</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('stockAdjustmentForm');
+
+    form.addEventListener('submit', function (e) {
+      const qty = document.getElementById('quantity').value;
+      if (qty <= 0) {
+        e.preventDefault();
+        alert('Quantity must be greater than 0');
+      }
+    });
+  });
+</script>
+{% endblock %}

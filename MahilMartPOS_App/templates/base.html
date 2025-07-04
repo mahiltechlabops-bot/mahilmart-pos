@@ -178,11 +178,11 @@
             <li class="nav-item active" data-page="products"><a href="{% url 'products' %}"><i class="fas fa-boxes"></i>Products</a></li>
             <li class="nav-item" data-page="items"><a href="#"><i class="fas fa-box"></i>Items</a></li>
             <li class="nav-item active" data-page="purchase"><a href="{% url 'purchase' %}"><i class="fas fa-truck-loading"></i>Purchase</a></li>
-            <li class="nav-item" data-page="purchase_return"><a href="#"><i class="fas fa-undo"></i>Purchase Return</a></li>
-            <li class="nav-item" data-page="stock_adjustment"><a href="#"><i class="fas fa-sliders-h"></i>Stock Adjustment</a></li>
+            <li class="nav-item active" data-page="purchase_return"><a href="{% url 'purchase_return' %}"><i class="fas fa-undo"></i>Purchase Return</a></li>
+            <li class="nav-item active" data-page="stock_adjustment"><a href="{% url 'stock_adjustment' %}"><i class="fas fa-sliders-h"></i>Stock Adjustment</a></li>
 
-            <li class="nav-item" data-page="inventory"><a href="#"><i class="fas fa-warehouse"></i>Inventory</a></li>
-            <li class="nav-item" data-page="suppliers"><a href="#"><i class="fas fa-truck"></i>Suppliers</a></li>
+            <li class="nav-item active" data-page="inventory"><a href="{% url 'inventory' %}"><i class="fas fa-warehouse"></i>Inventory</a></li>
+            <li class="nav-item active" data-page="suppliers"><a href="{% url 'suppliers' %}"><i class="fas fa-truck"></i>Suppliers</a></li>
             <li class="nav-item" data-page="customers"><a href="#"><i class="fas fa-users"></i>Customers</a></li>
 
             <li class="nav-item" data-page="payments"><a href="#"><i class="fas fa-money-check-alt"></i>Payments</a></li>
@@ -289,5 +289,6 @@
       }
     };
 </script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

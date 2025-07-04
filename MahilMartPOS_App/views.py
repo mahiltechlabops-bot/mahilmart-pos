@@ -1,6 +1,8 @@
-from django.shortcuts import render,get_object_or_404, redirect, render
+from django.shortcuts import render, redirect,  get_object_or_404, render
 from django.contrib.auth import authenticate, login
-from django.http import HttpResponse
+from MahilMartPOS_App.models import Product
+from .models import Supplier
+from .forms import SupplierForm
 
 
 def home(request):
@@ -34,6 +36,38 @@ def sale_return_view(request):
 
 def purchase_view(request):
     return render(request, 'purchase.html')
+
+def purchase_return_view(request):
+    return render(request, 'purchase_return.html')
+
+def stock_adjustment_view(request):
+    return render(request, 'stock_adjustment.html')
+
+def inventory_view(request):
+    query = request.GET.get('q')
+    products = Product.objects.all()
+    if query:
+        products = products.filter(name__icontains=query)
+    return render(request, 'inventory.html', {'products': products})
+
+def product_detail(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    return render(request, 'product_detail.html', {'product': product})
+
+def suppliers_view(request):
+    suppliers = Supplier.objects.all()
+    form = SupplierForm()
+
+    if request.method == 'POST':
+        form = SupplierForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('suppliers')
+
+    return render(request, 'suppliers.html', {
+        'suppliers': suppliers,
+        'form': form,
+    })
 
 def user_view(request):
     return render(request, 'user.html')
