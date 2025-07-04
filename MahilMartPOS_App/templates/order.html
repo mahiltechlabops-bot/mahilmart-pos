@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="app-content" id="mainContent">
+  <div class="card">
+    <div class="order-header d-flex justify-content-between align-items-center mb-3">
+      <h3><i class="fas fa-receipt"></i> Order Management</h3>
+      <button class="btn btn-primary" id="newOrderBtn">
+        <i class="fas fa-plus"></i> New Order
+      </button>
+    </div>
+
+    <div class="search-bar d-flex gap-2 mb-3">
+      <input type="text" class="form-control" placeholder="Search orders...">
+      <select class="form-select" style="max-width: 150px;">
+        <option>All Status</option>
+        <option>Pending</option>
+        <option>Completed</option>
+        <option>Cancelled</option>
+      </select>
+      <input type="date" class="form-control" style="max-width: 150px;">
+      <button class="btn btn-outline-secondary">
+        <i class="fas fa-filter"></i> Filter
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered order-table">
+        <thead class="table-light">
+          <tr>
+            <th>Order ID</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% comment %} Sample Orders {% endcomment %}
+          {% for order in orders %}
+          <tr>
+            <td>{{ order.order_id }}</td>
+            <td>{{ order.customer }}</td>
+            <td>{{ order.date }}</td>
+            <td>{{ order.items_count }}</td>
+            <td>${{ order.total }}</td>
+            <td><span class="badge bg-{{ order.status_class }}">{{ order.status }}</span></td>
+            <td>
+              <button class="btn btn-sm btn-info view-btn" data-order="{{ order.order_id }}">
+                <i class="fas fa-eye"></i>
+              </button>
+              {% if order.status == 'Pending' %}
+              <button class="btn btn-sm btn-success complete-btn" data-order="{{ order.order_id }}">
+                <i class="fas fa-check"></i>
+              </button>
+              <button class="btn btn-sm btn-danger cancel-btn" data-order="{{ order.order_id }}">
+                <i class="fas fa-times"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <nav aria-label="Page navigation">
+      <ul class="pagination justify-content-end mt-3">
+        <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+        <li class="page-item"><a class="page-link" href="#">2</a></li>
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+        <li class="page-item"><a class="page-link" href="#">&raquo;</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Order Details Modal -->
+  <div class="modal" id="orderDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5>Order Details - ORD-<span id="orderId"></span></h5>
+          <button class="btn-close" id="closeOrderDetails"></button>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <p><strong>Customer:</strong> <span id="orderCustomer"></span></p>
+            <p><strong>Date:</strong> <span id="orderDate"></span></p>
+            <p><strong>Status:</strong> <span id="orderStatus"></span></p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Order Total:</strong> $<span id="orderTotal"></span></p>
+            <p><strong>Payment Method:</strong> <span id="orderPayment"></span></p>
+            <p><strong>Delivery Address:</strong> <span id="orderAddress"></span></p>
+          </div>
+        </div>
+
+        <h6>Order Items</h6>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="orderItemsList"></tbody>
+        </table>
+
+        <div class="text-end mt-4">
+          <button class="btn btn-primary" id="printOrderBtn">
+            <i class="fas fa-print"></i> Print Order
+          </button>
+          <button class="btn btn-secondary" id="closeOrderBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Modal toggling
+  const orderDetailsModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+  const orderIdEl = document.getElementById("orderId");
+  const orderCustomer = document.getElementById("orderCustomer");
+  const orderDate = document.getElementById("orderDate");
+  const orderStatus = document.getElementById("orderStatus");
+  const orderTotal = document.getElementById("orderTotal");
+  const orderPayment = document.getElementById("orderPayment");
+  const orderAddress = document.getElementById("orderAddress");
+  const orderItemsList = document.getElementById("orderItemsList");
+
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const orderId = btn.dataset.order;
+      showOrderDetails(orderId);
+    });
+  });
+
+  function showOrderDetails(orderId) {
+    // Sample Data - Replace with actual API call
+    const mock = {
+      "1001": {
+        customer: "John Smith",
+        date: "2025-06-15",
+        status: "Completed",
+        total: "125.75",
+        payment: "Credit Card",
+        address: "123 Main St",
+        items: [
+          { name: "Product A", price: "10", qty: 3, total: "30" },
+          { name: "Product B", price: "15", qty: 2, total: "30" }
+        ]
+      }
+    };
+
+    const data = mock[orderId] || {
+      customer: "Unknown",
+      date: "N/A",
+      status: "N/A",
+      total: "0.00",
+      payment: "N/A",
+      address: "N/A",
+      items: []
+    };
+
+    orderIdEl.textContent = orderId;
+    orderCustomer.textContent = data.customer;
+    orderDate.textContent = data.date;
+    orderStatus.textContent = data.status;
+    orderTotal.textContent = data.total;
+    orderPayment.textContent = data.payment;
+    orderAddress.textContent = data.address;
+
+    orderItemsList.innerHTML = "";
+    data.items.forEach(i => {
+      orderItemsList.innerHTML += `<tr>
+        <td>${i.name}</td>
+        <td>$${i.price}</td>
+        <td>${i.qty}</td>
+        <td>$${i.total}</td>
+      </tr>`;
+    });
+
+    orderDetailsModal.show();
+  }
+
+  document.getElementById("closeOrderDetails").addEventListener("click", () => orderDetailsModal.hide());
+  document.getElementById("closeOrderBtn").addEventListener("click", () => orderDetailsModal.hide());
+
+  document.querySelectorAll(".complete-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const orderId = btn.dataset.order;
+      if (confirm(`Mark Order ORD-${orderId} as completed?`)) {
+        alert(`Order ${orderId} completed.`);
+      }
+    });
+  });
+
+  document.querySelectorAll(".cancel-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const orderId = btn.dataset.order;
+      if (confirm(`Cancel Order ORD-${orderId}?`)) {
+        alert(`Order ${orderId} cancelled.`);
+      }
+    });
+  });
+
+  document.getElementById("printOrderBtn").addEventListener("click", () => {
+    alert("Print Order (not implemented).");
+  });
+
+  document.getElementById("newOrderBtn").addEventListener("click", () => {
+    alert("Redirect to new order form.");
+  });
+</script>
+{% endblock %}

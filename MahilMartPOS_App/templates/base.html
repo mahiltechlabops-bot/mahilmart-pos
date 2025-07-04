@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>MahilMart POS</title>
+
+    <!-- Bootstrap & FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        html, body {
+           height: 100%;
+           margin: 0;
+           overflow: hidden;
+         }
+
+         .app-container {
+           display: flex;
+           height: calc(100vh - 100px);
+           overflow: hidden;
+         }
+
+        .app-sidebar {
+          width: 220px;
+          min-width: 220px;
+          background-color: #1f2a38;
+          color: white;
+          padding-top: 20px;
+          flex-shrink: 0;
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+
+        .app-content {
+          flex-grow: 1;
+          overflow-y: auto;
+          padding: 20px;
+        }
+
+         body {
+           margin: 0;
+           font-family: 'Segoe UI', sans-serif;
+           background-color: #f4f6f9;
+           color: #333;
+         }
+
+         .app-header, .content-footer {
+           background-color: #2e3b4e;
+           color: white;
+           padding: 10px 20px;
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+         }
+
+         .app-container {
+           display: flex;
+           min-height: calc(100vh - 100px);
+         }
+
+         .app-sidebar {
+           width: 220px;
+           background-color: #1f2a38;
+           color: white;
+           padding-top: 20px;
+           flex-shrink: 0;
+         }
+
+         .nav-menu {
+           list-style: none;
+           padding: 0;
+         }
+
+         .nav-item {
+           padding: 10px 20px;
+           cursor: pointer;
+         }
+
+         .nav-item a {
+           color: white;
+           text-decoration: none;
+           display: flex;
+           align-items: center;
+         }
+
+         .nav-item i {
+           margin-right: 10px;
+         }
+
+         .nav-item.active, .nav-item:hover {
+           background-color: #32465a;
+         }
+
+         .app-content {
+           flex-grow: 1;
+           padding: 20px;
+         }
+
+         .card {
+           background: white;
+           padding: 20px;
+           border-radius: 8px;
+           box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+           margin-bottom: 20px;
+         }
+
+         .modal {
+           display: none;
+           position: fixed;
+           z-index: 1000;
+           left: 0; top: 0;
+           width: 100%; height: 100%;
+           background: rgba(0,0,0,0.5);
+         }
+
+         .modal-content {
+           background: white;
+           margin: 10% auto;
+           padding: 20px;
+           border-radius: 8px;
+           width: 90%;
+           max-width: 500px;
+         }
+
+         @media (max-width: 768px) {
+           .app-sidebar {
+             position: fixed;
+             left: -220px;
+             height: 100%;
+             transition: left 0.3s;
+           }
+
+           .app-sidebar.active {
+             left: 0;
+           }
+
+           .sidebar-toggle {
+             display: block;
+             background: none;
+             border: none;
+             color: white;
+             font-size: 20px;
+             margin-right: 10px;
+           }
+         }
+
+         .sidebar-toggle {
+           display: none;
+         }
+    </style>
+</head>
+<body>
+  
+<header class="app-header">
+    <div>
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <strong>MahilMart POS</strong>
+    </div>
+    <div>
+        <span>Admin: Mahil</span> | <span>Role: Operator</span>
+    </div>
+</header>
+
+<div class="app-container">
+    <!-- Sidebar -->
+    <aside class="app-sidebar" id="appSidebar">
+        <ul class="nav-menu">
+            <li class="nav-item active" data-page="dashboard"><a href="{% url 'dashboard' %}"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>          
+            <li class="nav-item" data-page="billing"><a href="#"><i class="fas fa-cash-register"></i>Billing</a></li>
+            <li class="nav-item" data-page="quotation"><a href="#"><i class="fas fa-file-invoice"></i>Quotation</a></li>
+            <li class="nav-item active" data-page="order"><a href="{% url 'order' %}"><i class="fas fa-receipt"></i>Order</a></li>
+            <li class="nav-item active" data-page="sale_return"><a href="{% url 'sale_return' %}"><i class="fas fa-undo-alt"></i>Sales Return</a></li>
+
+            <li class="nav-item active" data-page="products"><a href="{% url 'products' %}"><i class="fas fa-boxes"></i>Products</a></li>
+            <li class="nav-item" data-page="items"><a href="#"><i class="fas fa-box"></i>Items</a></li>
+            <li class="nav-item active" data-page="purchase"><a href="{% url 'purchase' %}"><i class="fas fa-truck-loading"></i>Purchase</a></li>
+            <li class="nav-item" data-page="purchase_return"><a href="#"><i class="fas fa-undo"></i>Purchase Return</a></li>
+            <li class="nav-item" data-page="stock_adjustment"><a href="#"><i class="fas fa-sliders-h"></i>Stock Adjustment</a></li>
+
+            <li class="nav-item" data-page="inventory"><a href="#"><i class="fas fa-warehouse"></i>Inventory</a></li>
+            <li class="nav-item" data-page="suppliers"><a href="#"><i class="fas fa-truck"></i>Suppliers</a></li>
+            <li class="nav-item" data-page="customers"><a href="#"><i class="fas fa-users"></i>Customers</a></li>
+
+            <li class="nav-item" data-page="payments"><a href="#"><i class="fas fa-money-check-alt"></i>Payments</a></li>
+            <li class="nav-item" data-page="expenses"><a href="#"><i class="fas fa-file-invoice-dollar"></i>Expenses</a></li>
+
+            <li class="nav-item" data-page="barcodes"><a href="#"><i class="fas fa-barcode"></i>Barcode Print</a></li>
+            <li class="nav-item" data-page="reports"><a href="#"><i class="fas fa-chart-bar"></i>Reports</a></li>
+            <li class="nav-item" data-page="logs"><a href="#"><i class="fas fa-history"></i>Activity Logs</a></li>
+
+            <li class="nav-item active" data-page="user"><a href="{% url 'user' %}"><i class="fas fa-tachometer-alt"></i>User</a></li>          
+            <li class="nav-item" data-page="company"><a href="#"><i class="fas fa-info-circle"></i>Company Info</a></li>
+            <li class="nav-item" data-page="settings"><a href="#"><i class="fas fa-cog"></i>Settings</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+   <main class="app-content" id="mainContent">
+    {% block content %}
+    <div class="card">
+        <h3>Welcome to MahilMart POS</h3>
+        <p>Select a section from the sidebar to get started.</p>
+    </div>
+    {% endblock %}
+  </main>
+</div>
+
+<!-- Footer -->
+<footer class="content-footer">
+    <div>MahilMart Pro v2.5.1</div>
+    <div>© 2025 SuperMart Solutions Inc.</div>
+</footer>
+
+<!-- Confirm Modal -->
+<div class="modal" id="confirmModal">
+    <div class="modal-content">
+        <h5 id="confirmTitle">Confirm</h5>
+        <p id="confirmMessage">Are you sure?</p>
+        <div class="text-end">
+            <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+            <button class="btn btn-danger" id="confirmBtn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const appSidebar = document.getElementById("appSidebar");
+    const navItems = document.querySelectorAll(".nav-item");
+    const mainContent = document.getElementById("mainContent");
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener("click", () => {
+        appSidebar.classList.toggle("active");
+      });
+    }
+
+    navItems.forEach(item => {
+      item.addEventListener("click", () => {
+        navItems.forEach(i => i.classList.remove("active"));
+        item.classList.add("active");
+        const page = item.getAttribute("data-page");
+        loadPageContent(page);
+      });
+    });
+
+    function loadPageContent(page) {
+      mainContent.innerHTML = `
+        <div class="card">
+          <h3>${capitalize(page)} Page</h3>
+          <p>Content for <strong>${page}</strong> will go here.</p>
+        </div>`;
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // Confirm modal logic (for reuse)
+    function showConfirm(title, message, onConfirm) {
+      document.getElementById("confirmTitle").innerText = title;
+      document.getElementById("confirmMessage").innerText = message;
+
+      const modal = document.getElementById("confirmModal");
+      modal.style.display = "block";
+
+      const confirmBtn = document.getElementById("confirmBtn");
+      const newConfirmBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+      newConfirmBtn.addEventListener("click", () => {
+        modal.style.display = "none";
+        if (typeof onConfirm === 'function') onConfirm();
+      });
+
+      document.getElementById("cancelBtn").onclick = () => {
+        modal.style.display = "none";
+      };
+    }
+
+    window.onclick = (e) => {
+      if (e.target.id === "confirmModal") {
+        e.target.style.display = "none";
+      }
+    };
+</script>
+</body>
+</html>

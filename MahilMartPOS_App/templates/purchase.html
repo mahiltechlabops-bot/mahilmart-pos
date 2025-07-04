@@ -1,0 +1,683 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Main Content -->
+<main class="app-content" id="mainContent">
+    <div class="card">
+        <h3><i class="fas fa-truck-loading"></i> Purchase</h3>
+
+        <!-- Dealer Section -->
+        <div class="dealer-section">
+            <h4>1. Select Dealer</h4>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="dealerOption" id="existingDealer" checked>
+                        <label class="form-check-label" for="existingDealer">
+                            Select Existing Dealer
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="dealerOption" id="newDealer">
+                        <label class="form-check-label" for="newDealer">
+                            Add New Dealer
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Existing Dealer Search -->
+            <div id="existingDealerSection">
+                <div class="search-box">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search dealer by name or code" id="dealerSearch">
+                        <button class="btn btn-primary" type="button" id="searchDealerBtn">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dealer-info" id="selectedDealerInfo" style="display: none;">
+                    <h5>Dealer Information</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Name:</strong> <span id="dealerName">ABC Suppliers</span></p>
+                            <p><strong>Code:</strong> <span id="dealerCode">DLR-001</span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Contact:</strong> <span id="dealerContact">9876543210</span></p>
+                            <p><strong>Email:</strong> <span id="dealerEmail">abc@supplier.com</span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Address:</strong> <span id="dealerAddress">123 Supplier St, City</span></p>
+                            <p><strong>GSTIN:</strong> <span id="dealerGST">22AAAAA0000A1Z5</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Dealer Form -->
+            <div id="newDealerSection" style="display: none;">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="newDealerName" class="form-label">Dealer Name*</label>
+                        <input type="text" class="form-control" id="newDealerName" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="newDealerCode" class="form-label">Dealer Code</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newDealerCode">
+                            <button class="btn btn-outline-secondary" type="button" id="generateDealerCodeBtn">
+                                <i class="fas fa-sync-alt"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="newDealerContact" class="form-label">Contact Number*</label>
+                        <input type="tel" class="form-control" id="newDealerContact" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="newDealerEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="newDealerEmail">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="newDealerGST" class="form-label">GSTIN</label>
+                        <input type="text" class="form-control" id="newDealerGST">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="newDealerAddress" class="form-label">Address</label>
+                        <textarea class="form-control" id="newDealerAddress" rows="1"></textarea>
+                    </div>
+                </div>
+                <div class="text-end mb-3">
+                    <button class="btn btn-success" id="addDealerBtn">
+                        <i class="fas fa-save"></i> Add Dealer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <div class="products-section">
+            <h4>2. Add Products</h4>
+
+            <div class="search-box mb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search product by name or barcode" id="productSearch">
+                    <button class="btn btn-primary" type="button" id="searchProductBtn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Barcode</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        <!-- Products will be added here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-success mt-3" id="addProductBtn">
+                <i class="fas fa-plus"></i> Add Product
+            </button>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <h4>3. Purchase Summary</h4>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <table class="summary-table">
+                            <tr>
+                                <td>Subtotal:</td>
+                                <td class="text-end">₹<span id="subtotal">0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td>Tax (18%):</td>
+                                <td class="text-end">₹<span id="tax">0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td>Discount:</td>
+                                <td class="text-end">-₹<span id="discount">0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td>Shipping:</td>
+                                <td class="text-end">₹<span id="shipping">0.00</span></td>
+                            </tr>
+                            <tr class="total-row">
+                                <td><strong>Total:</strong></td>
+                                <td class="text-end"><strong>₹<span id="total">0.00</span></strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="mb-3">
+                            <label for="paymentMethod" class="form-label">Payment Method</label>
+                            <select class="form-select" id="paymentMethod">
+                                <option value="cash">Cash</option>
+                                <option value="bank">Bank Transfer</option>
+                                <option value="cheque">Cheque</option>
+                                <option value="upi">UPI</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="paymentNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="paymentNotes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons mt-4">
+                <button class="btn btn-secondary" id="cancelPurchaseBtn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-primary" id="saveDraftBtn">
+                    <i class="fas fa-save"></i> Save Draft
+                </button>
+                <button class="btn btn-success" id="completePurchaseBtn">
+                    <i class="fas fa-check"></i> Complete Purchase
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Dealer Selection Modal -->
+<div class="modal" id="dealerSelectionModal">
+    <div class="modal-content">
+        <h5>Select Dealer</h5>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="dealerListBody">
+                    <!-- Sample dealer data -->
+                    <tr>
+                        <td>DLR-001</td>
+                        <td>ABC Suppliers</td>
+                        <td>9876543210</td>
+                        <td><button class="btn btn-sm btn-primary select-dealer-btn">Select</button></td>
+                    </tr>
+                    <tr>
+                        <td>DLR-002</td>
+                        <td>XYZ Wholesale</td>
+                        <td>8765432109</td>
+                        <td><button class="btn btn-sm btn-primary select-dealer-btn">Select</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="text-end mt-3">
+            <button class="btn btn-secondary" id="closeDealerModalBtn">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Product Selection Modal -->
+<div class="modal" id="productSelectionModal">
+    <div class="modal-content">
+        <h5>Select Product</h5>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Barcode</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="productListBody">
+                    <!-- Sample product data -->
+                    <tr>
+                        <td>Premium Rice 5kg</td>
+                        <td>8901234567890</td>
+                        <td>₹450.00</td>
+                        <td>25</td>
+                        <td><button class="btn btn-sm btn-primary select-product-btn">Add</button></td>
+                    </tr>
+                    <tr>
+                        <td>Wheat Flour 2kg</td>
+                        <td>8901234567891</td>
+                        <td>₹120.00</td>
+                        <td>40</td>
+                        <td><button class="btn btn-sm btn-primary select-product-btn">Add</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="text-end mt-3">
+            <button class="btn btn-secondary" id="closeProductModalBtn">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal" id="confirmModal">
+    <div class="modal-content">
+        <h5 id="confirmTitle">Confirm Purchase</h5>
+        <p id="confirmMessage">Are you sure you want to complete this purchase?</p>
+        <div class="text-end">
+            <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+            <button class="btn btn-danger" id="confirmBtn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// DOM Elements
+const existingDealerRadio = document.getElementById("existingDealer");
+const newDealerRadio = document.getElementById("newDealer");
+const existingDealerSection = document.getElementById("existingDealerSection");
+const newDealerSection = document.getElementById("newDealerSection");
+const dealerSearch = document.getElementById("dealerSearch");
+const searchDealerBtn = document.getElementById("searchDealerBtn");
+const selectedDealerInfo = document.getElementById("selectedDealerInfo");
+const productSearch = document.getElementById("productSearch");
+const searchProductBtn = document.getElementById("searchProductBtn");
+const productTableBody = document.getElementById("productTableBody");
+const addProductBtn = document.getElementById("addProductBtn");
+const completePurchaseBtn = document.getElementById("completePurchaseBtn");
+const saveDraftBtn = document.getElementById("saveDraftBtn");
+const cancelPurchaseBtn = document.getElementById("cancelPurchaseBtn");
+
+// Modal Elements
+const dealerSelectionModal = document.getElementById("dealerSelectionModal");
+const productSelectionModal = document.getElementById("productSelectionModal");
+const confirmModal = document.getElementById("confirmModal");
+const closeDealerModalBtn = document.getElementById("closeDealerModalBtn");
+const closeProductModalBtn = document.getElementById("closeProductModalBtn");
+
+// Summary Elements
+const subtotalEl = document.getElementById("subtotal");
+const taxEl = document.getElementById("tax");
+const discountEl = document.getElementById("discount");
+const shippingEl = document.getElementById("shipping");
+const totalEl = document.getElementById("total");
+
+// Initialize purchase data
+let purchaseData = {
+    dealer: null,
+    products: [],
+    subtotal: 0,
+    tax: 0,
+    discount: 0,
+    shipping: 0,
+    total: 0
+};
+
+// Dealer selection toggle
+existingDealerRadio.addEventListener("change", () => {
+    existingDealerSection.style.display = "block";
+    newDealerSection.style.display = "none";
+});
+
+newDealerRadio.addEventListener("change", () => {
+    existingDealerSection.style.display = "none";
+    newDealerSection.style.display = "block";
+});
+
+// Search dealer button click
+searchDealerBtn.addEventListener("click", () => {
+    dealerSelectionModal.style.display = "block";
+});
+
+// Close dealer modal
+closeDealerModalBtn.addEventListener("click", () => {
+    dealerSelectionModal.style.display = "none";
+});
+
+// Select dealer from modal
+document.querySelectorAll(".select-dealer-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+        const row = e.target.closest("tr");
+        const dealerCode = row.cells[0].textContent;
+        const dealerName = row.cells[1].textContent;
+        const dealerContact = row.cells[2].textContent;
+
+        // Update dealer info display
+        document.getElementById("dealerName").textContent = dealerName;
+        document.getElementById("dealerCode").textContent = dealerCode;
+        document.getElementById("dealerContact").textContent = dealerContact;
+        document.getElementById("dealerEmail").textContent = "abc@supplier.com";
+        document.getElementById("dealerAddress").textContent = "123 Supplier St, City";
+        document.getElementById("dealerGST").textContent = "22AAAAA0000A1Z5";
+
+        // Store dealer data
+        purchaseData.dealer = {
+            code: dealerCode,
+            name: dealerName,
+            contact: dealerContact,
+            email: "abc@supplier.com",
+            address: "123 Supplier St, City",
+            gst: "22AAAAA0000A1Z5"
+        };
+
+        selectedDealerInfo.style.display = "block";
+        dealerSelectionModal.style.display = "none";
+    });
+});
+
+// Search product button click
+searchProductBtn.addEventListener("click", () => {
+    productSelectionModal.style.display = "block";
+});
+
+// Close product modal
+closeProductModalBtn.addEventListener("click", () => {
+    productSelectionModal.style.display = "none";
+});
+
+// Add product button click
+addProductBtn.addEventListener("click", () => {
+    productSelectionModal.style.display = "block";
+});
+
+// Select product from modal
+document.querySelectorAll(".select-product-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+        const row = e.target.closest("tr");
+        const productName = row.cells[0].textContent;
+        const barcode = row.cells[1].textContent;
+        const price = parseFloat(row.cells[2].textContent.replace('₹', ''));
+
+        // Add product to table
+        const productId = Date.now(); // Unique ID for the product row
+        const newRow = document.createElement("tr");
+        newRow.id = `product-${productId}`;
+        newRow.innerHTML = `
+            <td>${productName}</td>
+            <td>${barcode}</td>
+            <td>₹${price.toFixed(2)}</td>
+            <td><input type="number" class="form-control quantity-input" value="1" min="1" data-price="${price}"></td>
+            <td class="product-total">₹${price.toFixed(2)}</td>
+            <td><button class="btn btn-sm btn-danger remove-product-btn"><i class="fas fa-trash"></i></button></td>
+        `;
+        productTableBody.appendChild(newRow);
+
+        // Add product to purchase data
+        purchaseData.products.push({
+            id: productId,
+            name: productName,
+            barcode: barcode,
+            price: price,
+            quantity: 1,
+            total: price
+        });
+
+        // Update totals
+        updateTotals();
+
+        // Add event listeners to new row
+        document.querySelector(`#product-${productId} .quantity-input`).addEventListener("change", updateProductQuantity);
+        document.querySelector(`#product-${productId} .remove-product-btn`).addEventListener("click", removeProduct);
+
+        productSelectionModal.style.display = "none";
+    });
+});
+
+// Update product quantity
+function updateProductQuantity(e) {
+    const input = e.target;
+    const row = input.closest("tr");
+    const productId = row.id.split("-")[1];
+    const price = parseFloat(input.dataset.price);
+    const quantity = parseInt(input.value);
+    const total = price * quantity;
+
+    // Update display
+    row.querySelector(".product-total").textContent = `₹${total.toFixed(2)}`;
+
+    // Update purchase data
+    const productIndex = purchaseData.products.findIndex(p => p.id == productId);
+    if (productIndex !== -1) {
+        purchaseData.products[productIndex].quantity = quantity;
+        purchaseData.products[productIndex].total = total;
+    }
+
+    // Update totals
+    updateTotals();
+}
+
+// Remove product
+function removeProduct(e) {
+    const button = e.target.closest("button");
+    const row = button.closest("tr");
+    const productId = row.id.split("-")[1];
+
+    // Remove from purchase data
+    purchaseData.products = purchaseData.products.filter(p => p.id != productId);
+
+    // Remove row
+    row.remove();
+
+    // Update totals
+    updateTotals();
+}
+
+// Update totals
+function updateTotals() {
+    // Calculate subtotal
+    purchaseData.subtotal = purchaseData.products.reduce((sum, product) => sum + product.total, 0);
+
+    // Calculate tax (18%)
+    purchaseData.tax = purchaseData.subtotal * 0.18;
+
+    // For now, discount and shipping are 0
+    purchaseData.discount = 0;
+    purchaseData.shipping = 0;
+
+    // Calculate total
+    purchaseData.total = purchaseData.subtotal + purchaseData.tax + purchaseData.shipping - purchaseData.discount;
+
+    // Update display
+    subtotalEl.textContent = purchaseData.subtotal.toFixed(2);
+    taxEl.textContent = purchaseData.tax.toFixed(2);
+    discountEl.textContent = purchaseData.discount.toFixed(2);
+    shippingEl.textContent = purchaseData.shipping.toFixed(2);
+    totalEl.textContent = purchaseData.total.toFixed(2);
+}
+
+// Complete purchase button click
+completePurchaseBtn.addEventListener("click", () => {
+    if (!purchaseData.dealer) {
+        alert("Please select a dealer first");
+        return;
+    }
+
+    if (purchaseData.products.length === 0) {
+        alert("Please add at least one product");
+        return;
+    }
+
+    document.getElementById("confirmTitle").textContent = "Confirm Purchase";
+    document.getElementById("confirmMessage").textContent = "Are you sure you want to complete this purchase?";
+    confirmModal.style.display = "block";
+});
+
+// Confirm purchase
+document.getElementById("confirmBtn").addEventListener("click", () => {
+    // Here you would typically send the purchaseData to your backend
+    console.log("Purchase completed:", purchaseData);
+    alert("Purchase completed successfully!");
+
+    // Reset form
+    resetPurchaseForm();
+    confirmModal.style.display = "none";
+});
+
+// Cancel confirm
+document.getElementById("cancelBtn").addEventListener("click", () => {
+    confirmModal.style.display = "none";
+});
+
+// Save draft button click
+saveDraftBtn.addEventListener("click", () => {
+    if (!purchaseData.dealer) {
+        alert("Please select a dealer first");
+        return;
+    }
+
+    if (purchaseData.products.length === 0) {
+        alert("Please add at least one product");
+        return;
+    }
+
+    // Here you would typically save the draft to your backend
+    console.log("Draft saved:", purchaseData);
+    alert("Draft saved successfully!");
+});
+
+// Cancel purchase button click
+cancelPurchaseBtn.addEventListener("click", () => {
+    if (confirm("Are you sure you want to cancel this purchase? All data will be lost.")) {
+        resetPurchaseForm();
+    }
+});
+
+// Reset purchase form
+function resetPurchaseForm() {
+    // Reset dealer selection
+    existingDealerRadio.checked = true;
+    newDealerSection.style.display = "none";
+    existingDealerSection.style.display = "block";
+    selectedDealerInfo.style.display = "none";
+    dealerSearch.value = "";
+
+    // Reset new dealer form
+    document.getElementById("newDealerName").value = "";
+    document.getElementById("newDealerCode").value = "";
+    document.getElementById("newDealerContact").value = "";
+    document.getElementById("newDealerEmail").value = "";
+    document.getElementById("newDealerGST").value = "";
+    document.getElementById("newDealerAddress").value = "";
+
+    // Reset products
+    productTableBody.innerHTML = "";
+    productSearch.value = "";
+
+    // Reset summary
+    subtotalEl.textContent = "0.00";
+    taxEl.textContent = "0.00";
+    discountEl.textContent = "0.00";
+    shippingEl.textContent = "0.00";
+    totalEl.textContent = "0.00";
+
+    // Reset payment
+    document.getElementById("paymentMethod").value = "cash";
+    document.getElementById("paymentNotes").value = "";
+
+    // Reset purchase data
+    purchaseData = {
+        dealer: null,
+        products: [],
+        subtotal: 0,
+        tax: 0,
+        discount: 0,
+        shipping: 0,
+        total: 0
+    };
+}
+
+// Add new dealer
+document.getElementById("addDealerBtn").addEventListener("click", function() {
+    const dealerName = document.getElementById("newDealerName").value;
+    const dealerCode = document.getElementById("newDealerCode").value || generateDealerCode();
+    const dealerContact = document.getElementById("newDealerContact").value;
+
+    if (!dealerName || !dealerContact) {
+        alert("Please fill in all required fields (Name and Contact)");
+        return;
+    }
+
+    // Create dealer object
+    const newDealer = {
+        name: dealerName,
+        code: dealerCode,
+        contact: dealerContact,
+        email: document.getElementById("newDealerEmail").value,
+        gst: document.getElementById("newDealerGST").value,
+        address: document.getElementById("newDealerAddress").value
+    };
+
+    // Here you would typically save to your database
+    console.log("New dealer added:", newDealer);
+
+    // Auto-select this dealer
+    purchaseData.dealer = newDealer;
+
+    // Update UI to show selected dealer
+    document.getElementById("dealerName").textContent = newDealer.name;
+    document.getElementById("dealerCode").textContent = newDealer.code;
+    document.getElementById("dealerContact").textContent = newDealer.contact;
+    document.getElementById("dealerEmail").textContent = newDealer.email || "N/A";
+    document.getElementById("dealerAddress").textContent = newDealer.address || "N/A";
+    document.getElementById("dealerGST").textContent = newDealer.gst || "N/A";
+
+    selectedDealerInfo.style.display = "block";
+
+    // Switch back to existing dealer view
+    existingDealerRadio.checked = true;
+    newDealerSection.style.display = "none";
+    existingDealerSection.style.display = "block";
+
+    // Clear form
+    document.getElementById("newDealerName").value = "";
+    document.getElementById("newDealerCode").value = "";
+    document.getElementById("newDealerContact").value = "";
+    document.getElementById("newDealerEmail").value = "";
+    document.getElementById("newDealerGST").value = "";
+    document.getElementById("newDealerAddress").value = "";
+
+    alert("Dealer added successfully!");
+});
+
+// Generate random dealer code
+document.getElementById("generateDealerCodeBtn").addEventListener("click", function() {
+    document.getElementById("newDealerCode").value = generateDealerCode();
+});
+
+function generateDealerCode() {
+    return "DLR-" + Math.floor(1000 + Math.random() * 9000);
+}
+
+// Close modals when clicking outside
+window.onclick = (e) => {
+    if (e.target.classList.contains("modal")) {
+        e.target.style.display = "none";
+    }
+};
+</script>
+{% endblock %}

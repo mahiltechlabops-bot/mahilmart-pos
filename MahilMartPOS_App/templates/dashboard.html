@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="app-content" id="appContent">
+  <div class="content-header d-flex justify-content-between align-items-center mb-4">
+    <h2 id="contentTitle">Dashboard Overview</h2>
+    <div>
+      <input type="text" class="form-control d-inline-block me-2" placeholder="Search..." style="width: 200px;">
+      <button class="btn btn-primary" id="generateReport">Generate Report</button>
+    </div>
+  </div>
+
+  <div class="dashboard-widgets d-flex flex-wrap gap-3 mb-4">
+    <div class="card flex-fill">
+      <div class="card-header">
+        <h3>Today's Sales</h3>
+      </div>
+      <div class="card-body">
+        <h2 id="todaySales">$2,435.00</h2>
+        <p class="text-success">+12.5% from yesterday</p>
+      </div>
+    </div>
+
+    <div class="card flex-fill">
+      <div class="card-header">
+        <h3>Transactions</h3>
+      </div>
+      <div class="card-body">
+        <h2 id="transactionCount">128</h2>
+        <p class="text-info">Active bills processed</p>
+      </div>
+    </div>
+
+    <div class="card flex-fill">
+      <div class="card-header">
+        <h3>Low Stock</h3>
+      </div>
+      <div class="card-body">
+        <h2 id="lowStockCount">6 Items</h2>
+        <p class="text-warning">Check inventory</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3>Weekly Sales</h3>
+      <select id="chartPeriod" class="form-select w-auto">
+        <option value="week">This Week</option>
+        <option value="month">This Month</option>
+      </select>
+    </div>
+    <div class="card-body">
+      <canvas id="salesChart" width="400" height="150"></canvas>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3>Recent Transactions</h3>
+      <button class="btn btn-sm btn-primary" id="viewAllTransactions">View All</button>
+    </div>
+    <div class="card-body">
+      <table class="table" id="transactionsTable">
+        <thead>
+          <tr>
+            <th>Bill ID</th>
+            <th>Customer</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>#1024</td>
+            <td>Jane Smith</td>
+            <td>$54.20</td>
+            <td><span class="badge bg-success">Completed</span></td>
+            <td>June 26, 2025</td>
+            <td><button class="btn btn-sm btn-primary">Details</button></td>
+          </tr>
+          <tr>
+            <td>#1023</td>
+            <td>John Doe</td>
+            <td>$120.00</td>
+            <td><span class="badge bg-warning">Pending</span></td>
+            <td>June 26, 2025</td>
+            <td><button class="btn btn-sm btn-primary">Details</button></td>
+          </tr>
+          <tr>
+            <td>#1022</td>
+            <td>Mary Johnson</td>
+            <td>$89.99</td>
+            <td><span class="badge bg-success">Completed</span></td>
+            <td>June 25, 2025</td>
+            <td><button class="btn btn-sm btn-primary">Details</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Report Modal -->
+  <div id="reportModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h3>Generate Report</h3>
+      <form id="reportForm">
+        <div class="mb-3">
+          <label>Report Type:</label>
+          <select class="form-control mt-2">
+            <option>Sales Report</option>
+            <option>Inventory Report</option>
+            <option>Customer Report</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label>Date Range:</label>
+          <div class="d-flex gap-2 mt-1">
+            <input type="date" class="form-control">
+            <span class="align-self-center">to</span>
+            <input type="date" class="form-control">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label>Format:</label>
+          <div class="form-check form-check-inline ms-2">
+            <input class="form-check-input" type="radio" name="format" checked>
+            <label class="form-check-label">PDF</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="format">
+            <label class="form-check-label">Excel</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="format">
+            <label class="form-check-label">CSV</label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate</button>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
