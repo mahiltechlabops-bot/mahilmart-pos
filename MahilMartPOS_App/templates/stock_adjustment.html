@@ -45,9 +45,9 @@
     <label for="product">Product</label>
     <select name="product" id="product" class="form-control" required>
       <option value="">-- Select Product --</option>
-      <option value="product1">Product A</option>
-      <option value="product2">Product B</option>
-      <!-- Dynamically load products from DB -->
+      {% for product in products %}
+        <option value="{{ product.id }}">{{ product.name }}</option>
+      {% endfor %}
     </select>
 
     <label for="adjustmentType">Adjustment Type</label>

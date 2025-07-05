@@ -170,7 +170,7 @@
     <aside class="app-sidebar" id="appSidebar">
         <ul class="nav-menu">
             <li class="nav-item active" data-page="dashboard"><a href="{% url 'dashboard' %}"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>          
-            <li class="nav-item" data-page="billing"><a href="#"><i class="fas fa-cash-register"></i>Billing</a></li>
+            <li class="nav-item active" data-page="billing"><a href="{% url 'billing' %}"><i class="fas fa-cash-register"></i>Billing</a></li>
             <li class="nav-item" data-page="quotation"><a href="#"><i class="fas fa-file-invoice"></i>Quotation</a></li>
             <li class="nav-item active" data-page="order"><a href="{% url 'order' %}"><i class="fas fa-receipt"></i>Order</a></li>
             <li class="nav-item active" data-page="sale_return"><a href="{% url 'sale_return' %}"><i class="fas fa-undo-alt"></i>Sales Return</a></li>
@@ -183,7 +183,7 @@
 
             <li class="nav-item active" data-page="inventory"><a href="{% url 'inventory' %}"><i class="fas fa-warehouse"></i>Inventory</a></li>
             <li class="nav-item active" data-page="suppliers"><a href="{% url 'suppliers' %}"><i class="fas fa-truck"></i>Suppliers</a></li>
-            <li class="nav-item" data-page="customers"><a href="#"><i class="fas fa-users"></i>Customers</a></li>
+            <li class="nav-item active" data-page="customers"><a href="{% url 'customers' %}"><i class="fas fa-users"></i>Customers</a></li>
 
             <li class="nav-item" data-page="payments"><a href="#"><i class="fas fa-money-check-alt"></i>Payments</a></li>
             <li class="nav-item" data-page="expenses"><a href="#"><i class="fas fa-file-invoice-dollar"></i>Expenses</a></li>
@@ -193,7 +193,7 @@
             <li class="nav-item" data-page="logs"><a href="#"><i class="fas fa-history"></i>Activity Logs</a></li>
 
             <li class="nav-item active" data-page="user"><a href="{% url 'user' %}"><i class="fas fa-tachometer-alt"></i>User</a></li>          
-            <li class="nav-item" data-page="company"><a href="#"><i class="fas fa-info-circle"></i>Company Info</a></li>
+            <li class="nav-item active" data-page="company"><a href="{% url 'company_details' %}"><i class="fas fa-info-circle"></i>Company Info</a></li>
             <li class="nav-item" data-page="settings"><a href="#"><i class="fas fa-cog"></i>Settings</a></li>
         </ul>
     </aside>

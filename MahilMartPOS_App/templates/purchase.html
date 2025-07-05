@@ -6,103 +6,20 @@
     <div class="card">
         <h3><i class="fas fa-truck-loading"></i> Purchase</h3>
 
-        <!-- Dealer Section -->
-        <div class="dealer-section">
-            <h4>1. Select Dealer</h4>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="dealerOption" id="existingDealer" checked>
-                        <label class="form-check-label" for="existingDealer">
-                            Select Existing Dealer
-                        </label>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="dealerOption" id="newDealer">
-                        <label class="form-check-label" for="newDealer">
-                            Add New Dealer
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Existing Dealer Search -->
-            <div id="existingDealerSection">
-                <div class="search-box">
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search dealer by name or code" id="dealerSearch">
-                        <button class="btn btn-primary" type="button" id="searchDealerBtn">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                    </div>
-                </div>
-
-                <div class="dealer-info" id="selectedDealerInfo" style="display: none;">
-                    <h5>Dealer Information</h5>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <p><strong>Name:</strong> <span id="dealerName">ABC Suppliers</span></p>
-                            <p><strong>Code:</strong> <span id="dealerCode">DLR-001</span></p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Contact:</strong> <span id="dealerContact">9876543210</span></p>
-                            <p><strong>Email:</strong> <span id="dealerEmail">abc@supplier.com</span></p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Address:</strong> <span id="dealerAddress">123 Supplier St, City</span></p>
-                            <p><strong>GSTIN:</strong> <span id="dealerGST">22AAAAA0000A1Z5</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- New Dealer Form -->
-            <div id="newDealerSection" style="display: none;">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="newDealerName" class="form-label">Dealer Name*</label>
-                        <input type="text" class="form-control" id="newDealerName" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="newDealerCode" class="form-label">Dealer Code</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="newDealerCode">
-                            <button class="btn btn-outline-secondary" type="button" id="generateDealerCodeBtn">
-                                <i class="fas fa-sync-alt"></i> Generate
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="newDealerContact" class="form-label">Contact Number*</label>
-                        <input type="tel" class="form-control" id="newDealerContact" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="newDealerEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="newDealerEmail">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="newDealerGST" class="form-label">GSTIN</label>
-                        <input type="text" class="form-control" id="newDealerGST">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="newDealerAddress" class="form-label">Address</label>
-                        <textarea class="form-control" id="newDealerAddress" rows="1"></textarea>
-                    </div>
-                </div>
-                <div class="text-end mb-3">
-                    <button class="btn btn-success" id="addDealerBtn">
-                        <i class="fas fa-save"></i> Add Dealer
-                    </button>
-                </div>
-            </div>
+       <!-- Dealer Dropdown Search -->
+        <div id="existingDealerSection">
+        <div class="mb-3">
+            <label for="dealerSelect" class="form-label">Select Dealer</label>
+            <input class="form-control" list="dealerOptions" id="dealerSelect" name="supplier_id" placeholder="Type dealer name or code">
+            <datalist id="dealerOptions">
+            {% for supplier in suppliers %}
+                <option value="{{ supplier.name }} ({{ supplier.phone }})" data-id="{{ supplier.id }}">
+            {% endfor %}
+            </datalist>
+        </div>
         </div>
 
+    
         <!-- Products Section -->
         <div class="products-section">
             <h4>2. Add Products</h4>
@@ -116,28 +33,32 @@
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="product-table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Barcode</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Total</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productTableBody">
-                        <!-- Products will be added here -->
-                    </tbody>
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                    <th>#</th>
+                    <th>Supplier ID</th>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Subcategory</th>
+                    <th>Unit</th>
+                    <th>Qunatity</th>                    
+                    <th>MRP Price</th>
+                    <th>Sale Price</th>
+                    <th>Wholesale Price</th>
+                    <th>Wholesale Price 1</th>
+                    <th>Retail Price</th>
+                    <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="productTableBody">
+                    <!-- New rows will be inserted here -->
+                </tbody>
                 </table>
-            </div>
 
-            <button class="btn btn-success mt-3" id="addProductBtn">
+                <button class="btn btn-success mt-3" id="addProductBtn">
                 <i class="fas fa-plus"></i> Add Product
-            </button>
-        </div>
+                </button>
 
         <!-- Summary Section -->
         <div class="summary-section">
@@ -610,59 +531,6 @@ function resetPurchaseForm() {
         total: 0
     };
 }
-
-// Add new dealer
-document.getElementById("addDealerBtn").addEventListener("click", function() {
-    const dealerName = document.getElementById("newDealerName").value;
-    const dealerCode = document.getElementById("newDealerCode").value || generateDealerCode();
-    const dealerContact = document.getElementById("newDealerContact").value;
-
-    if (!dealerName || !dealerContact) {
-        alert("Please fill in all required fields (Name and Contact)");
-        return;
-    }
-
-    // Create dealer object
-    const newDealer = {
-        name: dealerName,
-        code: dealerCode,
-        contact: dealerContact,
-        email: document.getElementById("newDealerEmail").value,
-        gst: document.getElementById("newDealerGST").value,
-        address: document.getElementById("newDealerAddress").value
-    };
-
-    // Here you would typically save to your database
-    console.log("New dealer added:", newDealer);
-
-    // Auto-select this dealer
-    purchaseData.dealer = newDealer;
-
-    // Update UI to show selected dealer
-    document.getElementById("dealerName").textContent = newDealer.name;
-    document.getElementById("dealerCode").textContent = newDealer.code;
-    document.getElementById("dealerContact").textContent = newDealer.contact;
-    document.getElementById("dealerEmail").textContent = newDealer.email || "N/A";
-    document.getElementById("dealerAddress").textContent = newDealer.address || "N/A";
-    document.getElementById("dealerGST").textContent = newDealer.gst || "N/A";
-
-    selectedDealerInfo.style.display = "block";
-
-    // Switch back to existing dealer view
-    existingDealerRadio.checked = true;
-    newDealerSection.style.display = "none";
-    existingDealerSection.style.display = "block";
-
-    // Clear form
-    document.getElementById("newDealerName").value = "";
-    document.getElementById("newDealerCode").value = "";
-    document.getElementById("newDealerContact").value = "";
-    document.getElementById("newDealerEmail").value = "";
-    document.getElementById("newDealerGST").value = "";
-    document.getElementById("newDealerAddress").value = "";
-
-    alert("Dealer added successfully!");
-});
 
 // Generate random dealer code
 document.getElementById("generateDealerCodeBtn").addEventListener("click", function() {

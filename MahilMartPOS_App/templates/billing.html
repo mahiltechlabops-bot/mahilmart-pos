@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sales Creation</title>
+    <style>
+        body {
+            --background-color: #34ceec;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            max-width: 1300px;
+            margin: 40px auto;
+            background-color: #7eeaee;
+            padding: 0;
+        }
+
+        .title {
+            text-align: center;
+            color: #0e0d0d;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        form {
+            background-color: #7eeaee;
+            max-width: 1550px;
+            padding: 10px;
+            margin: 5px auto;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 0.4fr 0.4fr;
+            gap: 15px 40px;
+            color: black;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .form-group label {
+            width: 90px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            flex: 1;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background-color: white;
+        }
+
+        .item-table th,
+        .item-table td {
+            border: 1px solid black;
+            padding: 6px;
+            text-align: center;
+        }
+
+        .item-table th {
+            background-color: rgb(206, 238, 238);
+        }
+
+        .footer-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: bold;
+            padding: 10px;
+            background-color: rgb(206, 238, 238);
+        }
+
+        .footer-summary span {
+            font-size: 18px;
+        }
+
+        .total-red {
+            color: red;
+            font-size: 28px;
+        }
+
+        .total-blue {
+            color: blue;
+            font-size: 20px;
+        }
+
+        .footer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #5debf0;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .footer-controls > div,
+        .footer-controls .buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer-controls input[type="number"] {
+            width: 100px;
+            padding: 5px;
+        }
+
+        .footer-controls .buttons button {
+            padding: 8px 16px;
+            font-weight: bold;
+        }
+        .table-input {
+            width: 100%;
+            padding: 6px;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            font-size: 14px;
+        }
+        .item-table td {
+            padding: 0; 
+        }
+
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <div class="title">Sales Creation</div>
+    <form method="POST" action="{% url 'billing' %}">
+
+        {% csrf_token %}
+        <div class="form-grid">
+            <div class="form-group"><label>To :</label><input type="text" name="to" value="Cash Sales"></div>
+            <div class="form-group"><label>Bill No :</label><input type="text" name="bill_no" value="{{ bill_no }}" readonly></div>
+
+            <div class="form-group"><label>Date :</label><input type="text" name="date" value="{{ today_date }}" readonly></div>
+            <div class="form-group"><label>Type :</label><select name="sale_type" style="flex: 1; padding: 6px;">
+                <option value="Retail Sale" selected>Retail Sale</option>
+                <option value="Whole Rate 2">Whole Rate 2</option>
+                <option value="Wholesale">Whole Sale</option>
+            </select>
+        </div>
+
+            <div class="form-group"><label>Bill Type :</label><select name="bill_type" style="flex: 1; padding: 6px;">
+                <option value="Cash" selected>Cash</option>
+                <option value="Card">Card</option>
+                <option value="Credit">Credit</option>
+            </select>
+        </div>
+
+            <div class="form-group">
+                <label>Counter :</label>
+                <select name="counter" style="flex: 1; padding: 6px;">
+                    <option value="Main Counter" selected>Main Counter</option>
+                    <option value="Second Counter">Second Counter</option>
+                    <option value="Estimate">Estimate</option>
+                </select>
+            </div>
+
+            <div class="form-group"><label>Order No :</label><input type="text" name="order_no"></div>
+            <div class="form-group"><label>Phone :</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" required></div>
+            <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
+            <div class="form-group"><label>Email :</label><input type="email" name="email" id="email"></div>
+            <div class="form-group"><label>Join Date :</label><input type="date" name="date_joined" id="date_joined" value="{{ today_date }}"></div>
+
+            
+            <div id="nameModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background-color: rgba(0,0,0,0.4); justify-content:center; align-items:center; z-index:1000;">
+            
+            <div style="background-color:#fff; padding:20px; border-radius:8px; width:300px; text-align:center;">
+                <h3 style="margin-bottom:10px;">Enter the Name</h3>
+                <input type="text" id="modalNameInput" placeholder="Type name here" style="width:90%; padding:8px;">
+                <br><br>
+                <button onclick="submitName()" style="padding:8px 20px;">OK</button>
+            </div>
+        </div>
+        
+        <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div>
+            
+        </div>
+        <table class="item-table">
+            <thead>
+        <tr>
+            <th style="width: 10%;">Sno</th>
+            <th style="width: 20%;">Code</th>
+            <th style="width: 30%;">Item Name</th>
+            <th style="width: 20%;">Qty</th>
+            <th style="width: 20%;">MRSP</th>
+            <th style="width: 20%;">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><input type="number" name="sno" class="table-input"></td>
+            <td><input type="text" name="code" class="table-input"></td>
+            <td><input type="text" name="item_name" class="table-input"></td>
+            <td><input type="number" name="qty" class="table-input"></td>
+            <td><input type="number" name="mrsp" class="table-input"></td>
+            <td><input type="text" class="table-input amount-output" readonly></td>
+        </tr>
+    </tbody>
+</table>
+<br><br>
+
+<table class="item-table">
+    <tbody>
+        <tr style="background-color: rgb(206, 238, 238); font-weight: bold;">
+            <td style="width: 10%; border: 1px solid black;"></td> 
+            <td style="width: 20%; border: 1px solid black;"></td> 
+            <td style="width: 30%; border: 1px solid black; text-align: center;">
+                Items (<span id="item-count">0</span>)
+            </td> 
+             <td style="width: 20%; border: 1px solid black; text-align: center;">
+                Qty: <span id="qty-total">0</span>
+            </td>
+            <td style="width: 20%; border: 1px solid black;"></td> 
+            <td style="width: 20%; border: 1px solid black;"></td> 
+        </tr>
+    </tbody>
+</table>
+        <div class="footer-controls">
+            <div class="buttons">
+                <a href=""><button type="button">Quotation</button></a>
+
+                <button type="button">Order</button>
+                <button type="button">Option</button>
+            </div>
+
+            <div>
+                <span class="total-red">0.00</span> Received :<input type="number" step="0.01" name="received">
+                <span class="total-blue">Balance :</span><input type="number" step="0.01" name="balance">
+            </div>
+
+            
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <label for="points">Total Points:</label>
+        <input type="text" id="points" name="points" readonly style="width: 100px; height: 6px; font-size: 16px; padding: 6px;">
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <label for="total_earned">Today Points:</label>
+        <input type="text" id="total_earned" name="total_earned" readonly style="width: 100px; height: 6px; font-size: 16px; padding: 6px;">
+    </div>
+</div>
+<div class="buttons">
+                <button type="submit">Save</button>
+                <a href="{% url 'billing' %}"><button type="button">Exit</button>
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+
+    document.addEventListener('DOMContentLoaded', function () {
+    const qtyInput = document.querySelector('[name="qty"]');
+    const mrspInput = document.querySelector('[name="mrsp"]');
+    const pointsEarnedInput = document.getElementById('points_earned'); 
+    const totalEarnedInput = document.getElementById('total_earned');   
+
+    function updateTodayPoints() {
+        const qty = parseFloat(qtyInput.value) || 0;
+        const mrsp = parseFloat(mrspInput.value) || 0;
+        const total = qty * mrsp;
+        const todayPoints = total / 200;
+
+        pointsEarnedInput.value = todayPoints.toFixed(2);   
+        totalEarnedInput.value = todayPoints.toFixed(2);    
+    }
+
+    qtyInput.addEventListener('input', updateTodayPoints);
+    mrspInput.addEventListener('input', updateTodayPoints);
+});
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+    const phoneInput = document.getElementById('cell');
+    const nameInput = document.getElementById('name');
+    const pointsInput = document.getElementById('points');
+    const totalEarnedInput = document.getElementById('total_earned');
+    const qtyInput = document.querySelector('[name="qty"]');
+    const mrspInput = document.querySelector('[name="mrsp"]');
+    const pointsEarnedInput = document.getElementById('points_earned');
+
+    phoneInput.addEventListener('change', function () {
+        const phone = phoneInput.value;
+        if (phone.length > 4) {
+            fetch(`?phone=${phone}`, {
+                headers: { 'x-requested-with': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+         .then(data => {
+    nameInput.value = data.name || '';
+    pointsInput.value = data.points || 0;
+
+    document.getElementById('email').value = data.email || '';
+    document.getElementById('address').value = data.address || '';
+
+    const joinDateInput = document.getElementById('date_joined');
+    if (data.date_joined) {
+        joinDateInput.value = data.date_joined;
+        joinDateInput.readOnly = true; 
+    } else {
+        const today = new Date().toISOString().split('T')[0];
+        joinDateInput.value = today;
+        joinDateInput.readOnly = false;
+    }
+});
+        }
+    });
+
+    function calculatePoints() {
+        const qty = parseFloat(qtyInput.value) || 0;
+        const mrsp = parseFloat(mrspInput.value) || 0;
+        const total = qty * mrsp;
+        const earned = total / 200;
+        pointsEarnedInput.value = earned.toFixed(2);
+    }
+
+    qtyInput.addEventListener('input', calculatePoints);
+    mrspInput.addEventListener('input', calculatePoints);
+});
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const cellInput = document.getElementById('cell');
+    const nameInput = document.getElementById('name');
+    const modal = document.getElementById('nameModal');
+    const modalNameInput = document.getElementById('modalNameInput');
+
+    cellInput.addEventListener('blur', function () {
+        const phone = cellInput.value.trim();
+        if (phone !== "") {
+            fetch(`?phone=${encodeURIComponent(phone)}`, {
+                method: "GET",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.name) {
+                    nameInput.value = data.name;
+                } else {
+                    modal.style.display = 'flex';
+                    modalNameInput.value = '';
+                    modalNameInput.focus();
+                }
+            });
+        }
+    });
+
+    modalNameInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();  
+            submitName();            
+        }
+    });
+
+    window.submitName = function () {
+        const enteredName = modalNameInput.value.trim();
+        if (enteredName !== "") {
+            nameInput.value = enteredName;
+            modal.style.display = 'none';
+        } else {
+            modalNameInput.style.border = "2px solid red";
+        }
+    };
+});
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    const receivedInput = document.querySelector('input[name="received"]');
+    const balanceInput = document.querySelector('input[name="balance"]');
+    const itemCountDisplay = document.getElementById('item-count');
+    const totalText = document.querySelector('.total-red');
+
+    function updateCalculations() {
+        let totalAmount = 0;
+        let itemCount = 0;
+        let totalQty = 0;
+
+        const rows = document.querySelectorAll('.item-table:nth-of-type(1) tbody tr');
+
+        rows.forEach(row => {
+            const qtyInput = row.querySelector('input[name="qty"]');
+            const mrspInput = row.querySelector('input[name="mrsp"]');
+            const amountOutput = row.querySelector('.amount-output');
+
+            const qty = parseFloat(qtyInput?.value || 0);
+            const mrsp = parseFloat(mrspInput?.value || 0);
+            const rowAmount = qty * mrsp;
+
+
+            if (qty > 0) {
+                itemCount++;
+                totalQty += qty;
+                totalAmount += rowAmount;
+            }
+            amountOutput.value = rowAmount.toFixed(2);
+
+        });
+
+        const received = parseFloat(receivedInput?.value || 0);
+        const balance = received - totalAmount;
+
+        totalText.textContent = totalAmount.toFixed(2);
+        balanceInput.value = balance.toFixed(2);
+        itemCountDisplay.textContent = itemCount;
+        document.getElementById('qty-total').textContent = totalQty;
+    }
+
+    function attachInputListeners() {
+        document.querySelectorAll('input[name="qty"], input[name="mrsp"]').forEach(input => {
+            input.addEventListener('input', updateCalculations);
+        });
+    }
+
+    receivedInput.addEventListener('input', updateCalculations);
+
+    attachInputListeners(); 
+});
+
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    updateCalculations();
+});
+
+</script>
+
+</body>
+</html>
+{% endblock content %}

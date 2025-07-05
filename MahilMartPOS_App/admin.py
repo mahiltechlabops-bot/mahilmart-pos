@@ -1,6 +1,9 @@
 from django.contrib import admin
-from .models import Product, Category, Supplier  # Import all at once
-from .forms import SupplierForm
+from .models import Product, Category, Supplier
+from django.contrib import admin
+from .models import Customer
+from .models import Billing
+
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -16,3 +19,14 @@ class CategoryAdmin(admin.ModelAdmin):
 class SupplierAdmin(admin.ModelAdmin):
     list_display = ('name', 'contact_person', 'phone', 'email')
     search_fields = ('name', 'contact_person')
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ('name', 'phone', 'email', 'date_joined')
+    search_fields = ('name', 'phone', 'email')
+
+
+@admin.register(Billing)
+class BillingAdmin(admin.ModelAdmin):
+    list_display = ('name', 'phone', 'email', 'date_joined')
+    search_fields = ('name', 'phone', 'email')
