@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Item Creation{% endblock %}
+
+{% block content %}
+<style>
+    h2 {
+        margin-top: 0;
+        text-align: center;
+        color: white;
+        background-color: #060636;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 10px;
+        max-height: 750px; /* set your preferred height */
+        overflow-y: auto;  /* adds scroll if content overflows */
+    }
+
+    .section {
+        background-color: #e0f7fa;
+        padding: 15px;
+        border-radius: 10px;
+        flex: 1;
+        min-width: 300px;
+    }
+
+    table {
+        width: 100%;
+        border-spacing: 10px;
+    }
+
+    td {
+        vertical-align: top;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    input[type="text"], select {
+        width: 100%;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    .buttons {
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    button {
+        padding: 10px 20px;
+        margin: 5px;
+        border: none;
+        background-color: #00796b;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: #004d40;
+    }
+
+    .picture-box {
+        border: 1px solid #ccc;
+        background-color: white;
+        width: 100px;
+        height: 100px;
+        margin-bottom: 10px;
+    }
+</style>
+
+<h2>Item Creation</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="container">
+
+        <!-- Item Info -->
+        <div class="section">
+            <h3>Item Information</h3>
+            <table>
+                <tr>
+                    <td><label>Code</label><input type="text" name="code" required></td>
+                    <td><label>Status</label>
+                        <select name="status">
+                            <option>Active</option>
+                            <option>Inactive</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr><td colspan="2"><label>Item Name</label><input type="text" name="item_name" required></td></tr>
+                <tr><td colspan="2"><label>Print Name (optional)</label><input type="text" name="print_name"></td></tr>
+                <tr>
+                    <td>
+                        <label for="unit">Unit</label>
+                        <select name="unit" id="unit">
+                        <option value="">-- Select Unit --</option>
+                            {% for u in units %}
+                                <option value="{{ u.id }}">{{ u.unit_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <label for="p_unit">P. Unit</label>
+                        <select name="P_unit" id="p_unit">
+                            <option value="">-- Select Unit --</option>
+                            {% for u in units %}
+                                <option value="{{ u.id }}">{{ u.unit_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                <td colspan="2">
+                    <label for="group">Group</label>
+                    <select name="group" id="group" required>
+                        <option value="">-- Select Group --</option>
+                        {% for g in groups %}
+                            <option value="{{ g.id }}">{{ g.group_name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+    
+                <tr>
+                    <td colspan="2">
+                        <label for="brand">Brand</label>
+                        <select name="brand" id="brand">
+                            <option value="">-- Select Brand --</option>
+                            {% for b in brands %}
+                                <option value="{{ b.id }}">{{ b.brand_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr><td colspan="2"><label>Tax</label><input type="text" name="tax"></td></tr>
+                <tr><td colspan="2"><label>HSN / SAC</label><input type="text" name="hsn_sac"></td></tr>
+                <tr>
+                    <td><label>Use MRP</label>
+                        <select name="use_mrp">
+                            <option>Yes</option>
+                            <option selected>No</option>
+                        </select>
+                    </td>
+                    <td><label>Points</label><input type="text" name="points"></td>
+                </tr>
+                <tr><td colspan="2"><label>Cess Per Qty</label><input type="text" name="cess_per_qty"></td></tr>
+            </table>
+        </div>
+
+        <!-- Pricing -->
+        <div class="section">
+            <h3>Pricing Details</h3>
+            <table>
+                <tr><td><label>P. Rate</label><input type="text" name="p_rate"></td></tr>
+                <tr><td><label>Cost Rate</label><input type="text" name="cost_rate"></td></tr>
+                <tr><td><label>MRP</label><input type="text" name="mrp"></td></tr>
+                <tr><td><label>Sale Rate</label><input type="text" name="sale_rate"></td></tr>
+                <tr><td><label>Whole Rate</label><input type="text" name="whole_rate"></td></tr>
+                <tr><td><label>Whole Rate 2</label><input type="text" name="whole_rate2"></td></tr>
+                <tr><td><label>Min Stock</label><input type="text" name="min_stock"></td></tr>
+            </table>
+
+             <label>Carry Over</label>
+            <select name="carry_over">
+                <option disabled selected>Select Carry Over</option>
+                <option>Yes</option>
+                <option>No</option>
+            </select>
+
+            <label>Manual</label>
+            <select name="manual">
+                <option disabled selected>Select Manual</option>
+                <option>Yes</option>
+                <option>No</option>
+            </select>
+
+            <label>Stock Item</label>
+            <select name="stock_item">
+                <option disabled selected>Select Stock Item</option>
+                <option>Yes</option>
+                <option>No</option>
+            </select>
+        </div>            
+        
+
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="buttons">
+          <a href="{% url 'unit_creation' %}">
+            <button type="button">Unit's</button>
+        </a>
+          <a href="{% url 'group_creation' %}">
+            <button type="button">Group's</button>
+        </a>
+          <a href="{% url 'brand_creation' %}">
+            <button type="button">Brand's</button>
+        </a>          
+        <a href="{% url 'item_barcode' %}">
+            <button type="button">Barcode's</button>
+        </a>
+        <button type="submit">Save</button>
+        <button type="button" onclick="window.location.href='{% url 'dashboard' %}'">Exit</button>
+        <button type="reset">Reset</button>
+    </div>
+</form>
+{% endblock %}

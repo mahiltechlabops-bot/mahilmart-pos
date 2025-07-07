@@ -75,6 +75,83 @@ class Billing(models.Model):
     def __str__(self):
         return f"Invoice {self.bill_no} - {self.item_name}"
     
+
+class Item(models.Model):
+    code = models.CharField(max_length=30)
+    item_name = models.CharField(max_length=50)
+    print_name = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=10)
+    unit = models.CharField(max_length=20, blank=True, null=True)
+    P_unit = models.IntegerField(blank=True, null=True)
+    group = models.CharField(max_length=100, blank=True, null=True)
+    brand = models.CharField(max_length=100, blank=True, null=True)
+    tax = models.IntegerField(blank=True, null=True)
+    HSN_SAC = models.IntegerField(blank=True, null=True)
+    P_rate = models.IntegerField()
+    cost_rate = models.IntegerField()
+    MRSP = models.IntegerField()
+    sale_rate = models.IntegerField()
+    whole_rate = models.IntegerField()
+    whole_rate_2 = models.IntegerField()
+    use_MRP = models.CharField(max_length=10)
+    min_stock = models.CharField(max_length=100)
+    stock_item = models.CharField(max_length=10)
+    carry_over = models.CharField(max_length=10)
+    manual = models.CharField(max_length=10)
+    points = models.IntegerField()
+    cess_per_qty =  models.IntegerField()
+    picture = models.ImageField()
+    barcode = models.CharField(max_length=100)
+    other = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.item_name
+    
+
+class ItemBarcode(models.Model):
+    barcode = models.CharField(max_length=100, unique=True)
+    item_code = models.CharField(max_length=50)
+    item_name = models.CharField(max_length=100, blank=True, null=True)
+    unit = models.CharField(max_length=20)
+    mrp = models.DecimalField(max_digits=10, decimal_places=2)
+    sale_price = models.DecimalField(max_digits=10, decimal_places=2)
+    whole_price = models.DecimalField(max_digits=10, decimal_places=2)
+    whole_price1 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    generated_on = models.DateTimeField(auto_now_add=True)
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.barcode} - {self.item_name or self.item_code}"
+
+class Unit(models.Model):
+    unit_name = models.CharField(max_length=50)
+    print_name = models.CharField(max_length=50)
+    decimals = models.DecimalField(max_digits=10,decimal_places=2)
+    UQC = models.CharField(max_length=10)
+
+    def __str__(self):
+        return f"{self.unit_name} ({self.UQC})"
+    
+class Group(models.Model):
+    group_name = models.CharField(max_length=50)
+    alias_name = models.CharField(max_length=50)
+    under = models.CharField(max_length=50)
+    print_name = models.CharField(max_length=50)
+    commodity = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.group_name
+    
+class Brand(models.Model):
+    brand_name = models.CharField(max_length=50)
+    alias_name = models.CharField(max_length=50)
+    under = models.CharField(max_length=50)
+    print_name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.brand_name
+
+    
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, phone_number, role, status, password=None):
         if not email:

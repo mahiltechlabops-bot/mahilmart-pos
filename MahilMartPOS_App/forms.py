@@ -125,3 +125,32 @@ class CompanySettingsForm(forms.ModelForm):
             raise forms.ValidationError("Passwords do not match.")
 
         return cleaned_data
+
+class ItemForm(forms.Form):
+    code = forms.CharField(label="Code", required=True)
+    status = forms.ChoiceField(label="Status Active", choices=[("Yes", "Yes"), ("No", "No")], initial="No")
+    item_name = forms.CharField(label="Item Name", required=True)
+    print_name = forms.CharField(label="Print Name", required=False)
+    unit = forms.CharField(label="Unit", required=False)
+    p_unit = forms.CharField(label="P. Unit", required=False)
+    group = forms.CharField(label="Group", required=False)
+    brand = forms.CharField(label="Brand", required=False)
+    tax = forms.CharField(label="Tax", required=False)
+    hsn_sac = forms.CharField(label="HSN / SAC", required=False)
+    use_mrp = forms.ChoiceField(label="Use MRP", choices=[("Yes", "Yes"), ("No", "No")], initial="No")
+    points = forms.CharField(label="Points", required=False)
+    cess_per_qty = forms.CharField(label="Cess Per Qty", required=False)
+
+    # Pricing Section
+    p_rate = forms.CharField(label="P. Rate", required=False)
+    cost_rate = forms.CharField(label="Cost Rate", required=False)
+    mrp = forms.CharField(label="MRP", required=False)
+    sale_rate = forms.CharField(label="Sale Rate", required=False)
+    whole_rate = forms.CharField(label="Whole Rate", required=False)
+    whole_rate2 = forms.CharField(label="Whole Rate 2", required=False)
+    min_stock = forms.CharField(label="Min Stock", required=False)
+
+    # Options
+    carry_over = forms.ChoiceField(label="Carry Over", choices=[("Yes", "Yes"), ("No", "No")], initial="No")
+    manual = forms.ChoiceField(label="Manual", choices=[("Yes", "Yes"), ("No", "No")], initial="No")
+    stock_item = forms.ChoiceField(label="Stock Item", choices=[("Yes", "Yes"), ("No", "No")], initial="No")

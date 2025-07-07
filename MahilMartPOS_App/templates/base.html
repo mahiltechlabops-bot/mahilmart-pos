@@ -155,15 +155,28 @@
 </head>
 <body>
   
-<header class="app-header">
-    <div>
-        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+<header class="app-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; color: white;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <button class="sidebar-toggle" id="sidebarToggle" style="background: none; border: none; color: white; font-size: 20px;">
+            <i class="fas fa-bars"></i>
+        </button>
         <strong>MahilMart POS</strong>
     </div>
-    <div>
-        <span>Admin: Mahil</span> | <span>Role: Operator</span>
+
+    <div style="display: flex; align-items: center; gap: 20px;">
+        <span>Admin: Mahil</span>
+        <span>Role: Operator</span>
+
+        <!-- Logout Button -->
+        <form method="POST" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Logout
+            </button>
+        </form>
     </div>
 </header>
+
 
 <div class="app-container">
     <!-- Sidebar -->
@@ -176,7 +189,7 @@
             <li class="nav-item active" data-page="sale_return"><a href="{% url 'sale_return' %}"><i class="fas fa-undo-alt"></i>Sales Return</a></li>
 
             <li class="nav-item active" data-page="products"><a href="{% url 'products' %}"><i class="fas fa-boxes"></i>Products</a></li>
-            <li class="nav-item" data-page="items"><a href="#"><i class="fas fa-box"></i>Items</a></li>
+            <li class="nav-item active" data-page="items"><a href="{% url 'items' %}"><i class="fas fa-box"></i>Items</a></li>
             <li class="nav-item active" data-page="purchase"><a href="{% url 'purchase' %}"><i class="fas fa-truck-loading"></i>Purchase</a></li>
             <li class="nav-item active" data-page="purchase_return"><a href="{% url 'purchase_return' %}"><i class="fas fa-undo"></i>Purchase Return</a></li>
             <li class="nav-item active" data-page="stock_adjustment"><a href="{% url 'stock_adjustment' %}"><i class="fas fa-sliders-h"></i>Stock Adjustment</a></li>

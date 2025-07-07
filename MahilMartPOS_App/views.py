@@ -11,6 +11,7 @@ from django.db.models import Min
 from .models import User
 from .forms import CompanySettingsForm
 from django.contrib import messages
+from .models import Item, ItemBarcode, Unit, Group, Brand
 
 def home(request):
     return render(request, 'home.html')
@@ -115,6 +116,150 @@ def create_invoice_view(request):
         'today_date': today_date,
         'bill_no': next_bill_no
     })
+
+# Create your views
+def item_creation(request):  
+    if request.method == "POST":
+        code = request.POST.get('code')
+        status = request.POST.get('status')
+        item_name = request.POST.get('item_name')
+        print_name = request.POST.get('print_name')
+
+        # Safely fetch ForeignKey instances using get_object_or_404 or check
+        unit_id = request.POST.get('unit')
+        P_unit_id = request.POST.get('P_unit')
+        group_id = request.POST.get('group')
+        brand_id = request.POST.get('brand')        
+
+        unit = get_object_or_404(Unit, id=unit_id) if unit_id else None
+        P_unit = get_object_or_404(Unit, id=P_unit_id) if P_unit_id else None
+        group = get_object_or_404(Group, id=group_id) if group_id else None
+        brand = get_object_or_404(Brand, id=brand_id) if brand_id else None
+
+        tax = request.POST.get('tax')
+        HSN_SAC = request.POST.get('hsn_sac')
+        use_MRP = request.POST.get('use_mrp') == "Yes"
+        points = request.POST.get('points') or 0
+        cess_per_qty = request.POST.get('cess_per_qty') or 0
+
+        # Optional float conversion for numeric fields
+        P_rate = request.POST.get('p_rate') or 0
+        cost_rate = request.POST.get('cost_rate') or 0
+        MRSP = request.POST.get('mrp') or 0
+        sale_rate = request.POST.get('sale_rate') or 0
+        whole_rate = request.POST.get('whole_rate') or 0
+        whole_rate_2 = request.POST.get('whole_rate2') or 0
+        min_stock = request.POST.get('min_stock') or 0
+
+        # Save item
+        Item.objects.create(
+            code=code,
+            status=status,
+            item_name=item_name,
+            print_name=print_name,
+            unit=unit,
+            P_unit=P_unit,
+            group=group,
+            brand=brand,
+            tax=tax,
+            HSN_SAC=HSN_SAC,
+            use_MRP=use_MRP,
+            points=points,
+            cess_per_qty=cess_per_qty,
+            P_rate=P_rate,
+            cost_rate=cost_rate,
+            MRSP=MRSP,
+            sale_rate=sale_rate,
+            whole_rate=whole_rate,
+            whole_rate_2=whole_rate_2,
+            min_stock=min_stock
+        )
+        return redirect('item_creation')
+
+    # Render with dropdown options
+    context = {
+        'units': Unit.objects.all(),
+        'brands': Brand.objects.all(),
+        'groups': Group.objects.all()
+    }
+    return render(request, 'items.html', context)
+
+def Item_barcode(request):
+    if request.method == 'POST':
+        barcode = request.POST.get('barcode')
+        item_code = request.POST.get('item_code')
+        item_name = request.POST.get('item_name')
+        unit = request.POST.get('unit')
+        mrp = request.POST.get('mrp')
+        sale_price = request.POST.get('sale_price')
+        whole_price = request.POST.get('whole_price')
+        generated_on = request.POST.get('generated_on')
+        active = True if request.POST.get('active') == 'on' else False
+        
+        ItemBarcode.objects.create(
+            barcode=barcode,
+            item_code=item_code,
+            item_name=item_name,
+            unit=unit,
+            mrp=mrp,
+            sale_price=sale_price,
+            whole_price=whole_price,
+            generated_on=generated_on,
+            active=active
+        )
+        return redirect('item_barcode')
+    
+    return render(request,'barcode.html')
+
+def Unit_creation(request):
+    if request.method == 'POST':
+        unit_name = request.POST.get('unit_name')
+        print_name = request.POST.get('print_name')
+        decimals = request.POST.get('decimals')
+        UQC = request.POST.get('UQC')
+
+        Unit.objects.create(
+            unit_name=unit_name,
+            print_name=print_name,
+            decimals=decimals,
+            UQC=UQC
+        )
+        return redirect('unit_creation')
+    return render(request,'unit.html')
+
+def Group_creation(request):
+    if request.method == 'POST':
+        group_name = request.POST.get('group_name')
+        alias_name = request.POST.get('alias_name')
+        under = request.POST.get('under')
+        print_name = request.POST.get('print_name')
+        commodity = request.POST.get('commodity')
+
+        Group.objects.create(
+            group_name=group_name,
+            alias_name=alias_name,
+            under=under,
+            print_name=print_name,
+            commodity=commodity
+        )
+        return redirect('group_creation')
+    return render(request,'group.html')
+
+def Brand_creation(request):
+    if request.method == 'POST':
+        brand_name = request.POST.get('brand_name')
+        alias_name = request.POST.get('alias_name')
+        under = request.POST.get('under')
+        print_name = request.POST.get('print_name')
+
+        Brand.objects.create(
+            brand_name=brand_name,
+            alias_name=alias_name,
+            under=under,
+            print_name=print_name,
+        )
+        return redirect('brand_creation')
+    return render(request,'brand.html')
 
 def order_view(request):
     return render(request, 'order.html')

@@ -14,7 +14,8 @@
         }
 
         .main-container {
-            max-width: 1300px;
+            max-width: 2000px;
+            height: 1000px;
             margin: 40px auto;
             background-color: #7eeaee;
             padding: 0;
@@ -175,8 +176,19 @@
                 </select>
             </div>
 
-            <div class="form-group"><label>Order No :</label><input type="text" name="order_no"></div>
-            <div class="form-group"><label>Phone :</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" required></div>
+            <div class="form-group"><label>Cust Id :</label><input type="text" name="order_no"></div>            
+            <div class="form-group"><label>Phone :</label><input
+                type="text"
+                id="cell"
+                name="cell"
+                placeholder="Enter phone number"
+                required
+                maxlength="10"
+                pattern="[6-9][0-9]{9}"
+                title="Phone number must start with 6, 7, 8, or 9 and be exactly 10 digits"
+                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);"
+                />
+            </div>
             <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
             <div class="form-group"><label>Email :</label><input type="email" name="email" id="email"></div>
             <div class="form-group"><label>Join Date :</label><input type="date" name="date_joined" id="date_joined" value="{{ today_date }}"></div>
@@ -196,28 +208,31 @@
         <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div>
             
         </div>
-        <table class="item-table">
-            <thead>
+        <table class="item-table table table-bordered" style="width: 100%;">
+    <thead>
         <tr>
             <th style="width: 10%;">Sno</th>
-            <th style="width: 20%;">Code</th>
+            <th style="width: 10%;">Code</th>
             <th style="width: 30%;">Item Name</th>
-            <th style="width: 20%;">Qty</th>
-            <th style="width: 20%;">MRSP</th>
-            <th style="width: 20%;">Amount</th>
+            <th style="width: 10%;">Qty</th>
+            <th style="width: 15%;">MRP Price</th>
+            <th style="width: 15%;">Sale Price</th>
+            <th style="width: 15%;">Amount</th>
         </tr>
     </thead>
-    <tbody>
+    <tbody id="itemTableBody">
         <tr>
             <td><input type="number" name="sno" class="table-input"></td>
             <td><input type="text" name="code" class="table-input"></td>
             <td><input type="text" name="item_name" class="table-input"></td>
-            <td><input type="number" name="qty" class="table-input"></td>
-            <td><input type="number" name="mrsp" class="table-input"></td>
+            <td><input type="number" name="qty" class="table-input" oninput="updateAmount(this)"></td>
+            <td><input type="number" name="mrp" class="table-input"></td>
+            <td><input type="number" name="sale_price" class="table-input" oninput="updateAmount(this)"></td>
             <td><input type="text" class="table-input amount-output" readonly></td>
         </tr>
     </tbody>
 </table>
+<button id="addItemButton" type="button" class="btn btn-success mt-2">Add Item</button>
 <br><br>
 
 <table class="item-table">
@@ -240,8 +255,7 @@
             <div class="buttons">
                 <a href=""><button type="button">Quotation</button></a>
 
-                <button type="button">Order</button>
-                <button type="button">Option</button>
+                <button type="button">Order</button>                
             </div>
 
             <div>
@@ -253,7 +267,7 @@
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
     <div style="display: flex; align-items: center; gap: 8px;">
         <label for="points">Total Points:</label>
-        <input type="text" id="points" name="points" readonly style="width: 100px; height: 6px; font-size: 16px; padding: 6px;">
+        <input type="text" id="points" name="points" readonly style="width: 100px; height: 7px; font-size: 16px; padding: 6px;">
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
         <label for="total_earned">Today Points:</label>
@@ -270,110 +284,84 @@
 </div>
 
 <script>
-
-    document.addEventListener('DOMContentLoaded', function () {
-    const qtyInput = document.querySelector('[name="qty"]');
-    const mrspInput = document.querySelector('[name="mrsp"]');
-    const pointsEarnedInput = document.getElementById('points_earned'); 
-    const totalEarnedInput = document.getElementById('total_earned');   
-
-    function updateTodayPoints() {
-        const qty = parseFloat(qtyInput.value) || 0;
-        const mrsp = parseFloat(mrspInput.value) || 0;
-        const total = qty * mrsp;
-        const todayPoints = total / 200;
-
-        pointsEarnedInput.value = todayPoints.toFixed(2);   
-        totalEarnedInput.value = todayPoints.toFixed(2);    
-    }
-
-    qtyInput.addEventListener('input', updateTodayPoints);
-    mrspInput.addEventListener('input', updateTodayPoints);
+ document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all components
+    initCustomerManagement();
+    initPointsSystem();
+    initBillingSystem();
 });
 
-
-    document.addEventListener('DOMContentLoaded', function () {
+function initCustomerManagement() {
     const phoneInput = document.getElementById('cell');
-    const nameInput = document.getElementById('name');
-    const pointsInput = document.getElementById('points');
-    const totalEarnedInput = document.getElementById('total_earned');
-    const qtyInput = document.querySelector('[name="qty"]');
-    const mrspInput = document.querySelector('[name="mrsp"]');
-    const pointsEarnedInput = document.getElementById('points_earned');
-
-    phoneInput.addEventListener('change', function () {
-        const phone = phoneInput.value;
-        if (phone.length > 4) {
-            fetch(`?phone=${phone}`, {
-                headers: { 'x-requested-with': 'XMLHttpRequest' }
-            })
-            .then(response => response.json())
-         .then(data => {
-    nameInput.value = data.name || '';
-    pointsInput.value = data.points || 0;
-
-    document.getElementById('email').value = data.email || '';
-    document.getElementById('address').value = data.address || '';
-
-    const joinDateInput = document.getElementById('date_joined');
-    if (data.date_joined) {
-        joinDateInput.value = data.date_joined;
-        joinDateInput.readOnly = true; 
-    } else {
-        const today = new Date().toISOString().split('T')[0];
-        joinDateInput.value = today;
-        joinDateInput.readOnly = false;
-    }
-});
-        }
-    });
-
-    function calculatePoints() {
-        const qty = parseFloat(qtyInput.value) || 0;
-        const mrsp = parseFloat(mrspInput.value) || 0;
-        const total = qty * mrsp;
-        const earned = total / 200;
-        pointsEarnedInput.value = earned.toFixed(2);
-    }
-
-    qtyInput.addEventListener('input', calculatePoints);
-    mrspInput.addEventListener('input', calculatePoints);
-});
-
-  document.addEventListener('DOMContentLoaded', function () {
-    const cellInput = document.getElementById('cell');
     const nameInput = document.getElementById('name');
     const modal = document.getElementById('nameModal');
     const modalNameInput = document.getElementById('modalNameInput');
 
-    cellInput.addEventListener('blur', function () {
-        const phone = cellInput.value.trim();
+    if (!phoneInput) return;
+
+    phoneInput.addEventListener('change', function() {
+        const phone = phoneInput.value.trim();
+        if (phone.length > 4) {
+            fetchCustomerData(phone);
+        }
+    });
+
+    phoneInput.addEventListener('blur', function() {
+        const phone = phoneInput.value.trim();
         if (phone !== "") {
-            fetch(`?phone=${encodeURIComponent(phone)}`, {
-                method: "GET",
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.name) {
-                    nameInput.value = data.name;
-                } else {
-                    modal.style.display = 'flex';
-                    modalNameInput.value = '';
-                    modalNameInput.focus();
-                }
-            });
+            fetchCustomerData(phone);
         }
     });
 
-    modalNameInput.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();  
-            submitName();            
-        }
-    });
+ function fetchCustomerData(phone) {
+    fetch(`?phone=${encodeURIComponent(phone)}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.name) {
+                // Existing customer found
+                nameInput.value = data.name;
+                document.getElementById('email').value = data.email || '';
+                document.getElementById('address').value = data.address || '';
+                updateJoinDate(data.date_joined);
+                document.getElementById('points').value = data.points || 0;
+            } else {
+                // New customer - show modal
+                showNameModal();
+            }
+        })
+        .catch(error => console.error('Error fetching customer:', error));
+    }
 
-    window.submitName = function () {
+    function updateJoinDate(date) {
+        const joinDateInput = document.getElementById('date_joined');
+        if (date) {
+            joinDateInput.value = date;
+            joinDateInput.readOnly = true;
+        } else {
+            joinDateInput.value = new Date().toISOString().split('T')[0];
+            joinDateInput.readOnly = false;
+        }
+    }
+
+    function showNameModal() {
+        if (!modal) return;
+        modal.style.display = 'flex';
+        modalNameInput.value = '';
+        modalNameInput.focus();
+    }
+
+    if (modalNameInput) {
+        modalNameInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitName();
+            }
+        });
+    }
+
+    window.submitName = function() {
         const enteredName = modalNameInput.value.trim();
         if (enteredName !== "") {
             nameInput.value = enteredName;
@@ -382,71 +370,124 @@
             modalNameInput.style.border = "2px solid red";
         }
     };
-});
+}
 
+function initPointsSystem() {
+    const pointsInput = document.getElementById('points');
+    const totalEarnedInput = document.getElementById('total_earned');
+    const pointsEarnedInput = document.getElementById('points_earned');
 
-document.addEventListener('DOMContentLoaded', function () {
+    if (!pointsInput) return;
+
+    // Event delegation for points calculation
+    document.getElementById('itemTableBody')?.addEventListener('input', function(e) {
+        if (e.target.name === 'qty' || e.target.name === 'sale_price') {
+            calculatePoints();
+        }
+    });
+
+    function calculatePoints() {
+        let totalPoints = 0;
+        document.querySelectorAll('#itemTableBody tr').forEach(row => {
+            const qty = parseFloat(row.querySelector('input[name="qty"]')?.value) || 0;
+            const salePrice = parseFloat(row.querySelector('input[name="sale_price"]')?.value) || 0;
+            totalPoints += (qty * salePrice) / 200;
+        });
+
+        if (pointsEarnedInput) pointsEarnedInput.value = totalPoints.toFixed(2);
+        if (totalEarnedInput) totalEarnedInput.value = totalPoints.toFixed(2);
+    }
+}
+
+function initBillingSystem() {
     const receivedInput = document.querySelector('input[name="received"]');
     const balanceInput = document.querySelector('input[name="balance"]');
     const itemCountDisplay = document.getElementById('item-count');
-    const totalText = document.querySelector('.total-red');
+    const qtyTotalDisplay = document.getElementById('qty-total');
+    const totalAmountDisplay = document.querySelector('.total-red');
+
+    if (!itemCountDisplay) return;
+
+    // Event delegation for dynamic rows
+    document.getElementById('itemTableBody')?.addEventListener('input', function(e) {
+        if (e.target.name === 'qty' || e.target.name === 'sale_price') {
+            updateRowAmount(e.target.closest('tr'));
+            updateCalculations();
+        }
+    });
+
+    if (receivedInput) {
+        receivedInput.addEventListener('input', updateCalculations);
+    }
+
+    document.getElementById('addItemButton')?.addEventListener('click', addNewRow);
 
     function updateCalculations() {
         let totalAmount = 0;
         let itemCount = 0;
         let totalQty = 0;
 
-        const rows = document.querySelectorAll('.item-table:nth-of-type(1) tbody tr');
-
-        rows.forEach(row => {
-            const qtyInput = row.querySelector('input[name="qty"]');
-            const mrspInput = row.querySelector('input[name="mrsp"]');
-            const amountOutput = row.querySelector('.amount-output');
-
-            const qty = parseFloat(qtyInput?.value || 0);
-            const mrsp = parseFloat(mrspInput?.value || 0);
-            const rowAmount = qty * mrsp;
-
-
+        document.querySelectorAll('#itemTableBody tr').forEach(row => {
+            const qty = parseFloat(row.querySelector('input[name="qty"]')?.value) || 0;
+            const salePrice = parseFloat(row.querySelector('input[name="sale_price"]')?.value) || 0;
+            
             if (qty > 0) {
                 itemCount++;
                 totalQty += qty;
-                totalAmount += rowAmount;
+                totalAmount += qty * salePrice;
             }
-            amountOutput.value = rowAmount.toFixed(2);
-
         });
 
-        const received = parseFloat(receivedInput?.value || 0);
-        const balance = received - totalAmount;
-
-        totalText.textContent = totalAmount.toFixed(2);
-        balanceInput.value = balance.toFixed(2);
+        totalAmountDisplay.textContent = totalAmount.toFixed(2);
         itemCountDisplay.textContent = itemCount;
-        document.getElementById('qty-total').textContent = totalQty;
+        qtyTotalDisplay.textContent = totalQty;
+
+        if (receivedInput && balanceInput) {
+            const received = parseFloat(receivedInput.value) || 0;
+            balanceInput.value = (received - totalAmount).toFixed(2);
+        }
     }
 
-    function attachInputListeners() {
-        document.querySelectorAll('input[name="qty"], input[name="mrsp"]').forEach(input => {
-            input.addEventListener('input', updateCalculations);
+    function updateRowAmount(row) {
+        const qty = parseFloat(row.querySelector('input[name="qty"]')?.value) || 0;
+        const salePrice = parseFloat(row.querySelector('input[name="sale_price"]')?.value) || 0;
+        const amountOutput = row.querySelector('.amount-output');
+        
+        if (amountOutput) {
+            amountOutput.value = (qty * salePrice).toFixed(2);
+        }
+    }
+
+    function addNewRow(e) {
+        e.preventDefault();
+        const tableBody = document.getElementById('itemTableBody');
+        if (!tableBody || tableBody.rows.length === 0) return;
+
+        const newRow = tableBody.rows[0].cloneNode(true);
+        
+        newRow.querySelectorAll('input').forEach(input => {
+            if (!input.classList.contains('amount-output')) {
+                input.value = '';
+            } else {
+                input.value = '0.00';
+            }
+        });
+
+        tableBody.appendChild(newRow);
+        updateSerialNumbers();
+    }
+
+    function updateSerialNumbers() {
+        document.querySelectorAll('#itemTableBody tr').forEach((row, index) => {
+            const snoInput = row.querySelector('input[name="sno"]');
+            if (snoInput) snoInput.value = index + 1;
         });
     }
 
-    receivedInput.addEventListener('input', updateCalculations);
-
-    attachInputListeners(); 
-});
-
-document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-});
-
-document.addEventListener('DOMContentLoaded', function () {
+    // Initial calculations
     updateCalculations();
-});
-
+}
 </script>
-
 </body>
 </html>
 {% endblock content %}
