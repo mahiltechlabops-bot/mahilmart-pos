@@ -12,6 +12,10 @@ from .models import User
 from .forms import CompanySettingsForm
 from django.contrib import messages
 from .models import Item, ItemBarcode, Unit, Group, Brand
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+from .models import Purchase, PurchaseItem, Supplier, Item
 
 def home(request):
     return render(request, 'home.html')
@@ -174,7 +178,7 @@ def item_creation(request):
             whole_rate_2=whole_rate_2,
             min_stock=min_stock
         )
-        return redirect('item_creation')
+        return redirect('items')
 
     # Render with dropdown options
     context = {
@@ -270,11 +274,129 @@ def products_view(request):
 def sale_return_view(request):
     return render(request, 'sale_return.html')
 
+from .models import Supplier, Item, Purchase, PurchaseItem
+
 def purchase_view(request):
-    suppliers = Supplier.objects.all()
-    return render(request, 'purchase.html', {
-        'suppliers': suppliers
-    })
+    if request.method == 'POST':
+        supplier_id = request.POST.get('supplier')
+        supplier = get_object_or_404(Supplier, id=supplier_id)
+        purchase = Purchase.objects.create(supplier=supplier)
+
+        rows = zip(
+            request.POST.getlist('item_code'),
+            request.POST.getlist('qty'),
+            request.POST.getlist('price'),
+            request.POST.getlist('discount'),
+            request.POST.getlist('tax'),
+            request.POST.getlist('mrp'),
+            request.POST.getlist('whole_price'),
+            request.POST.getlist('whole_price1'),
+            request.POST.getlist('sale_price'),
+        )
+
+        for code, qty, price, disc, tax, mrp, wp, wp1, sp in rows:
+            item = get_object_or_404(Item, code=code)
+            qty = float(qty)
+            price = float(price)
+            discount = float(disc)
+            tax = float(tax)
+
+            total = qty * price
+            net = total - discount + (total * tax / 100)
+
+            PurchaseItem.objects.create(
+                purchase=purchase,
+                item=item,
+                quantity=qty,
+                unit_price=price,
+                total_price=total,
+                discount=discount,
+                tax=tax,
+                net_price=net,
+                mrp_price=mrp,
+                whole_price=wp,
+                whole_price_2=wp1,
+                sale_price=sp,
+            )
+
+        return redirect('purchase_list')
+
+    context = {
+        'suppliers': Supplier.objects.all(),
+        'items': Item.objects.all(),
+    }
+    return render(request, 'purchase.html', context)
+
+
+from django.http import JsonResponse
+from .models import Item
+
+def fetch_item(request):
+    name = request.GET.get('name', '').strip()
+    code = request.GET.get('code', '').strip()
+
+    item = None
+
+    if code:
+        item = Item.objects.filter(code__iexact=code).first()
+
+    if not item and name:
+        item = Item.objects.filter(item_name__iexact=name).first()
+
+    if item:
+        return JsonResponse({
+            'item_name': item.item_name,
+            'code': item.code,
+            'group': item.group or '',
+            'brand': item.brand or '',
+            'unit': item.unit or '',
+            'tax': item.tax,
+            'wholesale': item.whole_rate,
+            'wholesale_1': item.whole_rate_2,
+            'sale_price': item.sale_rate,
+            'mrp': item.MRSP,
+        })
+
+    return JsonResponse({'error': 'Item not found'}, status=404)
+
+@csrf_exempt
+def create_purchase(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            supplier_id = data.get("supplier_id")        
+            items_data = data.get("items", [])
+
+            supplier = Supplier.objects.get(id=supplier_id)
+            purchase = Purchase.objects.create(supplier=supplier) 
+            
+
+            for item in items_data:
+                item_obj = Item.objects.filter(code=item['item_code']).first()
+                if not item_obj:
+                    continue
+
+                PurchaseItem.objects.create(
+                    purchase=purchase,
+                    item=item_obj,
+                    quantity=item['quantity'],
+                    unit_price=item['price'],
+                    total_price=item['total_price'],
+                    discount=item['discount'],
+                    tax=item['tax'],
+                    net_price=item['net_price'],
+                    mrp_price=item['mrp'],
+                    whole_price=item['whole_price'],
+                    whole_price_2=item['whole_price_2'],
+                    sale_price=item['sale_price']
+                )
+
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Invalid method'}, status=405)
 
 def purchase_return_view(request):
     suppliers = Supplier.objects.all()

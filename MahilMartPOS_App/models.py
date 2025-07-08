@@ -21,14 +21,21 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
-
+   
 class Supplier(models.Model):
-    supplier_id = models.CharField(max_length=100, blank=True, null=True)
+    supplier_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
     name = models.CharField(max_length=100)
     contact_person = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.supplier_id:
+            last_supplier = Supplier.objects.order_by('-id').first()
+            next_id = 1 if not last_supplier else last_supplier.id + 1
+            self.supplier_id = f"SUP{next_id:03d}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -82,7 +89,7 @@ class Item(models.Model):
     print_name = models.CharField(max_length=50, blank=True, null=True)
     status = models.CharField(max_length=10)
     unit = models.CharField(max_length=20, blank=True, null=True)
-    P_unit = models.IntegerField(blank=True, null=True)
+    P_unit = models.CharField(max_length=20, blank=True, null=True)
     group = models.CharField(max_length=100, blank=True, null=True)
     brand = models.CharField(max_length=100, blank=True, null=True)
     tax = models.IntegerField(blank=True, null=True)
@@ -263,3 +270,30 @@ class CompanyDetails(models.Model):
     def __str__(self):
         return self.company_name
    
+# purchase & purchase items
+class Purchase(models.Model):
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Purchase #{self.id} - {self.supplier.name}"
+
+
+class PurchaseItem(models.Model):
+    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+
+    supplier_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(max_digits=12, decimal_places=2)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tax = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    net_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    mrp_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    whole_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    whole_price_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    sale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.item.item_name} - {self.quantity} units"

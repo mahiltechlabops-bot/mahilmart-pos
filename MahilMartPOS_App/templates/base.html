@@ -302,6 +302,9 @@
       }
     };
 </script>
-{% block scripts %}{% endblock %}
+{% block scripts %}
+  {% block extra_js %}
+  {% endblock %}
+{% endblock %}
 </body>
 </html>
