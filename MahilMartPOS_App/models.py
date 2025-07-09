@@ -5,17 +5,6 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission
 from django.db import models
 
-
-class Product(models.Model):
-    name = models.CharField(max_length=255)
-    category = models.ForeignKey('MahilMartPOS_App.Category', on_delete=models.CASCADE)
-    supplier = models.ForeignKey('MahilMartPOS_App.Supplier', on_delete=models.SET_NULL, null=True, blank=True)
-    stock = models.IntegerField(default=0)
-    reorder_level = models.IntegerField(default=10)
-
-    def __str__(self):
-        return self.name
-
 class Category(models.Model):
     name = models.CharField(max_length=255)
 
@@ -157,7 +146,24 @@ class Brand(models.Model):
 
     def __str__(self):
         return self.brand_name
+    
+class Product(models.Model):
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
 
+    item_name = models.CharField(max_length=255, default="Unknown")
+    code = models.CharField(max_length=100, blank=True, null=True)
+    group = models.CharField(max_length=100, blank=True, null=True)
+    brand = models.CharField(max_length=100, blank=True, null=True)
+    unit = models.CharField(max_length=50, blank=True, null=True)
+    mrp = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    whole_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    whole_rate_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    sale_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+      return f"{self.item.item_name} from {self.supplier.name}"
     
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, phone_number, role, status, password=None):
@@ -283,7 +289,7 @@ class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
 
-    supplier_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    supplier_id = models.CharField(max_length=100, blank=True, null=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -294,6 +300,11 @@ class PurchaseItem(models.Model):
     whole_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     whole_price_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     sale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    previous_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    purchased_at = models.DateField(default=timezone.now)
+    batch_no = models.CharField(max_length=100, blank=True, null=True)
+    expiry_date = models.DateField(blank=True, null=True)        
 
     def __str__(self):
         return f"{self.item.item_name} - {self.quantity} units"

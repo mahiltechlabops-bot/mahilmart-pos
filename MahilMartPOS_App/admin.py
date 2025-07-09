@@ -5,11 +5,11 @@ from .models import Customer
 from .models import Billing
 
 
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'supplier', 'stock', 'reorder_level')
-    list_filter = ('category', 'supplier')
-    search_fields = ('name',)
+# @admin.register(Product)
+# class ProductAdmin(admin.ModelAdmin):
+#     list_display = ('name', 'category', 'supplier', 'stock', 'reorder_level')
+#     list_filter = ('category', 'supplier')
+#     search_fields = ('name',)
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

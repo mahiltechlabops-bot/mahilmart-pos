@@ -16,6 +16,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 from .models import Purchase, PurchaseItem, Supplier, Item
+from django.utils.dateparse import parse_date
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.utils.dateparse import parse_date
+from .models import Purchase, PurchaseItem, Supplier, Product, Item
 
 def home(request):
     return render(request, 'home.html')
@@ -269,7 +274,9 @@ def order_view(request):
     return render(request, 'order.html')
 
 def products_view(request):
-    return render(request, 'products.html')
+    from .models import Product
+    items = Product.objects.select_related('item', 'supplier')
+    return render(request, 'products.html', {'items': items})
 
 def sale_return_view(request):
     return render(request, 'sale_return.html')
@@ -364,22 +371,41 @@ def create_purchase(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            supplier_id = data.get("supplier_id")        
+            supplier_id = data.get("supplier_id")
             items_data = data.get("items", [])
 
             supplier = Supplier.objects.get(id=supplier_id)
-            purchase = Purchase.objects.create(supplier=supplier) 
-            
+            purchase = Purchase.objects.create(supplier=supplier)
+
+            # Track quantities during this request
+            latest_qty_cache = {}
 
             for item in items_data:
-                item_obj = Item.objects.filter(code=item['item_code']).first()
+                item_code = item.get('item_code')
+                item_obj = Item.objects.filter(code=item_code).first()
                 if not item_obj:
                     continue
 
+                item_id = item_obj.id
+                qty_purchased = float(item['quantity'])
+
+                # Fetch previous quantity
+                if item_id in latest_qty_cache:
+                    previous_qty = latest_qty_cache[item_id]
+                else:
+                    last = PurchaseItem.objects.filter(item=item_obj).order_by('-id').first()
+                    previous_qty = float(last.total_qty) if last else 0
+
+                total_qty = previous_qty + qty_purchased
+
+                # Update in-memory cache
+                latest_qty_cache[item_id] = total_qty
+
+                # Save purchase item with correct qtys
                 PurchaseItem.objects.create(
                     purchase=purchase,
                     item=item_obj,
-                    quantity=item['quantity'],
+                    quantity=qty_purchased,
                     unit_price=item['price'],
                     total_price=item['total_price'],
                     discount=item['discount'],
@@ -388,7 +414,28 @@ def create_purchase(request):
                     mrp_price=item['mrp'],
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
-                    sale_price=item['sale_price']
+                    sale_price=item['sale_price'],
+                    supplier_id=item.get('supplier_id'),
+                    purchased_at=parse_date(item.get('purchased_at')),
+                    batch_no=item.get('batch_no', ''),
+                    expiry_date=parse_date(item.get('expiry_date')),
+                    previous_qty=previous_qty,
+                    total_qty=total_qty
+                )
+
+                # Optional product snapshot
+                Product.objects.create(
+                    supplier=supplier,
+                    item=item_obj,
+                    item_name=item_obj.item_name,
+                    code=item_obj.code,
+                    group=item_obj.group,
+                    brand=item_obj.brand,
+                    unit=item_obj.unit,
+                    mrp=item_obj.MRSP,
+                    whole_rate=item_obj.whole_rate,
+                    whole_rate_2=item_obj.whole_rate_2,
+                    sale_rate=item_obj.sale_rate
                 )
 
             return JsonResponse({'success': True})
@@ -408,24 +455,26 @@ def stock_adjustment_view(request):
     products = Product.objects.all()
     return render(request, 'stock_adjustment.html', {'products': products})
 
+from django.shortcuts import render
+from .models import PurchaseItem
+from django.db.models import Q
+
 def inventory_view(request):
-    from .models import Product, Category
+    query = request.GET.get('q', '').strip()
 
-    q = request.GET.get('q')
-    category_id = request.GET.get('category')
+    # Base queryset
+    items = PurchaseItem.objects.select_related('item').order_by('-id')
 
-    products = Product.objects.all()
-
-    if category_id:
-        products = products.filter(category_id=category_id)
-    if q:
-        products = products.filter(name__icontains=q)
-
-    categories = Category.objects.all()
+    # Apply search if provided
+    if query:
+        items = items.filter(
+            Q(item__item_name__icontains=query) |
+            Q(item__code__icontains=query) |
+            Q(item__brand__icontains=query)
+        )
 
     return render(request, 'inventory.html', {
-        'products': products,
-        'categories': categories
+        'items': items
     })
 
 def product_detail(request, pk):

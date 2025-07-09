@@ -15,6 +15,7 @@
 
   .inventory-table th, .inventory-table td {
     vertical-align: middle;
+    font-size: 14px;
   }
 
   .low-stock {
@@ -31,6 +32,11 @@
     float: right;
     margin-bottom: 10px;
   }
+
+  .btn-sm {
+    padding: 3px 6px;
+    font-size: 12px;
+  }
 </style>
 {% endblock %}
 
@@ -38,77 +44,67 @@
 <div class="inventory-container">
   <h3>Inventory Overview</h3>
 
-  <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
-
-  <!-- Category Filter Form -->
-  <form method="get" class="d-flex align-items-center gap-2">
-    <label for="category" class="mb-0">Category:</label>
-    <select name="category" id="category" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">All</option>
-      {% for c in categories %}
-        <option value="{{ c.id }}" {% if request.GET.category == c.id|stringformat:"s" %}selected{% endif %}>
-          {{ c.name }}
-        </option>
-      {% endfor %}
-    </select>
-    {% if request.GET.q %}
-      <input type="hidden" name="q" value="{{ request.GET.q }}">
-    {% endif %}
-  </form>
-
-  <!-- Search Form -->
   <form method="get" class="search-bar">
-    {% if request.GET.category %}
-      <input type="hidden" name="category" value="{{ request.GET.category }}">
-    {% endif %}
     <input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Search products...">
   </form>
 
-</div>
-
-  <div class="table-responsive">
+  <div class="table-responsive mt-3">
     <table class="table table-bordered table-sm inventory-table">
       <thead class="table-light">
         <tr>
-          <th>#</th>
-          <th>Product</th>
-          <th>Category</th>
-          <th>Supplier</th>
-          <th>Stock</th>
-          <th>Reorder Level</th>
-          <th>Status</th>
+          <th>S no</th>
+          <th>Inventory ID</th>
+          <th>Supplier ID</th>
+          <th>Item Name</th>
+          <th>Group</th>
+          <th>Brand</th>
+          <th>Sale Price</th>
+          <th>Discount</th>
+          <th>Tax</th>
+          <th>Net Price</th>
+          <th>Qty Purchased</th>
+          <th>Previous Qty</th>
+          <th>Total Qty</th>
+          <th>Purchased At</th>
+          <th>Batch No</th>
+          <th>Expiry Date</th>
           <th style="min-width: 120px;">Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for product in products %}
+        {% for item in items %}
         <tr>
           <td>{{ forloop.counter }}</td>
-          <td>{{ product.name }}</td>
-          <td>{{ product.category.name }}</td>
-          <td>{{ product.supplier.name }}</td>
-          <td>{{ product.stock }}</td>
-          <td>{{ product.reorder_level }}</td>
+          <td>{{ item.id }}</td>
+          <td>{{ item.supplier_id }}</td>
+          <td>{{ item.item.item_name }}</td>
+          <td>{{ item.item.group }}</td>
+          <td>{{ item.item.brand }}</td>
+          <td>₹ {{ item.sale_price }}</td>
+          <td>{{ item.discount }}%</td>
+          <td>{{ item.tax }}%</td>
+          <td>₹ {{ item.net_price }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.previous_qty }}</td>
+          <td>{{ item.quantity|add:item.previous_qty }}</td>
+          <td>{{ item.purchased_at|date:"Y-m-d" }}</td>
+          <td>{{ item.batch_no }}</td>
+          <td>{{ item.expiry_date|date:"Y-m-d" }}</td>
           <td>
-            {% if product.stock <= product.reorder_level %}
-              <span class="low-stock">Low Stock</span>
+            {% if item.item.id %}           
+              <a href="{% url 'stock_adjustment' %}?product={{ item.item.id }}" class="btn btn-sm btn-warning">Adjust Stock</a>
             {% else %}
-              <span class="text-success">In Stock</span>
+              <span class="text-muted">No Product</span>
             {% endif %}
-          </td>
-          <td>
-            <a href="{% url 'product_detail' product.id %}" class="btn btn-sm btn-info">View</a>
-            <a href="{% url 'stock_adjustment' %}?product={{ product.id }}" class="btn btn-sm btn-warning">Adjust</a>
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8" class="text-center text-muted">No products found.</td>
+          <td colspan="16" class="text-center text-muted">No products found.</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    
   </div>
 </div>
 {% endblock %}
