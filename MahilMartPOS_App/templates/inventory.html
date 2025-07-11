@@ -31,6 +31,7 @@
     max-width: 300px;
     float: right;
     margin-bottom: 10px;
+    margin-left: 0;
   }
 
   .btn-sm {
@@ -44,9 +45,14 @@
 <div class="inventory-container">
   <h3>Inventory Overview</h3>
 
+<div class="d-flex justify-content-start">
   <form method="get" class="search-bar">
     <input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Search products...">
   </form>
+</div>
+
+
+  <br>
 
   <div class="table-responsive mt-3">
     <table class="table table-bordered table-sm inventory-table">

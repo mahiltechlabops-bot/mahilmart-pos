@@ -17,22 +17,39 @@
     margin-bottom: 15px;
   }
 
-  .btn {
-    padding: 8px 14px;
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-  }
+   .button-group {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 25px;
+    }
 
-  .btn-success {
-    background-color: #28a745;
-    color: white;
-  }
+    .button-group button {
+        padding: 10px 20px;
+        font-size: 15px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
 
-  .btn-success:hover {
-    background-color: #218838;
-  }
+    .button-group button[type="submit"] {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .button-group button[type="submit"]:hover {
+        background-color: #218838;
+    }
+
+    .button-group .exit-button {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .button-group .exit-button:hover {
+        background-color: #c82333;
+    }
 </style>
 {% endblock %}
 
@@ -68,14 +85,17 @@
       <option value="expired">Expired</option>
       <option value="inventory_correction">Inventory Correction</option>
       <option value="manual_adjustment">Manual Adjustment</option>
-    </select>
+    </select> 
+    
 
     <label for="remarks">Remarks</label>
     <textarea name="remarks" id="remarks" class="form-control" rows="3"></textarea>
 
-    <button type="submit" class="btn btn-success mt-2">Submit Adjustment</button>
-    <button type="button" class="exit-button" onclick="window.location.href='{% url 'inventory' %}'">Exit</button>
-  
+   <div class="button-group">
+            <button type="submit">Save</button>
+            <button type="button" class="exit-button" onclick="window.location.href='{% url 'inventory' %}'">Exit</button>
+   </div>
+
   </form>
 </div>
 {% endblock %}

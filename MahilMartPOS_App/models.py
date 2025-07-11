@@ -71,7 +71,6 @@ class Billing(models.Model):
     def __str__(self):
         return f"Invoice {self.bill_no} - {self.item_name}"
     
-
 class Item(models.Model):
     code = models.CharField(max_length=30)
     item_name = models.CharField(max_length=50)
@@ -81,7 +80,7 @@ class Item(models.Model):
     P_unit = models.CharField(max_length=20, blank=True, null=True)
     group = models.CharField(max_length=100, blank=True, null=True)
     brand = models.CharField(max_length=100, blank=True, null=True)
-    tax = models.IntegerField(blank=True, null=True)
+    tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     HSN_SAC = models.IntegerField(blank=True, null=True)
     P_rate = models.IntegerField()
     cost_rate = models.IntegerField()
@@ -103,7 +102,6 @@ class Item(models.Model):
     def __str__(self):
         return self.item_name
     
-
 class ItemBarcode(models.Model):
     barcode = models.CharField(max_length=100, unique=True)
     item_code = models.CharField(max_length=50)
@@ -146,6 +144,46 @@ class Brand(models.Model):
 
     def __str__(self):
         return self.brand_name
+
+class Tax(models.Model):
+    tax_name = models.CharField(max_length=100)
+    print_name = models.CharField(max_length=100)
+    tax_type = models.CharField(max_length=20)  
+    effect_form = models.DateField()
+    rounded = models.IntegerField(default=0)   
+    gst_type = models.CharField(max_length=50, blank=True, null=True)
+    gst_percent = models.FloatField()
+    round_type = models.CharField(max_length=20)  
+    cess_percent = models.FloatField(default=0.0)
+
+    # SGST fields
+    sgst_percent = models.FloatField()
+    # sales
+    sgst_sales_account_1 = models.CharField(max_length=100) 
+    sgst_sales_account_2 = models.CharField(max_length=100)  
+    sgst_sales_return_1 = models.CharField(max_length=100)   
+    sgst_sales_return_2 = models.CharField(max_length=100)   
+    # purchase
+    sgst_purchase_account_1 = models.CharField(max_length=100) 
+    sgst_purchase_account_2 = models.CharField(max_length=100)  
+    sgst_purchase_return_1 = models.CharField(max_length=100)   
+    sgst_purchase_return_2 = models.CharField(max_length=100)   
+
+    # CGST fields
+    cgst_percent = models.FloatField()
+    # sales
+    cgst_sales_account_1 = models.CharField(max_length=100)  
+    cgst_sales_account_2 = models.CharField(max_length=100)  
+    cgst_sales_return_1 = models.CharField(max_length=100)   
+    cgst_sales_return_2 = models.CharField(max_length=100)   
+    # purchase
+    cgst_purchase_account_1 = models.CharField(max_length=100)  
+    cgst_purchase_account_2 = models.CharField(max_length=100)
+    cgst_purchase_return_1 = models.CharField(max_length=100)   
+    cgst_purchase_return_2 = models.CharField(max_length=100)   
+
+    def __str__(self):
+        return self.tax_name    
     
 class Product(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
@@ -279,6 +317,7 @@ class CompanyDetails(models.Model):
 # purchase & purchase items
 class Purchase(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
+    # invoice = models.CharField(max_length=100, unique=False, default="INV-0000")  
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -304,7 +343,8 @@ class PurchaseItem(models.Model):
     total_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     purchased_at = models.DateField(default=timezone.now)
     batch_no = models.CharField(max_length=100, blank=True, null=True)
+    # invoice = models.CharField(max_length=100, unique=True)
     expiry_date = models.DateField(blank=True, null=True)        
 
     def __str__(self):
-        return f"{self.item.item_name} - {self.quantity} units"
+        return f"{self.supplier.name} - {self.invoice}"

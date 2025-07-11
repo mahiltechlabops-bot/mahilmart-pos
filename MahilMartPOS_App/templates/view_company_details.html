@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-lg rounded p-4">
+    <h2 class="text-center mb-4 text-primary">Company Details</h2>
+
+    {% if company %}
+    <div class="row">
+      <div class="col-md-6">
+        <p><strong>ID:</strong> {{ company.id }}</p>
+        <p><strong>Company Name:</strong> {{ company.company_name }}</p>
+        <p><strong>Print Name:</strong> {{ company.print_name }}</p>
+        <p><strong>Address:</strong> {{ company.address }}</p>
+        <p><strong>Pin Code:</strong> {{ company.pincode }}</p>
+        <p><strong>State:</strong> {{ company.state }}</p>
+        <p><strong>Country:</strong> {{ company.country }}</p>
+        <p><strong>Phone:</strong> {{ company.phone }}</p>
+        <p><strong>Mobile:</strong> {{ company.mobile }}</p>
+        <p><strong>Email:</strong> {{ company.email }}</p>
+        <p><strong>Website:</strong> {{ company.website }}</p>
+        <p><strong>GSTIN:</strong> {{ company.gstin }}</p>
+        <p><strong>GST Type:</strong> {{ company.gst_type }}</p>
+        <p><strong>PAN No:</strong> {{ company.pan_no }}</p>
+        <p><strong>FSSAI No:</strong> {{ company.fssai_no }}</p>
+        <p><strong>Trade License No:</strong> {{ company.trade_license_no }}</p>
+      </div>
+
+      <div class="col-md-6">
+        <p><strong>Invoice Prefix:</strong> {{ company.invoice_prefix }}</p>
+        <p><strong>Invoice Start Number:</strong> {{ company.invoice_start_num }}</p>
+        <p><strong>Default Tax Rate:</strong> {{ company.default_tax_rate }}</p>
+        <p><strong>Bank Name:</strong> {{ company.bank_name }}</p>
+        <p><strong>Account No:</strong> {{ company.account_no }}</p>
+        <p><strong>IFSC Code:</strong> {{ company.ifsc_code }}</p>
+        <p><strong>Year From:</strong> {{ company.year_from }}</p>
+        <p><strong>Year To:</strong> {{ company.year_to }}</p>
+        <p><strong>Auto Backup:</strong> {{ company.auto_backup|yesno:"Yes,No" }}</p>
+        <p><strong>Backup Path:</strong> {{ company.daily_backup_path }}</p>
+        <p><strong>Printer Name:</strong> {{ company.printer_name }}</p>
+        <p><strong>Auto Logout (mins):</strong> {{ company.auto_logout_minutes }}</p>
+        <p><strong>Opening Time:</strong> {{ company.opening_time }}</p>
+        <p><strong>Closing Time:</strong> {{ company.closing_time }}</p>
+        <p><strong>Is Sunday Open:</strong> {{ company.is_sunday_open }}</p>
+        <p><strong>Admin Password:</strong> ********</p>
+        <p><strong>Confirm Password:</strong> ********</p>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="alert alert-warning text-center">
+      No company details found.
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+      <a href="{% url 'company_details' %}" class="btn btn-dark">Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

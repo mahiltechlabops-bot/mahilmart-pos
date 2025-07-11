@@ -21,6 +21,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils.dateparse import parse_date
 from .models import Purchase, PurchaseItem, Supplier, Product, Item
+from .models import Tax
+from .models import CompanyDetails
 
 def home(request):
     return render(request, 'home.html')
@@ -185,11 +187,11 @@ def item_creation(request):
         )
         return redirect('items')
 
-    # Render with dropdown options
     context = {
         'units': Unit.objects.all(),
         'brands': Brand.objects.all(),
-        'groups': Group.objects.all()
+        'groups': Group.objects.all(),
+        'taxes': Tax.objects.all()
     }
     return render(request, 'items.html', context)
 
@@ -269,6 +271,72 @@ def Brand_creation(request):
         )
         return redirect('brand_creation')
     return render(request,'brand.html')
+
+def Tax_creation(request):
+    if request.method =='POST':
+        tax_name = request.POST.get('tax_name')
+        print_name = request.POST.get('print_name')
+        tax_type = request.POST.get('tax_type')
+        effect_form = request.POST.get('effect_form')
+        rounded = int(request.POST.get('rounded'))
+        gst_type = request.POST.get('gst_type')
+        gst_percent = int(request.POST.get('gst_percent'))
+        round_type = request.POST.get('round_type')
+        cess_percent = request.POST.get('cess_percent')
+
+        sgst_percent = float(request.POST.get('sgst_percent') or 0)
+        sgst_sales_account_1 = request.POST.get('sgst_sales_account_1')
+        sgst_sales_account_2 = request.POST.get('sgst_sales_account_2')
+        sgst_sales_return_1 = request.POST.get('sgst_sales_return_1')
+        sgst_sales_return_2 = request.POST.get('sgst_sales_return_2')
+
+        sgst_purchase_account_1 = request.POST.get('sgst_purchase_account_1')
+        sgst_purchase_account_2 = request.POST.get('sgst_purchase_account_2')
+        sgst_purchase_return_1 = request.POST.get('sgst_purchase_return_1')
+        sgst_purchase_return_2 = request.POST.get('sgst_purchase_return_2')
+
+        cgst_percent = float(request.POST.get('cgst_percent') or 0)
+        cgst_sales_account_1 = request.POST.get('cgst_sales_account_1')
+        cgst_sales_account_2 = request.POST.get('cgst_sales_account_2')
+        cgst_sales_return_1 = request.POST.get('cgst_sales_return_1')
+        cgst_sales_return_2 = request.POST.get('cgst_sales_return_2')
+
+        cgst_purchase_account_1 = request.POST.get('cgst_purchase_account_1')
+        cgst_purchase_account_2 = request.POST.get('cgst_purchase_account_2')
+        cgst_purchase_return_1 = request.POST.get('cgst_purchase_return_1')
+        cgst_purchase_return_2 = request.POST.get('cgst_purchase_return_2')
+
+        Tax.objects.create(
+            tax_name=tax_name,
+            print_name=print_name,
+            tax_type=tax_type,
+            effect_form=effect_form,
+            rounded=rounded,
+            gst_type=gst_type,
+            gst_percent=gst_percent,
+            round_type=round_type,
+            cess_percent=cess_percent,
+            sgst_percent=sgst_percent,
+            sgst_sales_account_1=sgst_sales_account_1,
+            sgst_sales_account_2=sgst_sales_account_2,
+            sgst_sales_return_1=sgst_sales_return_1,
+            sgst_sales_return_2=sgst_sales_return_2,
+            sgst_purchase_account_1=sgst_purchase_account_1,
+            sgst_purchase_account_2=sgst_purchase_account_2,
+            sgst_purchase_return_1=sgst_purchase_return_1,
+            sgst_purchase_return_2=sgst_purchase_return_2,
+            cgst_percent=cgst_percent,
+            cgst_sales_account_1=cgst_sales_account_1,
+            cgst_sales_account_2=cgst_sales_account_2,
+            cgst_sales_return_1=cgst_sales_return_1,
+            cgst_sales_return_2=cgst_sales_return_2,
+            cgst_purchase_account_1=cgst_purchase_account_1,
+            cgst_purchase_account_2=cgst_purchase_account_2,
+            cgst_purchase_return_1=cgst_purchase_return_1,
+            cgst_purchase_return_2=cgst_purchase_return_2,
+        )
+        return redirect('tax_creation')
+    return render(request,'tax.html')
 
 def order_view(request):
     return render(request, 'order.html')
@@ -372,10 +440,13 @@ def create_purchase(request):
         try:
             data = json.loads(request.body)
             supplier_id = data.get("supplier_id")
+            # 
+            invoice = data.get("invoice")            
             items_data = data.get("items", [])
 
             supplier = Supplier.objects.get(id=supplier_id)
-            purchase = Purchase.objects.create(supplier=supplier)
+            purchase = Purchase.objects.create(supplier=supplier)        
+            # purchase = Purchase.objects.create(supplier=supplier, invoice=invoice)
 
             # Track quantities during this request
             latest_qty_cache = {}
@@ -529,7 +600,7 @@ def customers_view(request):
         'customer_entries': customer_entries,
         'billing_customers': billing_customers
     })
-
+ 
 def add_customer(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -619,3 +690,7 @@ def company_settings_view(request):
         form = CompanySettingsForm()
 
     return render(request, 'company_details.html', {'form': form})
+
+def view_company_details(request):
+    company = CompanyDetails.objects.last()
+    return render(request, 'view_company_details.html', {'company': company})

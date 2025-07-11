@@ -159,8 +159,9 @@
     </div>
 
     <div class="btn-group">
-      <button type="submit" name="action" value="save" class="btn btn-custom btn-save">Save</button>
-      <a href="{% url 'home' %}" class="btn btn-custom btn-exit">Exit</a>
+        <button type="submit" name="action" value="save" class="btn btn-custom btn-save">Save</button>
+        <a href="{% url 'view_company_details' %}" class="btn btn-info no-hover-change" >Show Details</a>
+        <a href="{% url 'dashboard' %}" class="btn btn-custom btn-exit">Exit</a>
     </div>
   </form>
 </div>

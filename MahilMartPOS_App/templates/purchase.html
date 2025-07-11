@@ -74,7 +74,7 @@
 
 {% block content %}
 <main class="app-content">
-  <div class="card p-4">
+  <div class="card p-4 mx-auto" style="width: 150%;">
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
 
     <!-- Supplier Selection -->
@@ -106,7 +106,7 @@
           <th>Qty</th>
           <th>Price</th>
           <th>Total</th>
-          <th>Disc</th>
+          <th>Discount</th>
           <th>Tax</th>
           <th>Net</th>
           <th>MRP</th>
@@ -114,7 +114,8 @@
           <th>Wh 1</th>
           <th>Sale Price</th>
           <th>Purchased At</th>
-          <th>Batch</th>
+          <th>Batch No</th>
+          <th>Invoice No</th>
           <th>Expiry Date</th>
           <th>Action</th>
         </tr>
@@ -180,6 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <td><input type="number" class="form-control sale_price" value="0" step="0.01"></td>
     <td><input type="date" class="form-control purchased_at" value="${new Date().toISOString().slice(0,10)}"></td>
     <td><input type="text" class="form-control batch_no"></td>
+    <td><input type="text" class="form-control invoice"></td>
     <td><input type="date" class="form-control expiry_date"></td>
     <td><button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button></td>
   `;

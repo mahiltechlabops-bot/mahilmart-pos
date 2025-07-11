@@ -13,6 +13,7 @@ urlpatterns = [
     path('unit', views.Unit_creation, name='unit_creation'),
     path('group', views.Group_creation, name='group_creation'),
     path('brand', views.Brand_creation, name='brand_creation'),
+    path('tax', views.Tax_creation, name='tax_creation'),
     path('sale_return/', views.sale_return_view, name='sale_return'),
     path('purchase/', views.purchase_view, name='purchase'),
     path('api/item/fetch/', views.fetch_item, name='fetch_item'),
@@ -28,5 +29,6 @@ urlpatterns = [
     path('submit-customer/', views.submit_customer, name='submit_customer'),
     path('user/', views.user_view, name='user'),
     path('company/', views.company_settings_view, name='company_details'),
+    path('company-details/view/', views.view_company_details, name='view_company_details'),
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
 ]

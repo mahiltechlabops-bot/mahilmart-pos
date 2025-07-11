@@ -145,7 +145,18 @@
                         </select>
                     </td>
                 </tr>
-                <tr><td colspan="2"><label>Tax</label><input type="text" name="tax"></td></tr>
+                 <tr>
+                    <td colspan="2">
+                        <label for="tax">Tax</label>
+                      <select name="tax" id="tax" required>
+                        <option value="">-- Select Tax --</option>
+                        {% for tax in taxes %}
+                            <option value="{{ tax.id }}">{{ tax.tax_name }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                </tr>                                    
+
                 <tr><td colspan="2"><label>HSN / SAC</label><input type="text" name="hsn_sac"></td></tr>
                 <tr>
                     <td><label>Use MRP</label>
@@ -211,6 +222,9 @@
         </a>          
         <a href="{% url 'item_barcode' %}">
             <button type="button">Barcode's</button>
+        </a>
+        <a href="{% url 'tax_creation' %}">
+            <button type="button">Tax</button>
         </a>
         <button type="submit">Save</button>
         <button type="button" onclick="window.location.href='{% url 'dashboard' %}'">Exit</button>
