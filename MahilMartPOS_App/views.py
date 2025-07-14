@@ -23,6 +23,15 @@ from django.utils.dateparse import parse_date
 from .models import Purchase, PurchaseItem, Supplier, Product, Item
 from .models import Tax
 from .models import CompanyDetails
+from django.shortcuts import render
+from django.db.models import Q
+from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.db.models import Sum
+from django.utils import timezone
+from .models import Billing
+from decimal import Decimal
 
 def home(request):
     return render(request, 'home.html')
@@ -43,12 +52,6 @@ def login_view(request):
 
 def dashboard_view(request):
     return render(request, 'dashboard.html') 
-
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.db.models import Sum
-from django.utils import timezone
-from .models import Billing
 
 def create_invoice_view(request):
     # Handle AJAX request for autofill
@@ -439,14 +442,11 @@ def create_purchase(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            supplier_id = data.get("supplier_id")
-            # 
-            invoice = data.get("invoice")            
+            supplier_id = data.get("supplier_id")          
             items_data = data.get("items", [])
 
             supplier = Supplier.objects.get(id=supplier_id)
-            purchase = Purchase.objects.create(supplier=supplier)        
-            # purchase = Purchase.objects.create(supplier=supplier, invoice=invoice)
+            purchase = Purchase.objects.create(supplier=supplier)                    
 
             # Track quantities during this request
             latest_qty_cache = {}
@@ -476,6 +476,9 @@ def create_purchase(request):
                 PurchaseItem.objects.create(
                     purchase=purchase,
                     item=item_obj,
+                    code=item.get('item_code', ''),
+                    item_name=item.get('item_name', ''),
+                    invoice_no=item.get('invoice_no', ''),
                     quantity=qty_purchased,
                     unit_price=item['price'],
                     total_price=item['total_price'],
@@ -522,13 +525,101 @@ def purchase_return_view(request):
         'suppliers': suppliers
     })
 
+@csrf_exempt
 def stock_adjustment_view(request):
-    products = Product.objects.all()
-    return render(request, 'stock_adjustment.html', {'products': products})
+    # Unique products (for dropdown)
+    unique_products = (
+        PurchaseItem.objects
+        .filter(item_name__isnull=False)
+        .order_by('item_name', 'id')
+        .distinct('item_name')
+    )
 
-from django.shortcuts import render
-from .models import PurchaseItem
-from django.db.models import Q
+    # All products with batch info
+    products = PurchaseItem.objects.filter(item_name__isnull=False)
+
+    if request.method == "POST":
+        product_id = request.POST.get("product")
+        adjustment_type = request.POST.get("adjustmentType")
+        quantity = request.POST.get("quantity")
+        reason = request.POST.get("reason")
+        remarks = request.POST.get("remarks")
+
+        if not all([product_id, adjustment_type, quantity]):
+            messages.error(request, "All required fields must be filled.")
+            return redirect('stock_adjustment')
+
+        try:
+            quantity = Decimal(quantity)
+            if quantity <= 0:
+                messages.error(request, "Quantity must be greater than 0.")
+                return redirect('stock_adjustment')
+        except:
+            messages.error(request, "Invalid quantity format.")
+            return redirect('stock_adjustment')
+
+        selected_batch = get_object_or_404(PurchaseItem, id=product_id)
+        item = selected_batch.item
+
+        # Get all batches of the same item, ordered chronologically
+        all_batches = PurchaseItem.objects.filter(item=item).order_by('purchased_at', 'id')
+
+        if adjustment_type == "add":
+            selected_batch.quantity += quantity
+            selected_batch.save()
+
+        elif adjustment_type == "subtract":
+            total_available = sum(b.quantity for b in all_batches)
+            if total_available < quantity:
+                messages.error(request, f"Insufficient total stock. Available: {total_available}")
+                return redirect('stock_adjustment')
+
+            remaining = quantity
+
+            # Subtract from selected batch first
+            if selected_batch.quantity >= remaining:
+                selected_batch.quantity -= remaining
+                selected_batch.save()
+                remaining = 0
+            else:
+                remaining -= selected_batch.quantity
+                selected_batch.quantity = 0
+                selected_batch.save()
+
+            # Continue subtracting from other batches if needed
+            if remaining > 0:
+                for batch in all_batches.exclude(id=selected_batch.id):
+                    if batch.quantity >= remaining:
+                        batch.quantity -= remaining
+                        batch.save()
+                        break
+                    else:
+                        remaining -= batch.quantity
+                        batch.quantity = 0
+                        batch.save()
+        else:
+            messages.error(request, "Invalid adjustment type.")
+            return redirect('stock_adjustment')
+
+        # ✅ Recalculate `previous_qty` and `total_qty` correctly for all batches
+        cumulative_total = Decimal("0.00")
+        for batch in all_batches:
+            batch.previous_qty = cumulative_total
+            batch.total_qty = cumulative_total + batch.quantity
+            batch.save()
+            cumulative_total = batch.total_qty
+
+        messages.success(
+            request,
+            f"Stock successfully adjusted: {adjustment_type.upper()} {quantity} units for '{selected_batch.item_name}' (Batch {selected_batch.batch_no})."
+        )
+        return redirect('stock_adjustment')
+
+    return render(request, "stock_adjustment.html", {
+        "products": products,
+        "unique_products": unique_products
+    })
+
 
 def inventory_view(request):
     query = request.GET.get('q', '').strip()

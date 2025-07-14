@@ -18,7 +18,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='purchaseitem',
             name='invoice',
-            field=models.CharField(default=1, max_length=100, unique=True),
-            preserve_default=False,
-        ),
+            field=models.CharField(default='INV-0001', max_length=100),
+        ),   
     ]

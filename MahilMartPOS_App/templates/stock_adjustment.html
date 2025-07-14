@@ -59,13 +59,29 @@
   <form method="post" id="stockAdjustmentForm">
     {% csrf_token %}
 
-    <label for="product">Product</label>
-    <select name="product" id="product" class="form-control" required>
+    <label for="product_unique">Product (Unique)</label>
+    <select name="product" id="product_unique" class="form-control" required>
       <option value="">-- Select Product --</option>
-      {% for product in products %}
-        <option value="{{ product.id }}">{{ product.name }}</option>
+      {% for product in unique_products %}
+        <option value="{{ product.id }}">{{ product.code }} - {{ product.item_name }}</option>
       {% endfor %}
-    </select>
+   </select>
+
+  <label for="product_batch">Product (Batch-wise)</label>
+  <select name="product" id="product_batch" class="form-control select2" required>
+    <option value="">-- Select Batch --</option>
+    {% for product in products %}
+      <option value="{{ product.id }}">{{ product.code }} - Batch {{ product.batch_no }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="product_date">Product (Purchased At)</label>
+  <select name="product" id="product_date" class="form-control select2" required>
+    <option value="">-- Select Purchased Date --</option>
+    {% for product in products %}
+      <option value="{{ product.id }}">{{ product.code }} - {{ product.purchased_at }}</option>
+    {% endfor %}
+  </select>
 
     <label for="adjustmentType">Adjustment Type</label>
     <select name="adjustmentType" id="adjustmentType" class="form-control" required>
@@ -87,7 +103,6 @@
       <option value="manual_adjustment">Manual Adjustment</option>
     </select> 
     
-
     <label for="remarks">Remarks</label>
     <textarea name="remarks" id="remarks" class="form-control" rows="3"></textarea>
 

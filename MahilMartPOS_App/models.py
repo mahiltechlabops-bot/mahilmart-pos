@@ -316,8 +316,7 @@ class CompanyDetails(models.Model):
    
 # purchase & purchase items
 class Purchase(models.Model):
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
-    # invoice = models.CharField(max_length=100, unique=False, default="INV-0000")  
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)   
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -329,6 +328,8 @@ class PurchaseItem(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
 
     supplier_id = models.CharField(max_length=100, blank=True, null=True)
+    code = models.CharField(max_length=30, blank=True, null=True)
+    item_name = models.CharField(max_length=50, blank=True, null=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -343,8 +344,8 @@ class PurchaseItem(models.Model):
     total_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     purchased_at = models.DateField(default=timezone.now)
     batch_no = models.CharField(max_length=100, blank=True, null=True)
-    # invoice = models.CharField(max_length=100, unique=True)
+    invoice_no = models.CharField(max_length=100, blank=True, null=True)
     expiry_date = models.DateField(blank=True, null=True)        
-
+  
     def __str__(self):
-        return f"{self.supplier.name} - {self.invoice}"
+        return f"{self.supplier_name} - {self.code} - {self.item_name}"
