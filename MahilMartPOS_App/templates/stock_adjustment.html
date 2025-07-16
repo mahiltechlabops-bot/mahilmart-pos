@@ -67,19 +67,13 @@
       {% endfor %}
    </select>
 
-  <label for="product_batch">Product (Batch-wise)</label>
-  <select name="product" id="product_batch" class="form-control select2" required>
-    <option value="">-- Select Batch --</option>
+  <label for="product_combined">Product (Batch + Purchased At)</label>
+  <select name="product" id="product_combined" class="form-control select2" required>
+    <option value="">-- Select Product --</option>
     {% for product in products %}
-      <option value="{{ product.id }}">{{ product.code }} - Batch {{ product.batch_no }}</option>
-    {% endfor %}
-  </select>
-
-  <label for="product_date">Product (Purchased At)</label>
-  <select name="product" id="product_date" class="form-control select2" required>
-    <option value="">-- Select Purchased Date --</option>
-    {% for product in products %}
-      <option value="{{ product.id }}">{{ product.code }} - {{ product.purchased_at }}</option>
+      <option value="{{ product.id }}">
+        {{ product.code }} - Batch {{ product.batch_no }} ({{ product.purchased_at|date:"d M Y" }})
+      </option>
     {% endfor %}
   </select>
 

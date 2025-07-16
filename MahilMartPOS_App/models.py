@@ -12,22 +12,23 @@ class Category(models.Model):
         return self.name
    
 class Supplier(models.Model):
-    supplier_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    supplier_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     name = models.CharField(max_length=100)
-    contact_person = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    address = models.TextField(blank=True, null=True)
-
-    def save(self, *args, **kwargs):
-        if not self.supplier_id:
-            last_supplier = Supplier.objects.order_by('-id').first()
-            next_id = 1 if not last_supplier else last_supplier.id + 1
-            self.supplier_id = f"SUP{next_id:03d}"
-        super().save(*args, **kwargs)
+    contact_person = models.CharField(max_length=100, blank=True, default="Unknown")
+    phone = models.CharField(max_length=15, default="0000000000")
+    email = models.EmailField(blank=True, default="unknown@example.com")
+    address = models.TextField(blank=True, default="N/A")
+    gst_number = models.CharField(max_length=20, blank=True, default="N/A")
+    pan_number = models.CharField(max_length=20, blank=True, default="N/A")
+    credit_terms = models.CharField(max_length=50, blank=True, default="N/A")
+    opening_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    bank_name = models.CharField(max_length=100, blank=True, default="N/A")
+    account_number = models.CharField(max_length=50, blank=True, default="N/A")
+    ifsc_code = models.CharField(max_length=20, blank=True, default="N/A")
+    notes = models.TextField(blank=True, default="")
 
     def __str__(self):
-        return self.name
+        return self.name    
 
 class Customer(models.Model):
     name = models.CharField(max_length=100)
@@ -320,8 +321,7 @@ class Purchase(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"Purchase #{self.id} - {self.supplier.name}"
-
+        return f"Purchase #{self.id} - {self.supplier.name}"          
 
 class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
@@ -347,5 +347,7 @@ class PurchaseItem(models.Model):
     invoice_no = models.CharField(max_length=100, blank=True, null=True)
     expiry_date = models.DateField(blank=True, null=True)        
   
+    # def __str__(self):
+    #     return f"{self.supplier_name} - {self.code} - {self.item_name}"
     def __str__(self):
-        return f"{self.supplier_name} - {self.code} - {self.item_name}"
+        return f"{self.purchase.supplier.name} - {self.code} - {self.item_name}"

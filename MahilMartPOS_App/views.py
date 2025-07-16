@@ -26,12 +26,15 @@ from .models import CompanyDetails
 from django.shortcuts import render
 from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
-from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.db.models import Sum
 from django.utils import timezone
 from .models import Billing
 from decimal import Decimal
+from django.db.models import Q
+from .models import Supplier, Item, Purchase, PurchaseItem
+from django.http import JsonResponse
+from .models import Item
 
 def home(request):
     return render(request, 'home.html')
@@ -139,7 +142,12 @@ def item_creation(request):
         item_name = request.POST.get('item_name')
         print_name = request.POST.get('print_name')
 
-        # Safely fetch ForeignKey instances using get_object_or_404 or check
+        # Get tax percent from Tax object
+        tax_id = request.POST.get('tax')
+        tax_obj = get_object_or_404(Tax, id=tax_id) if tax_id else None
+        gst_percent = tax_obj.gst_percent if tax_obj else None
+
+        # Safely fetch ForeignKey instances
         unit_id = request.POST.get('unit')
         P_unit_id = request.POST.get('P_unit')
         group_id = request.POST.get('group')
@@ -150,13 +158,12 @@ def item_creation(request):
         group = get_object_or_404(Group, id=group_id) if group_id else None
         brand = get_object_or_404(Brand, id=brand_id) if brand_id else None
 
-        tax = request.POST.get('tax')
         HSN_SAC = request.POST.get('hsn_sac')
         use_MRP = request.POST.get('use_mrp') == "Yes"
         points = request.POST.get('points') or 0
         cess_per_qty = request.POST.get('cess_per_qty') or 0
 
-        # Optional float conversion for numeric fields
+        # Convert numeric fields safely
         P_rate = request.POST.get('p_rate') or 0
         cost_rate = request.POST.get('cost_rate') or 0
         MRSP = request.POST.get('mrp') or 0
@@ -165,7 +172,7 @@ def item_creation(request):
         whole_rate_2 = request.POST.get('whole_rate2') or 0
         min_stock = request.POST.get('min_stock') or 0
 
-        # Save item
+        # Create the item
         Item.objects.create(
             code=code,
             status=status,
@@ -175,7 +182,7 @@ def item_creation(request):
             P_unit=P_unit,
             group=group,
             brand=brand,
-            tax=tax,
+            tax=gst_percent,  # Save the gst_percent directly
             HSN_SAC=HSN_SAC,
             use_MRP=use_MRP,
             points=points,
@@ -345,14 +352,29 @@ def order_view(request):
     return render(request, 'order.html')
 
 def products_view(request):
-    from .models import Product
-    items = Product.objects.select_related('item', 'supplier')
-    return render(request, 'products.html', {'items': items})
+    query = request.GET.get('q', '').strip()
+
+    # Get unique product IDs by item code
+    base_queryset = Product.objects.all()
+    if query:
+        base_queryset = base_queryset.filter(item__item_name__icontains=query)
+
+    unique_ids = (
+        base_queryset
+        .values('item__code')
+        .annotate(min_id=Min('id'))
+        .values_list('min_id', flat=True)
+    )
+
+    items = Product.objects.filter(id__in=unique_ids).select_related('item', 'supplier')
+
+    return render(request, 'products.html', {
+        'items': items,
+        'query': query
+    })
 
 def sale_return_view(request):
     return render(request, 'sale_return.html')
-
-from .models import Supplier, Item, Purchase, PurchaseItem
 
 def purchase_view(request):
     if request.method == 'POST':
@@ -405,10 +427,6 @@ def purchase_view(request):
     }
     return render(request, 'purchase.html', context)
 
-
-from django.http import JsonResponse
-from .models import Item
-
 def fetch_item(request):
     name = request.GET.get('name', '').strip()
     code = request.GET.get('code', '').strip()
@@ -436,6 +454,12 @@ def fetch_item(request):
         })
 
     return JsonResponse({'error': 'Item not found'}, status=404)
+
+def purchase_return_view(request):
+    suppliers = Supplier.objects.all()
+    return render(request, 'purchase_return.html', {
+        'suppliers': suppliers
+    })
 
 @csrf_exempt
 def create_purchase(request):
@@ -519,12 +543,6 @@ def create_purchase(request):
 
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
-def purchase_return_view(request):
-    suppliers = Supplier.objects.all()
-    return render(request, 'purchase_return.html', {
-        'suppliers': suppliers
-    })
-
 @csrf_exempt
 def stock_adjustment_view(request):
     # Unique products (for dropdown)
@@ -545,23 +563,26 @@ def stock_adjustment_view(request):
         reason = request.POST.get("reason")
         remarks = request.POST.get("remarks")
 
+        # Validate required fields
         if not all([product_id, adjustment_type, quantity]):
             messages.error(request, "All required fields must be filled.")
             return redirect('stock_adjustment')
 
+        # Validate quantity
         try:
             quantity = Decimal(quantity)
             if quantity <= 0:
                 messages.error(request, "Quantity must be greater than 0.")
                 return redirect('stock_adjustment')
-        except:
+        except InvalidOperation:
             messages.error(request, "Invalid quantity format.")
             return redirect('stock_adjustment')
 
+        # Get the selected batch and item
         selected_batch = get_object_or_404(PurchaseItem, id=product_id)
         item = selected_batch.item
 
-        # Get all batches of the same item, ordered chronologically
+        # Get all batches of the same item
         all_batches = PurchaseItem.objects.filter(item=item).order_by('purchased_at', 'id')
 
         if adjustment_type == "add":
@@ -576,34 +597,28 @@ def stock_adjustment_view(request):
 
             remaining = quantity
 
-            # Subtract from selected batch first
-            if selected_batch.quantity >= remaining:
-                selected_batch.quantity -= remaining
-                selected_batch.save()
-                remaining = 0
-            else:
-                remaining -= selected_batch.quantity
-                selected_batch.quantity = 0
-                selected_batch.save()
+            # Subtract from selected batch first, then others if needed
+            ordered_batches = [selected_batch] + list(all_batches.exclude(id=selected_batch.id))
 
-            # Continue subtracting from other batches if needed
-            if remaining > 0:
-                for batch in all_batches.exclude(id=selected_batch.id):
-                    if batch.quantity >= remaining:
-                        batch.quantity -= remaining
-                        batch.save()
-                        break
-                    else:
-                        remaining -= batch.quantity
-                        batch.quantity = 0
-                        batch.save()
+            for batch in ordered_batches:
+                if remaining <= 0:
+                    break
+
+                if batch.quantity >= remaining:
+                    batch.quantity -= remaining
+                    batch.save()
+                    remaining = Decimal("0")
+                else:
+                    remaining -= batch.quantity
+                    batch.quantity = Decimal("0")
+                    batch.save()
         else:
             messages.error(request, "Invalid adjustment type.")
             return redirect('stock_adjustment')
 
-        # ✅ Recalculate `previous_qty` and `total_qty` correctly for all batches
+        # Recalculate `previous_qty` and `total_qty` for all batches of this item
         cumulative_total = Decimal("0.00")
-        for batch in all_batches:
+        for batch in PurchaseItem.objects.filter(item=item).order_by('purchased_at', 'id'):
             batch.previous_qty = cumulative_total
             batch.total_qty = cumulative_total + batch.quantity
             batch.save()
@@ -619,7 +634,6 @@ def stock_adjustment_view(request):
         "products": products,
         "unique_products": unique_products
     })
-
 
 def inventory_view(request):
     query = request.GET.get('q', '').strip()
@@ -644,7 +658,19 @@ def product_detail(request, pk):
     return render(request, 'product_detail.html', {'product': product})
 
 def suppliers_view(request):
+    search_query = request.GET.get('q', '')
     suppliers = Supplier.objects.all()
+    
+    if search_query:
+        suppliers = suppliers.filter(
+            Q(name__icontains=search_query) |
+            Q(contact_person__icontains=search_query) |
+            Q(phone__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(address__icontains=search_query) |    
+            Q(supplier_id__icontains=search_query)
+        )
+    
     form = SupplierForm()
 
     if request.method == 'POST':
@@ -661,14 +687,49 @@ def suppliers_view(request):
 def add_supplier(request):
     if request.method == 'POST':
         Supplier.objects.create(
+            supplier_id=request.POST.get('supplier_id'),
             name=request.POST.get('name'),
             contact_person=request.POST.get('contact_person'),
             phone=request.POST.get('phone'),
             email=request.POST.get('email'),
             address=request.POST.get('address'),
+            gst_number=request.POST.get('gst_number'),
+            pan_number=request.POST.get('pan_number'),
+            credit_terms=request.POST.get('credit_terms'),
+            opening_balance=request.POST.get('opening_balance') or 0,
+            bank_name=request.POST.get('bank_name'),
+            account_number=request.POST.get('account_number'),
+            ifsc_code=request.POST.get('ifsc_code'),
+            notes=request.POST.get('notes'),
         )
         return redirect('suppliers')
     return render(request, 'add_supplier.html')
+
+def edit_supplier(request, supplier_id):
+    supplier = get_object_or_404(Supplier, pk=supplier_id)
+    if request.method == 'POST':
+        supplier.supplier_id = request.POST.get('supplier_id')
+        supplier.name = request.POST.get('name')
+        supplier.contact_person = request.POST.get('contact_person')
+        supplier.phone = request.POST.get('phone')
+        supplier.email = request.POST.get('email')
+        supplier.address = request.POST.get('address')
+        supplier.gst_number = request.POST.get('gst_number')
+        supplier.pan_number = request.POST.get('pan_number')
+        supplier.credit_terms = request.POST.get('credit_terms')
+        supplier.opening_balance = request.POST.get('opening_balance') or 0
+        supplier.bank_name = request.POST.get('bank_name')
+        supplier.account_number = request.POST.get('account_number')
+        supplier.ifsc_code = request.POST.get('ifsc_code')
+        supplier.notes = request.POST.get('notes')
+        supplier.save()
+        return redirect('suppliers')
+    return render(request, 'edit_supplier.html', {'supplier': supplier})
+
+def delete_supplier(request, supplier_id):
+    supplier = get_object_or_404(Supplier, pk=supplier_id)
+    supplier.delete()
+    return redirect('suppliers')
 
 def customers_view(request):
     try:

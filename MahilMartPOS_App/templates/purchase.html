@@ -115,8 +115,7 @@
           <th>Wh 1</th>
           <th>Sale Price</th>
           <th>Purchased At</th>
-          <th>Batch No</th>
-          <th>Invoice No</th>
+          <th>Batch No</th>    
           <th>Expiry Date</th>
           <th>Action</th>
         </tr>
@@ -164,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const row = document.createElement("tr");
   row.innerHTML = `
     <td class="sno"></td>
-    <td><input type="text" class="form-control supplier-id" readonly></td>
+    <td><input type="text" class="form-control supplier-id" readonly></td>  
     <td><input type="text" class="form-control invoice_no"></td>
     <td><input type="text" class="form-control item-name" onblur="fetchItemDetails(this)"></td>
     <td><input type="text" class="form-control item-code" onblur="fetchItemDetails(this)"></td>
@@ -235,8 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const items = Array.from(document.querySelectorAll('#productTableBody tr')).map(row => ({
-    supplier_id:  row.querySelector('.supplier-id').value,
-    invoice_no: row.querySelector('.invoice_no').value,
+    supplier_id:  row.querySelector('.supplier-id').value,    
     item_name: row.querySelector('.item-name').value,
     item_code: row.querySelector('.item-code').value,
     quantity: row.querySelector('.qty').value,
@@ -251,6 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sale_price: row.querySelector('.sale_price').value,
     purchased_at: new Date().toISOString().slice(0, 10), 
     batch_no: row.querySelector('.batch_no').value,
+    invoice_no: row.querySelector('.invoice_no').value,
     expiry_date: row.querySelector('.expiry_date').value,
   }));
 
