@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Edit Bulk Inventory Item</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    <table>
+        <tr>
+            <th>Item Name</th>
+            <td><input type="text" name="item_name" value="{{ inventory.item_name }}" required></td>
+        </tr>
+        <tr>
+            <th>Item Code</th>
+            <td><input type="text" name="item_code" value="{{ inventory.code }}"></td>
+        </tr>
+        <tr>
+            <th>Group</th>
+            <td><input type="text" name="group" value="{{ inventory.group }}"></td>
+        </tr>
+        <tr>
+            <th>Brand</th>
+            <td><input type="text" name="brand" value="{{ inventory.brand }}"></td>
+        </tr>
+        <tr>
+            <th>Unit</th>
+            <td><input type="text" name="unit" value="{{ inventory.unit }}"></td>
+        </tr>
+        <tr>
+            <th>Batch No</th>
+            <td><input type="text" name="batch_no" value="{{ inventory.batch_no }}"></td>
+        </tr>
+        <tr>
+            <th>Invoice No</th>
+            <td><input type="text" name="invoice_no" value="{{ inventory.invoice_no }}"></td>
+        </tr>
+        <tr>
+            <th>Quantity</th>
+            <td><input type="number" name="quantity" value="{{ inventory.quantity }}"></td>
+        </tr>
+        <tr>
+            <th>Previous Qty</th>
+            <td><input type="number" name="previous_qty" value="{{ inventory.previous_qty }}"></td>
+        </tr>
+        <tr>
+            <th>Total Qty</th>
+            <td><input type="number" name="total_qty" value="{{ inventory.total_qty }}"></td>
+        </tr>
+        <tr>
+            <th>Unit Price</th>
+            <td><input type="number" step="0.01" name="unit_price" value="{{ inventory.unit_price }}"></td>
+        </tr>
+        <tr>
+            <th>Total Price</th>
+            <td><input type="number" step="0.01" name="total_price" value="{{ inventory.total_price }}"></td>
+        </tr>
+        <tr>
+            <th>Discount</th>
+            <td><input type="number" step="0.01" name="discount" value="{{ inventory.discount }}"></td>
+        </tr>
+        <tr>
+            <th>Tax</th>
+            <td><input type="number" step="0.01" name="tax" value="{{ inventory.tax }}"></td>
+        </tr>
+        <tr>
+            <th>Net Price</th>
+            <td><input type="number" step="0.01" name="net_price" value="{{ inventory.net_price }}"></td>
+        </tr>
+        <tr>
+            <th>MRP</th>
+            <td><input type="number" step="0.01" name="mrp_price" value="{{ inventory.mrp_price }}"></td>
+        </tr>
+        <tr>
+            <th>Whole Price</th>
+            <td><input type="number" step="0.01" name="whole_price" value="{{ inventory.whole_price }}"></td>
+        </tr>
+        <tr>
+            <th>Whole Price 2</th>
+            <td><input type="number" step="0.01" name="whole_price_2" value="{{ inventory.whole_price_2 }}"></td>
+        </tr>
+        <tr>
+            <th>Sale Price</th>
+            <td><input type="number" step="0.01" name="sale_price" value="{{ inventory.sale_price }}"></td>
+        </tr>
+        <tr>
+            <th>Purchase Date</th>
+            <td><input type="date" name="purchased_at" value="{{ inventory.purchased_at|date:'Y-m-d' }}"></td>
+        </tr>
+        <tr>
+            <th>Expiry Date</th>
+            <td><input type="date" name="expiry_date" value="{{ inventory.expiry_date|date:'Y-m-d' }}"></td>
+        </tr>
+    </table>
+
+    <div class="button-group">
+        <button type="submit">Save Changes</button>
+        <button type="button" class="exit-button" onclick="window.location.href='{% url 'inventory' %}'">Cancel</button>
+    </div>
+</form>
+{% endblock %}

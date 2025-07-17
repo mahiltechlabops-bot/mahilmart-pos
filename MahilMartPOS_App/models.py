@@ -1,9 +1,7 @@
 from django.db import models
 from django.utils import timezone
-from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission
-from django.db import models
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -204,6 +202,36 @@ class Product(models.Model):
     def __str__(self):
       return f"{self.item.item_name} from {self.supplier.name}"
     
+class StockAdjustment(models.Model):
+    ADJUSTMENT_TYPES = [
+        ('add', 'Add Stock'),
+        ('subtract', 'Subtract Stock'),
+    ]
+
+    REASONS = [
+        ('damaged', 'Damaged'),
+        ('lost', 'Lost'),
+        ('expired', 'Expired'),
+        ('inventory_correction', 'Inventory Correction'),
+        ('manual_adjustment', 'Manual Adjustment'),
+    ]
+
+    invoice_no = models.CharField(max_length=100, default='UNKNOWN')
+    batch_no = models.CharField(max_length=100, default='UNKNOWN')
+    code = models.CharField(max_length=100, default='UNKNOWN')
+    item_name = models.CharField(max_length=255, default='UNKNOWN')
+    supplier_code = models.CharField(max_length=20, default='UNKNOWN')
+
+    purchase_item = models.ForeignKey('MahilMartPOS_App.PurchaseItem', on_delete=models.CASCADE)
+    adjustment_type = models.CharField(max_length=10, choices=ADJUSTMENT_TYPES)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    reason = models.CharField(max_length=30, choices=REASONS, default='manual_adjustment')
+    remarks = models.TextField(blank=True, null=True)
+    adjusted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.adjustment_type.title()} {self.quantity} - {self.purchase_item}"  
+    
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, phone_number, role, status, password=None):
         if not email:
@@ -327,6 +355,9 @@ class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
 
+    group = models.CharField(max_length=50, blank=True, null=True)
+    brand = models.CharField(max_length=50, blank=True, null=True)
+    unit = models.CharField(max_length=20, blank=True, null=True)
     supplier_id = models.CharField(max_length=100, blank=True, null=True)
     code = models.CharField(max_length=30, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
@@ -347,7 +378,40 @@ class PurchaseItem(models.Model):
     invoice_no = models.CharField(max_length=100, blank=True, null=True)
     expiry_date = models.DateField(blank=True, null=True)        
   
-    # def __str__(self):
-    #     return f"{self.supplier_name} - {self.code} - {self.item_name}"
     def __str__(self):
         return f"{self.purchase.supplier.name} - {self.code} - {self.item_name}"
+    
+class Inventory(models.Model):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    item_name = models.CharField(max_length=255)
+    code = models.CharField(max_length=100)
+    group = models.CharField(max_length=100, blank=True, null=True)
+    brand = models.CharField(max_length=100, blank=True, null=True)
+    unit = models.CharField(max_length=50)
+    batch_no = models.CharField(max_length=100, blank=True, null=True)
+    invoice_no = models.CharField(max_length=100, blank=True, null=True)
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True)
+    quantity = models.FloatField(default=0)
+    previous_qty = models.FloatField(default=0)
+    total_qty = models.FloatField(default=0)
+
+    unit_price = models.FloatField(default=0)
+    total_price = models.FloatField(default=0)
+    discount = models.FloatField(default=0)
+    tax = models.FloatField(default=0)
+    net_price = models.FloatField(default=0)
+
+    mrp_price = models.FloatField(default=0)
+    whole_price = models.FloatField(default=0)
+    whole_price_2 = models.FloatField(default=0)
+    sale_price = models.FloatField(default=0)
+
+    purchased_at = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+
+    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, null=True, blank=True)  # Optional
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.item_name} - {self.code}"    

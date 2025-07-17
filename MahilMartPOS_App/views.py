@@ -1,40 +1,34 @@
-from django.shortcuts import render, redirect,  get_object_or_404, render
-from django.contrib.auth import authenticate, login
-from MahilMartPOS_App.models import Product
-from .models import Supplier
-from .forms import SupplierForm
-from .models import Customer, Billing
-from django.shortcuts import render
-from django.shortcuts import redirect
-from django.utils import timezone
-from django.db.models import Min
-from .models import User
-from .forms import CompanySettingsForm
-from django.contrib import messages
-from .models import Item, ItemBarcode, Unit, Group, Brand
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-from .models import Purchase, PurchaseItem, Supplier, Item
-from django.utils.dateparse import parse_date
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.utils.dateparse import parse_date
-from .models import Purchase, PurchaseItem, Supplier, Product, Item
-from .models import Tax
-from .models import CompanyDetails
-from django.shortcuts import render
-from django.db.models import Q
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
-from django.db.models import Sum
-from django.utils import timezone
-from .models import Billing
 from decimal import Decimal
-from django.db.models import Q
-from .models import Supplier, Item, Purchase, PurchaseItem
+import json
+from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.db.models import Min, Q, Sum
 from django.http import JsonResponse
-from .models import Item
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+from django.views.decorators.csrf import csrf_exempt
+from .forms import SupplierForm, CompanySettingsForm
+from .models import (
+    Supplier,
+    Customer,
+    Billing,
+    User,
+    Item,
+    ItemBarcode,
+    Unit,
+    Group,
+    Brand,
+    Purchase,
+    PurchaseItem,
+    Tax,
+    CompanyDetails,
+    Product,
+    StockAdjustment,
+    PurchaseItem,
+    Inventory,
+)
+from MahilMartPOS_App.models import Product as AppProduct
 
 def home(request):
     return render(request, 'home.html')
@@ -499,7 +493,10 @@ def create_purchase(request):
                 # Save purchase item with correct qtys
                 PurchaseItem.objects.create(
                     purchase=purchase,
-                    item=item_obj,
+                    item=item_obj,                  
+                    group=item_obj.group,
+                    brand=item_obj.brand,
+                    unit=item_obj.unit,
                     code=item.get('item_code', ''),
                     item_name=item.get('item_name', ''),
                     invoice_no=item.get('invoice_no', ''),
@@ -519,6 +516,33 @@ def create_purchase(request):
                     expiry_date=parse_date(item.get('expiry_date')),
                     previous_qty=previous_qty,
                     total_qty=total_qty
+                )
+
+                Inventory.objects.create(
+                    item=item_obj,
+                    item_name=item.get('item_name', ''),
+                    code=item.get('item_code', ''),
+                    group=item_obj.group,
+                    brand=item_obj.brand,
+                    unit=item_obj.unit,
+                    batch_no=item.get('batch_no', ''),
+                    invoice_no=item.get('invoice_no', ''),                   
+                    supplier=supplier,
+                    quantity=qty_purchased,
+                    previous_qty=previous_qty,
+                    total_qty=total_qty,
+                    unit_price=item['price'],
+                    total_price=item['total_price'],
+                    discount=item['discount'],
+                    tax=item['tax'],
+                    net_price=item['net_price'],
+                    mrp_price=item['mrp'],
+                    whole_price=item['whole_price'],
+                    whole_price_2=item['whole_price_2'],
+                    sale_price=item['sale_price'],
+                    purchased_at=parse_date(item.get('purchased_at')),
+                    expiry_date=parse_date(item.get('expiry_date')),
+                    purchase=purchase
                 )
 
                 # Optional product snapshot
@@ -614,7 +638,20 @@ def stock_adjustment_view(request):
                     batch.save()
         else:
             messages.error(request, "Invalid adjustment type.")
-            return redirect('stock_adjustment')
+            return redirect('stock_adjustment')   
+        
+        StockAdjustment.objects.create(
+            purchase_item=selected_batch,
+            invoice_no=selected_batch.invoice_no,
+            batch_no=selected_batch.batch_no,
+            code=selected_batch.code,
+            item_name=selected_batch.item_name,          
+            supplier_code=selected_batch.supplier_id,
+            adjustment_type=adjustment_type,
+            quantity=quantity,
+            reason=reason,
+            remarks=remarks,            
+        )
 
         # Recalculate `previous_qty` and `total_qty` for all batches of this item
         cumulative_total = Decimal("0.00")
@@ -635,23 +672,64 @@ def stock_adjustment_view(request):
         "unique_products": unique_products
     })
 
+def stock_adjustment_list(request):
+    adjustments = StockAdjustment.objects.all().order_by('-adjusted_at')
+    return render(request, 'stock_adjustment_list.html', {'adjustments': adjustments})
+
+def edit_bulk_item(request, item_id):
+    inventory = get_object_or_404(Inventory, id=item_id)
+
+    if request.method == 'POST':
+        inventory.item_name = request.POST.get('item_name')
+        inventory.code = request.POST.get('item_code')
+        inventory.group = request.POST.get('group')
+        inventory.brand = request.POST.get('brand')
+        inventory.unit = request.POST.get('unit')
+        inventory.batch_no = request.POST.get('batch_no')
+        inventory.invoice_no = request.POST.get('invoice_no')
+        inventory.quantity = request.POST.get('quantity')
+        inventory.previous_qty = request.POST.get('previous_qty')
+        inventory.total_qty = request.POST.get('total_qty')
+        inventory.unit_price = request.POST.get('unit_price')
+        inventory.total_price = request.POST.get('total_price')
+        inventory.discount = request.POST.get('discount')
+        inventory.tax = request.POST.get('tax')
+        inventory.net_price = request.POST.get('net_price')
+        inventory.mrp_price = request.POST.get('mrp_price')
+        inventory.whole_price = request.POST.get('whole_price')
+        inventory.whole_price_2 = request.POST.get('whole_price_2')
+        inventory.sale_price = request.POST.get('sale_price')
+        inventory.purchased_at = request.POST.get('purchased_at')
+        inventory.expiry_date = request.POST.get('expiry_date')
+        inventory.save()
+        return redirect('inventory')  # or another success page
+
+    return render(request, 'edit_bulk_item.html', {'inventory': inventory})
+
 def inventory_view(request):
     query = request.GET.get('q', '').strip()
 
+
     # Base queryset
-    items = PurchaseItem.objects.select_related('item').order_by('-id')
+    items = Inventory.objects.select_related('item').order_by('-id')
 
     # Apply search if provided
     if query:
         items = items.filter(
             Q(item__item_name__icontains=query) |
             Q(item__code__icontains=query) |
-            Q(item__brand__icontains=query)
+            Q(item__brand__icontains=query) |
+            Q(item__unit__icontains=query)
         )
 
     return render(request, 'inventory.html', {
         'items': items
     })
+
+def split_stock_page(request):
+    bulk_items = PurchaseItem.objects.filter(unit__icontains='bulk')
+    return render(request, 'split_stock.html', {'bulk_items': bulk_items})
+   
 
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)

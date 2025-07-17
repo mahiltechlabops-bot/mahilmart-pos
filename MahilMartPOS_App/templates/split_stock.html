@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    th, td {
+        padding: 8px 12px;
+        border: 1px solid #999;
+        text-align: left;
+    }
+
+    th {
+        background-color: #f2f2f2;
+    }
+
+    h1 {
+        font-family: Arial, sans-serif;
+    }
+    .button-group {
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        margin-top: 25px;
+    }
+
+    .button-group button {
+        padding: 10px 20px;
+        font-size: 15px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .button-group button[type="submit"] {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .button-group button[type="submit"]:hover {
+        background-color: #218838;
+    }
+
+    .button-group .exit-button {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .button-group .exit-button:hover {
+        background-color: #c82333;
+    }
+</style>
+
+<div class="container">
+    <h2>Bulk Stock Purchase</h2>
+    
+    <table class="table table-striped table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th>Item Code</th>
+                <th>Item Name</th>
+                <th>Brand</th>
+                <th>Group</th>
+                <th>Unit</th>
+                <th>Current Qty</th>
+                <th>Unit Price</th>
+                <th>MRP</th>
+                <th>Batch No</th>
+                <th>Expiry Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in bulk_items %}
+            <tr>
+                <td>{{ item.code }}</td>
+                <td>{{ item.item_name }}</td>
+                <td>{{ item.brand }}</td>
+                <td>{{ item.group }}</td>
+                <td>{{ item.unit }}</td>
+                <td>{{ item.total_qty }}</td>
+                <td>{{ item.unit_price }}</td>
+                <td>{{ item.mrp_price }}</td>
+                <td>{{ item.batch_no|default:"-" }}</td>
+                <td>{{ item.expiry_date|date:"Y-m-d"|default:"-" }}</td>
+                <td>
+                    <a href="{% url 'edit_bulk_item' item.id %}" class="btn btn-sm btn-primary">Edit</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="11" class="text-center">No bulk items found in stock</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="button-group">            
+            <button type="button" class="exit-button" onclick="window.location.href='{% url 'inventory' %}'">Exit</button>
+    </div>
+</div>
+{% endblock %}

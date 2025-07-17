@@ -34,9 +34,10 @@
     margin-left: 0;
   }
 
-  .btn-sm {
-    padding: 3px 6px;
-    font-size: 12px;
+  .btn-medium {
+    padding: 8px 16px;
+    font-size: 15px;
+    border-radius: 6px;
   }
 </style>
 {% endblock %}
@@ -50,9 +51,13 @@
     <input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Search products...">
   </form>
 </div>
-
-
-  <br>
+ <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+      <div>
+        <a href="{% url 'stock_adjustment' %}" class="btn btn-sm btn-primary">Stock Adjustement</a>
+        <a href="{% url 'stock_adjustment_list' %}" class="btn btn-sm btn-success">View Adjusted Stock</a>
+        <a href="{% url 'split_stock' %}" class="btn btn-sm btn-success">Split Stock</a>
+      </div>
+    </div>
 
   <div class="table-responsive mt-3">
     <table class="table table-bordered table-sm inventory-table">
@@ -64,6 +69,7 @@
           <th>Item Name</th>
           <th>Group</th>
           <th>Brand</th>
+          <th>Unit</th>
           <th>Sale Price</th>
           <th>Discount</th>
           <th>Tax</th>
@@ -73,8 +79,7 @@
           <th>Total Qty</th>
           <th>Purchased At</th>
           <th>Batch No</th>
-          <th>Expiry Date</th>
-          <th style="min-width: 120px;">Actions</th>
+          <th>Expiry Date</th>      
         </tr>
       </thead>
       <tbody>
@@ -86,6 +91,7 @@
           <td>{{ item.item.item_name }}</td>
           <td>{{ item.item.group }}</td>
           <td>{{ item.item.brand }}</td>
+          <td>{{ item.item.unit }}</td>
           <td>₹ {{ item.sale_price }}</td>
           <td>{{ item.discount }}%</td>
           <td>{{ item.tax }}%</td>
@@ -96,13 +102,13 @@
           <td>{{ item.purchased_at|date:"Y-m-d" }}</td>
           <td>{{ item.batch_no }}</td>
           <td>{{ item.expiry_date|date:"Y-m-d" }}</td>
-          <td>
+          <!-- <td>
             {% if item.item.id %}           
               <a href="{% url 'stock_adjustment' %}?product={{ item.item.id }}" class="btn btn-sm btn-warning">Adjust Stock</a>
             {% else %}
               <span class="text-muted">No Product</span>
             {% endif %}
-          </td>
+          </td> -->
         </tr>
         {% empty %}
         <tr>
