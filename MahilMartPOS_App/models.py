@@ -414,4 +414,28 @@ class Inventory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.item_name} - {self.code}"    
+        return f"{self.item_name} - {self.code}"        
+
+class PurchaseBulk(models.Model):
+    item_name = models.CharField(max_length=255)
+    code = models.CharField(max_length=100)
+    group = models.CharField(max_length=100)
+    brand = models.CharField(max_length=100)
+    unit = models.CharField(max_length=50)
+    batch_no = models.CharField(max_length=100, null=True, blank=True)
+    invoice_no = models.CharField(max_length=100, null=True, blank=True)
+    quantity = models.FloatField()
+    unit_price = models.FloatField()
+    total_price = models.FloatField()
+    discount = models.FloatField(default=0)
+    tax = models.FloatField(default=0)
+    net_price = models.FloatField()
+    mrp_price = models.FloatField(null=True, blank=True)
+    whole_price = models.FloatField(null=True, blank=True)
+    whole_price_2 = models.FloatField(null=True, blank=True)
+    sale_price = models.FloatField(null=True, blank=True)
+    purchased_at = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    purchase_id = models.IntegerField(null=True, blank=True)
+    supplier_id = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

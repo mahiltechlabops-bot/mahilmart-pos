@@ -29,6 +29,7 @@ from .models import (
     Inventory,
 )
 from MahilMartPOS_App.models import Product as AppProduct
+from django.db.models.functions import Trim
 
 def home(request):
     return render(request, 'home.html')
@@ -425,13 +426,18 @@ def fetch_item(request):
     name = request.GET.get('name', '').strip()
     code = request.GET.get('code', '').strip()
 
+    print(f"Fetching item - Name: '{name}', Code: '{code}'")
+
     item = None
 
     if code:
         item = Item.objects.filter(code__iexact=code).first()
 
     if not item and name:
-        item = Item.objects.filter(item_name__iexact=name).first()
+        # fallback: try both name and code
+        item = Item.objects.filter(
+            Q(item_name__iexact=name) | Q(code__iexact=name)
+        ).first()
 
     if item:
         return JsonResponse({
@@ -676,44 +682,80 @@ def stock_adjustment_list(request):
     adjustments = StockAdjustment.objects.all().order_by('-adjusted_at')
     return render(request, 'stock_adjustment_list.html', {'adjustments': adjustments})
 
+from django.shortcuts import get_object_or_404, redirect, render
+from .models import Inventory
+from django.utils import timezone
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from datetime import datetime
+from .models import Inventory, PurchaseItem
+
 def edit_bulk_item(request, item_id):
-    inventory = get_object_or_404(Inventory, id=item_id)
+    bulk_item = get_object_or_404(PurchaseItem, id=item_id)
 
     if request.method == 'POST':
-        inventory.item_name = request.POST.get('item_name')
-        inventory.code = request.POST.get('item_code')
-        inventory.group = request.POST.get('group')
-        inventory.brand = request.POST.get('brand')
-        inventory.unit = request.POST.get('unit')
-        inventory.batch_no = request.POST.get('batch_no')
-        inventory.invoice_no = request.POST.get('invoice_no')
-        inventory.quantity = request.POST.get('quantity')
-        inventory.previous_qty = request.POST.get('previous_qty')
-        inventory.total_qty = request.POST.get('total_qty')
-        inventory.unit_price = request.POST.get('unit_price')
-        inventory.total_price = request.POST.get('total_price')
-        inventory.discount = request.POST.get('discount')
-        inventory.tax = request.POST.get('tax')
-        inventory.net_price = request.POST.get('net_price')
-        inventory.mrp_price = request.POST.get('mrp_price')
-        inventory.whole_price = request.POST.get('whole_price')
-        inventory.whole_price_2 = request.POST.get('whole_price_2')
-        inventory.sale_price = request.POST.get('sale_price')
-        inventory.purchased_at = request.POST.get('purchased_at')
-        inventory.expiry_date = request.POST.get('expiry_date')
-        inventory.save()
-        return redirect('inventory')  # or another success page
+        print("POST request received:", request.POST)
 
-    return render(request, 'edit_bulk_item.html', {'inventory': inventory})
+        try:
+            purchased_at = request.POST.get('purchased_at')
+            expiry_date = request.POST.get('expiry_date')
+
+            purchased_at_date = datetime.strptime(purchased_at, '%Y-%m-%d').date() if purchased_at else None
+            expiry_date_date = datetime.strptime(expiry_date, '%Y-%m-%d').date() if expiry_date else None
+
+            # Get supplier by code if needed
+            try:
+                supplier_obj = Supplier.objects.get(code=bulk_item.supplier_id)
+            except Supplier.DoesNotExist:
+                messages.error(request, "Supplier not found")
+                return render(request, 'edit_bulk_item.html', {'item': bulk_item})
+
+            inventory = Inventory(
+                item=bulk_item.item,
+                item_name=request.POST.get('item_name'),
+                code=request.POST.get('code'),
+                group=request.POST.get('group'),
+                brand=request.POST.get('brand'),
+                unit=request.POST.get('unit'),
+                batch_no=request.POST.get('batch_no'),
+                invoice_no=request.POST.get('invoice_no'),
+                quantity=float(request.POST.get('quantity') or 0),
+                previous_qty=float(request.POST.get('previous_qty') or 0),
+                total_qty=float(request.POST.get('total_qty') or 0),
+                unit_price=float(request.POST.get('unit_price') or 0),
+                total_price=float(request.POST.get('total_price') or 0),
+                discount=float(request.POST.get('discount') or 0),
+                tax=float(request.POST.get('tax') or 0),
+                net_price=float(request.POST.get('net_price') or 0),
+                mrp_price=float(request.POST.get('mrp_price') or 0),
+                whole_price=float(request.POST.get('whole_price') or 0),
+                whole_price_2=float(request.POST.get('whole_price_2') or 0),
+                sale_price=float(request.POST.get('sale_price') or 0),
+                purchased_at=purchased_at_date,
+                expiry_date=expiry_date_date,
+                supplier=supplier_obj,
+                purchase=bulk_item.purchase
+            )
+            inventory.save()
+            print("Inventory saved with ID:", inventory.id)
+
+            messages.success(request, "Item added to inventory successfully.")
+            return redirect('split_stock')
+
+        except Exception as e:
+            print("Save error:", e)
+            messages.error(request, f"Error saving to inventory: {e}")
+
+    return render(request, 'edit_bulk_item.html', {'item': bulk_item})
 
 def inventory_view(request):
     query = request.GET.get('q', '').strip()
 
+    # Exclude any unit that contains the word "bulk"
+    items = Inventory.objects.select_related('item') \
+        .exclude(item__unit__icontains='bulk') \
+        .order_by('-id')
 
-    # Base queryset
-    items = Inventory.objects.select_related('item').order_by('-id')
-
-    # Apply search if provided
     if query:
         items = items.filter(
             Q(item__item_name__icontains=query) |

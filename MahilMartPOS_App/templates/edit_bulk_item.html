@@ -1,100 +1,153 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block content %}
-<h2>Edit Bulk Inventory Item</h2>
 
-<form method="POST">
-    {% csrf_token %}
-    <table>
-        <tr>
-            <th>Item Name</th>
-            <td><input type="text" name="item_name" value="{{ inventory.item_name }}" required></td>
-        </tr>
-        <tr>
-            <th>Item Code</th>
-            <td><input type="text" name="item_code" value="{{ inventory.code }}"></td>
-        </tr>
-        <tr>
-            <th>Group</th>
-            <td><input type="text" name="group" value="{{ inventory.group }}"></td>
-        </tr>
-        <tr>
-            <th>Brand</th>
-            <td><input type="text" name="brand" value="{{ inventory.brand }}"></td>
-        </tr>
-        <tr>
-            <th>Unit</th>
-            <td><input type="text" name="unit" value="{{ inventory.unit }}"></td>
-        </tr>
-        <tr>
-            <th>Batch No</th>
-            <td><input type="text" name="batch_no" value="{{ inventory.batch_no }}"></td>
-        </tr>
-        <tr>
-            <th>Invoice No</th>
-            <td><input type="text" name="invoice_no" value="{{ inventory.invoice_no }}"></td>
-        </tr>
-        <tr>
-            <th>Quantity</th>
-            <td><input type="number" name="quantity" value="{{ inventory.quantity }}"></td>
-        </tr>
-        <tr>
-            <th>Previous Qty</th>
-            <td><input type="number" name="previous_qty" value="{{ inventory.previous_qty }}"></td>
-        </tr>
-        <tr>
-            <th>Total Qty</th>
-            <td><input type="number" name="total_qty" value="{{ inventory.total_qty }}"></td>
-        </tr>
-        <tr>
-            <th>Unit Price</th>
-            <td><input type="number" step="0.01" name="unit_price" value="{{ inventory.unit_price }}"></td>
-        </tr>
-        <tr>
-            <th>Total Price</th>
-            <td><input type="number" step="0.01" name="total_price" value="{{ inventory.total_price }}"></td>
-        </tr>
-        <tr>
-            <th>Discount</th>
-            <td><input type="number" step="0.01" name="discount" value="{{ inventory.discount }}"></td>
-        </tr>
-        <tr>
-            <th>Tax</th>
-            <td><input type="number" step="0.01" name="tax" value="{{ inventory.tax }}"></td>
-        </tr>
-        <tr>
-            <th>Net Price</th>
-            <td><input type="number" step="0.01" name="net_price" value="{{ inventory.net_price }}"></td>
-        </tr>
-        <tr>
-            <th>MRP</th>
-            <td><input type="number" step="0.01" name="mrp_price" value="{{ inventory.mrp_price }}"></td>
-        </tr>
-        <tr>
-            <th>Whole Price</th>
-            <td><input type="number" step="0.01" name="whole_price" value="{{ inventory.whole_price }}"></td>
-        </tr>
-        <tr>
-            <th>Whole Price 2</th>
-            <td><input type="number" step="0.01" name="whole_price_2" value="{{ inventory.whole_price_2 }}"></td>
-        </tr>
-        <tr>
-            <th>Sale Price</th>
-            <td><input type="number" step="0.01" name="sale_price" value="{{ inventory.sale_price }}"></td>
-        </tr>
-        <tr>
-            <th>Purchase Date</th>
-            <td><input type="date" name="purchased_at" value="{{ inventory.purchased_at|date:'Y-m-d' }}"></td>
-        </tr>
-        <tr>
-            <th>Expiry Date</th>
-            <td><input type="date" name="expiry_date" value="{{ inventory.expiry_date|date:'Y-m-d' }}"></td>
-        </tr>
-    </table>
+<div class="inventory-edit-wrapper">
 
-    <div class="button-group">
-        <button type="submit">Save Changes</button>
-        <button type="button" class="exit-button" onclick="window.location.href='{% url 'inventory' %}'">Cancel</button>
-    </div>
-</form>
+    <style>
+        .inventory-edit-wrapper h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 28px;
+        }
+
+        .inventory-edit-wrapper form {
+            max-width: 900px;
+            margin: auto;
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .inventory-edit-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .inventory-edit-wrapper table td {
+            padding: 12px 8px;
+            vertical-align: middle;
+        }
+
+        .inventory-edit-wrapper table td:first-child {
+            text-align: right;
+            font-weight: bold;
+            color: #444;
+            width: 35%;
+        }
+
+        .inventory-edit-wrapper input[type="text"],
+        .inventory-edit-wrapper input[type="number"],
+        .inventory-edit-wrapper input[type="date"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: #fff;
+            transition: border 0.3s;
+        }
+
+        .inventory-edit-wrapper input:focus {
+            border-color: #5b9bd5;
+            outline: none;
+        }
+
+        .inventory-edit-wrapper .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+
+        .inventory-edit-wrapper .btn-primary {
+            background-color: #5b9bd5;
+            color: #fff;
+        }
+
+        .inventory-edit-wrapper .btn-primary:hover {
+            background-color: #4682b4;
+        }
+
+        .inventory-edit-wrapper .btn-secondary {
+            background-color: #ccc;
+            color: #000;
+        }
+
+        .inventory-edit-wrapper .btn-secondary:hover {
+            background-color: #aaa;
+        }
+
+        .inventory-edit-wrapper .form-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+
+    <h2>Edit & Add to Inventory</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <tbody>
+                    <tr><td>Item Name:</td><td><input type="text" name="item_name" value="{{ item.item_name }}"></td></tr>
+                    <tr><td>Code:</td><td><input type="text" name="code" value="{{ item.code }}"></td></tr>
+                    <tr><td>Group:</td><td><input type="text" name="group" value="{{ item.group }}"></td></tr>
+                    <tr><td>Brand:</td><td><input type="text" name="brand" value="{{ item.brand }}"></td></tr>
+                    <tr><td>Unit:</td><td><input type="text" name="unit" value="{{ item.unit }}"></td></tr>
+                    <tr><td>Batch No:</td><td><input type="text" name="batch_no" value="{{ item.batch_no }}"></td></tr>
+                    <tr><td>Invoice No:</td><td><input type="text" name="invoice_no" value="{{ item.invoice_no }}"></td></tr>
+                    <tr><td>Quantity:</td><td><input type="number" step="0.01" name="quantity" id="quantity" value="{{ item.quantity }}"></td></tr>
+                    <tr><td>Previous Qty:</td><td><input type="number" step="0.01" name="previous_qty" value="0" id="previous_qty"></td></tr>
+                    <tr><td>Total Qty:</td><td><input type="number" step="0.01" name="total_qty" id="total_qty" value="{{ item.quantity }}"></td></tr>
+                    <tr><td>Unit Price:</td><td><input type="number" step="0.01" name="unit_price" id="unit_price" value="{{ item.unit_price }}"></td></tr>
+                    <tr><td>Total Price:</td><td><input type="number" step="0.01" name="total_price" id="total_price" readonly></td></tr>
+                    <tr><td>Discount:</td><td><input type="number" step="0.01" name="discount" id="discount" value="0"></td></tr>
+                    <tr><td>Tax:</td><td><input type="number" step="0.01" name="tax" id="tax" value="0"></td></tr>
+                    <tr><td>Net Price:</td><td><input type="number" step="0.01" name="net_price" id="net_price" readonly></td></tr>
+                    <tr><td>MRP Price:</td><td><input type="number" step="0.01" name="mrp_price" value="{{ item.mrp_price }}"></td></tr>
+                    <tr><td>Whole Price:</td><td><input type="number" step="0.01" name="whole_price" value="{{ item.whole_price }}"></td></tr>
+                    <tr><td>Whole Price 2:</td><td><input type="number" step="0.01" name="whole_price_2" value="{{ item.whole_price_2 }}"></td></tr>
+                    <tr><td>Sale Price:</td><td><input type="number" step="0.01" name="sale_price" value="{{ item.sale_price }}"></td></tr>
+                    <tr><td>Purchase Date:</td><td><input type="date" name="purchased_at" value="{{ item.purchased_at|date:'Y-m-d' }}"></td></tr>
+                    <tr><td>Expiry Date:</td><td><input type="date" name="expiry_date" value="{{ item.expiry_date|date:'Y-m-d' }}"></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-buttons">
+            <button type="submit" class="btn btn-primary">Save to Inventory</button>
+            <a href="{% url 'split_stock' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+</div>
+
+<script>
+    function calculatePrices() {
+        const qty = parseFloat(document.getElementById("quantity").value) || 0;
+        const unitPrice = parseFloat(document.getElementById("unit_price").value) || 0;
+        const discount = parseFloat(document.getElementById("discount").value) || 0;
+        const tax = parseFloat(document.getElementById("tax").value) || 0;
+
+        const totalPrice = qty * unitPrice;
+        const netPrice = totalPrice - discount + tax;
+
+        document.getElementById("total_price").value = totalPrice.toFixed(2);
+        document.getElementById("net_price").value = netPrice.toFixed(2);
+        document.getElementById("total_qty").value = qty;
+    }
+
+    document.addEventListener('input', calculatePrices);
+    window.onload = calculatePrices;
+</script>
+
 {% endblock %}
