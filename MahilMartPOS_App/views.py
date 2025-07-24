@@ -434,7 +434,6 @@ def fetch_item(request):
         item = Item.objects.filter(code__iexact=code).first()
 
     if not item and name:
-        # fallback: try both name and code
         item = Item.objects.filter(
             Q(item_name__iexact=name) | Q(code__iexact=name)
         ).first()
@@ -470,7 +469,9 @@ def create_purchase(request):
             items_data = data.get("items", [])
 
             supplier = Supplier.objects.get(id=supplier_id)
-            purchase = Purchase.objects.create(supplier=supplier)                    
+            # purchase = Purchase.objects.create(supplier=supplier)    
+            invoice_no = data.get("invoice_no", "").strip()
+            purchase = Purchase.objects.create(supplier=supplier, invoice_no=invoice_no)                
 
             # Track quantities during this request
             latest_qty_cache = {}
@@ -504,8 +505,7 @@ def create_purchase(request):
                     brand=item_obj.brand,
                     unit=item_obj.unit,
                     code=item.get('item_code', ''),
-                    item_name=item.get('item_name', ''),
-                    invoice_no=item.get('invoice_no', ''),
+                    item_name=item.get('item_name', ''),                   
                     quantity=qty_purchased,
                     unit_price=item['price'],
                     total_price=item['total_price'],

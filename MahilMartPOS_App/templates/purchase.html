@@ -1,131 +1,63 @@
 {% extends "base.html" %}
-
-{% block style %}
-<style>
-  /* Base input style */
-  #purchaseTable input[type="text"],
-  #purchaseTable input[type="number"],
-  #purchaseTable input[type="date"],
-  #purchaseTable select {
-    width: 100px !important;
-    padding: 6px 10px !important;
-    font-size: 14px !important;
-    box-sizing: border-box;
-  }
-
-  /* Narrower fields for short content */
-  #purchaseTable input[name="item_name"],
-  #purchaseTable input[name="item_code"],
-  #purchaseTable input[name="group"],
-  #purchaseTable input[name="brand"] {
-    width: 70px !important;
-  }
-
-  /* Date fields (adjusted narrower) */
-  #purchaseTable input.purchased_at,
-  #purchaseTable input.expiry_date {
-    width: 80px !important;
-  }
-
-  /* Expand on focus */
-  #purchaseTable input:focus {
-    width: auto !important;
-    min-width: 150px !important;
-    position: relative;
-    z-index: 10;
-    background-color: #fffdf0;
-    box-shadow: 0 0 5px #888;
-  }
-
-  /* Tooltip-like hover support */
-  #purchaseTable input[title] {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Table cell alignment */
-  #purchaseTable th,
-  #purchaseTable td {
-    vertical-align: middle;
-    text-align: center;
-    padding: 8px;
-  }
-
-  /* Add Product button styling */
-  #addProductBtn {
-    width: 100%;
-    font-size: 16px;
-    padding: 10px;
-  }
-
-  /* Table layout */
-  #purchaseTable {
-    table-layout: auto;
-    width: 100%;  /* Full width for better responsiveness */
-  }
-
-  /* Prevent text wrapping in cells */
-  #purchaseTable td {
-    white-space: nowrap;
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 <main class="app-content">
-  <div class="card p-4 mx-auto" style="width: 150%;">
+  <div class="card p-4 mx-auto" style="width:150%;">
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
 
-    <!-- Supplier Selection -->
-    <div class="mb-4">
-      <label for="dealerSelect" class="form-label">Select Supplier</label>
-      <input class="form-control" list="dealerOptions" id="dealerSelect" name="supplier_name" placeholder="Type supplier name or phone">
-    <datalist id="dealerOptions">
-            {% for supplier in suppliers %}
-                <option value="{{ supplier.name }} ({{ supplier.phone }})"
-                        data-id="{{ supplier.id }}"
-                        data-supplier-id="{{ supplier.supplier_id }}">
-            {% endfor %}
-    </datalist>
+    <!-- Purchase Header -->
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <label>Select Supplier</label>
+        <input list="dealerOptions" id="dealerSelect" class="form-control" placeholder="Type supplier name or phone">
+        <datalist id="dealerOptions">
+          {% for supplier in suppliers %}
+          <option value="{{supplier.name}} ({{supplier.phone}})"
+                  data-id="{{supplier.id}}"
+                  data-contact="{{supplier.contact_person}}"
+                  data-email="{{supplier.email}}"
+                  data-address="{{supplier.address}}"
+                  data-account="{{supplier.account_number}}"
+                  data-bank="{{supplier.bank_name}}"
+                  data-credit="{{supplier.credit_terms}}"
+                  data-gst="{{supplier.gst_number}}"
+                  data-ifsc="{{supplier.ifsc_code}}">
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="col-md-6">
+        <label>Invoice Number</label>
+        <input type="text" id="invoiceNumber" class="form-control" placeholder="Invoice No">
+      </div>
     </div>
-    
+
+    <!-- Auto-filled Supplier Details -->
+    <div class="row mb-3" id="supplierDetails" style="display:none;">
+      <div class="col-md-12">
+        <h6>Supplier Details:</h6>
+        <div><b>Contact Person:</b> <span id="supplierContact"></span></div>
+        <div><b>Phone:</b> <span id="supplierPhone"></span></div>
+        <div><b>Email:</b> <span id="supplierEmail"></span></div>
+        <div><b>Address:</b> <span id="supplierAddress"></span></div>
+        <div><b>Bank:</b> <span id="supplierBank"></span></div>
+        <div><b>Account #:</b> <span id="supplierAccount"></span></div>
+        <div><b>IFSC:</b> <span id="supplierIFSC"></span></div>
+        <div><b>GST No:</b> <span id="supplierGST"></span></div>
+        <div><b>Credit Terms:</b> <span id="supplierCredit"></span></div>
+      </div>
+    </div>
 
     <!-- Products Table -->
     <h5>Add Products</h5>
     <table class="table table-bordered mt-3" id="purchaseTable">
-      <thead class="table-light">
-        <tr>
-          <th>S.no</th>
-          <th>Supp_ID</th>
-          <th>Invoice_No</th>
-          <th>Item</th>
-          <th>Code</th>
-          <th>Group</th>
-          <th>Brand</th>
-          <th>Unit</th>
-          <th>Qty</th>
-          <th>Price</th>
-          <th>Total</th>
-          <th>Discount</th>
-          <th>Tax</th>
-          <th>Net</th>
-          <th>MRP</th>
-          <th>Wh</th>
-          <th>Wh 1</th>
-          <th>Sale Price</th>
-          <th>Purchased At</th>
-          <th>Batch No</th>    
-          <th>Expiry Date</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="productTableBody">
-        <!-- Dynamic rows -->
-      </tbody>
+      <thead class="table-light"><tr>
+        <th>S.no</th><th>Item</th><th>Code</th><th>Group</th><th>Brand</th><th>Unit</th>
+        <th>Qty</th><th>Price</th><th>Total</th><th>Discount</th><th>Tax</th><th>Net</th>
+        <th>MRP</th><th>Wh</th><th>Wh 1</th><th>Sale Price</th><th>Purchased At</th>
+        <th>Batch No</th><th>Expiry Date</th><th>Action</th>
+      </tr></thead>
+      <tbody id="productTableBody"></tbody>
     </table>
-
-    <button type="button" class="btn btn-primary" id="addProductBtn">+ Add Product</button>
+    <button id="addProductBtn" class="btn btn-primary">+ Add Product</button>
 
     <!-- Summary -->
     <div class="row mt-5">
@@ -141,190 +73,166 @@
     </div>
 
     <div class="mt-4">
-      <button class="btn btn-success" id="completePurchaseBtn">Complete Purchase</button>
-      <button class="btn btn-secondary" id="cancelPurchaseBtn">Cancel</button>
+      <button id="completePurchaseBtn" class="btn btn-success">Complete Purchase</button>
+      <button id="cancelPurchaseBtn" class="btn btn-secondary">Cancel</button>
     </div>
   </div>
 </main>
 {% endblock %}
-
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const productTableBody = document.getElementById("productTableBody");
   const addProductBtn = document.getElementById("addProductBtn");
+  const dealerInput = document.getElementById("dealerSelect");
+  const invoiceInput = document.getElementById("invoiceNumber");
+  const supplierDetails = document.getElementById("supplierDetails");
 
-  const subtotalEl = document.getElementById("subtotal");
-  const taxEl = document.getElementById("tax");
-  const discountEl = document.getElementById("discount");
-  const totalEl = document.getElementById("total");
+  function updateSerials() {
+    productTableBody.querySelectorAll('tr').forEach((r,i)=> r.querySelector('.sno').textContent=i+1);
+  }
 
   addProductBtn.addEventListener("click", () => {
-  const row = document.createElement("tr");
-  row.innerHTML = `
-    <td class="sno"></td>
-    <td><input type="text" class="form-control supplier-id" readonly></td>  
-    <td><input type="text" class="form-control invoice_no"></td>
-    <td><input type="text" class="form-control item-name" onblur="fetchItemDetails(this)"></td>
-    <td><input type="text" class="form-control item-code" onblur="fetchItemDetails(this)"></td>
-    <td><input type="text" class="form-control group" readonly></td>
-    <td><input type="text" class="form-control brand" readonly></td>
-    <td><input type="text" class="form-control unit" readonly></td>
-    <td><input type="number" class="form-control qty" value="1" min="1" oninput="calculateRow(this.closest('tr'))"></td>
-    <td><input type="number" class="form-control price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
-    <td><input type="text" class="form-control total" readonly></td>
-    <td><input type="number" class="form-control discount" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
-    <td><input type="number" class="form-control tax" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
-    <td><input type="text" class="form-control net_price" readonly></td>
-    <td><input type="number" class="form-control mrp" value="0" step="0.01"></td>
-    <td><input type="number" class="form-control whole_price" value="0" step="0.01"></td>
-    <td><input type="number" class="form-control whole_price_2" value="0" step="0.01"></td>
-    <td><input type="number" class="form-control sale_price" value="0" step="0.01"></td>
-    <td><input type="date" class="form-control purchased_at" value="${new Date().toISOString().slice(0,10)}"></td>
-    <td><input type="text" class="form-control batch_no"></td>
-    <td><input type="date" class="form-control expiry_date"></td>
-    <td><button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button></td>
-  `;
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="sno"></td>
+      <td><input class="form-control item-name" onblur="fetchItemDetails(this)"></td>
+      <td><input class="form-control item-code" onblur="fetchItemDetails(this)"></td>
+      <td><input class="form-control group" readonly></td>
+      <td><input class="form-control brand" readonly></td>
+      <td><input class="form-control unit" readonly></td>
+      <td><input type="number" class="form-control qty" value="1" min="1" oninput="calculateRow(this.closest('tr'))"></td>
+      <td><input type="number" class="form-control price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
+      <td><input class="form-control total" readonly></td>
+      <td><input type="number" class="form-control discount" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
+      <td><input type="number" class="form-control tax" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
+      <td><input class="form-control net_price" readonly></td>
+      <td><input type="number" class="form-control mrp" value="0" step="0.01"></td>
+      <td><input type="number" class="form-control whole_price" value="0" step="0.01"></td>
+      <td><input type="number" class="form-control whole_price_2" value="0" step="0.01"></td>
+      <td><input type="number" class="form-control sale_price" value="0" step="0.01"></td>
+      <td><input type="date" class="form-control purchased_at" value="${new Date().toISOString().slice(0,10)}"></td>
+      <td><input class="form-control batch_no"></td>
+      <td><input type="date" class="form-control expiry_date"></td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button></td>`;
     productTableBody.appendChild(row);
-    updateSerialNumbers();
+    updateSerials();
     calculateRow(row);
+  });
 
-    const supplierInput = document.getElementById("dealerSelect").value;
-    const selectedOption = Array.from(document.getElementById("dealerOptions").options)
-      .find(opt => supplierInput.includes(opt.value.split(" (")[0]));
-    if (selectedOption) {
-      row.querySelector(".supplier-id").value = selectedOption.dataset.supplierId;
+  // populate supplier details
+  dealerInput.addEventListener("input", () => {
+    const opt = Array.from(document.getElementById("dealerOptions").options)
+      .find(o => o.value === dealerInput.value);
+    if (opt) {
+      supplierDetails.style.display = "block";
+      document.getElementById("supplierContact").textContent = opt.dataset.contact;
+      document.getElementById("supplierPhone").textContent = dealerInput.value.match(/\((.+)\)/)?.[1]||"";
+      document.getElementById("supplierEmail").textContent = opt.dataset.email;
+      document.getElementById("supplierAddress").textContent = opt.dataset.address;
+      document.getElementById("supplierBank").textContent = opt.dataset.bank;
+      document.getElementById("supplierAccount").textContent = opt.dataset.account;
+      document.getElementById("supplierIFSC").textContent = opt.dataset.ifsc;
+      document.getElementById("supplierGST").textContent = opt.dataset.gst;
+      document.getElementById("supplierCredit").textContent = opt.dataset.credit;
+    } else {
+      supplierDetails.style.display = "none";
     }
   });
 
   document.getElementById("cancelPurchaseBtn").addEventListener("click", () => {
     if (confirm("Clear all purchase items?")) {
       productTableBody.innerHTML = "";
-      subtotalEl.textContent = "0.00";
-      taxEl.textContent = "0.00";
-      discountEl.textContent = "0.00";
-      totalEl.textContent = "0.00";
+      updateTotals();
     }
   });
-
-  function getSelectedSupplierId() {
-  const input = document.getElementById("dealerSelect").value.trim();
-  for (const opt of document.querySelectorAll("#dealerOptions option")) {
-    if (opt.value === input) {
-      return opt.dataset.id;
-    }
-  }
-  return null;
-}
 
   document.getElementById("completePurchaseBtn").addEventListener("click", () => {
-  const supplierName = document.getElementById("dealerSelect").value;
-  const supplierOption = Array.from(document.getElementById("dealerOptions").options)
-    .find(opt => supplierName.includes(opt.value.split(" (")[0]));
-
-  const supplierId = getSelectedSupplierId();
-    if (!supplierId) {
-        alert("Please select a supplier from the dropdown");
-        return;
+    const opt = Array.from(document.getElementById("dealerOptions").options)
+      .find(o => o.value === dealerInput.value);
+    if (!opt || invoiceInput.value.trim()==="") {
+      return alert("Please select a supplier and enter invoice number.");
     }
 
-  if (!supplierOption) {
-    alert("Please select a supplier.");
-    return;
-  }
+    const items = Array.from(productTableBody.querySelectorAll('tr')).map(r => ({
+      item_name: r.querySelector('.item-name').value,
+      item_code: r.querySelector('.item-code').value,
+      quantity: r.querySelector('.qty').value,
+      price: r.querySelector('.price').value,
+      total_price: r.querySelector('.total').value,
+      discount: r.querySelector('.discount').value,
+      tax: r.querySelector('.tax').value,
+      net_price: r.querySelector('.net_price').value,
+      mrp: r.querySelector('.mrp').value,
+      whole_price: r.querySelector('.whole_price').value,
+      whole_price_2: r.querySelector('.whole_price_2').value,
+      sale_price: r.querySelector('.sale_price').value,
+      purchased_at: r.querySelector('.purchased_at').value,
+      batch_no: r.querySelector('.batch_no').value,
+      expiry_date: r.querySelector('.expiry_date').value
+    }));
 
-  const items = Array.from(document.querySelectorAll('#productTableBody tr')).map(row => ({
-    supplier_id:  row.querySelector('.supplier-id').value,    
-    item_name: row.querySelector('.item-name').value,
-    item_code: row.querySelector('.item-code').value,
-    quantity: row.querySelector('.qty').value,
-    price: row.querySelector('.price').value,
-    total_price: row.querySelector('.total').value,
-    discount: row.querySelector('.discount').value,
-    tax: row.querySelector('.tax').value,
-    net_price: row.querySelector('.net_price').value,
-    mrp: row.querySelector('.mrp').value,
-    whole_price: row.querySelector('.whole_price').value,
-    whole_price_2: row.querySelector('.whole_price_2').value,
-    sale_price: row.querySelector('.sale_price').value,
-    purchased_at: new Date().toISOString().slice(0, 10), 
-    batch_no: row.querySelector('.batch_no').value,
-    invoice_no: row.querySelector('.invoice_no').value,
-    expiry_date: row.querySelector('.expiry_date').value,
-  }));
-
-  fetch("/api/purchase/create/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": getCSRFToken()
-    },
-    body: JSON.stringify({
-      supplier_id: supplierId,
-      items: items
+    fetch("/api/purchase/create/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify({
+        supplier_id: opt.dataset.id,
+        invoice_no: invoiceInput.value.trim(),
+        items
+      })
     })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      alert("Purchase saved successfully!");
-      window.location.reload();
-    } else {
-      alert("Error: " + data.error);
-    }
-  })
-  .catch(err => {
-    console.error("Submit error:", err);
-    alert("Failed to submit purchase.");
+    .then(r => r.json()).then(d => {
+      if (d.success) alert("Saved!");
+      else alert("Error: "+d.error);
+      if (d.success) window.location.reload();
+    })
+    .catch(e => { console.error(e); alert("Submit failed"); });
   });
 });
 
-function getCSRFToken() {
-  return document.cookie.split('; ')
-    .find(row => row.startsWith('csrftoken='))
-    ?.split('=')[1];
-}
-});
+  function fetchItemDetails(inputEl) {
+    const row = inputEl.closest('tr');
+    const itemNameInput = row.querySelector('.item-name');
+    const itemCodeInput = row.querySelector('.item-code');
 
-function fetchItemDetails(input) {
-  const row = input.closest("tr");
-  const itemName = row.querySelector(".item-name").value.trim();
-  const itemCode = row.querySelector(".item-code").value.trim();
+    const name = itemNameInput.value.trim();
+    const code = itemCodeInput.value.trim();
 
-  const url = `/api/item/fetch/?name=${encodeURIComponent(itemName)}&code=${encodeURIComponent(itemCode)}`;
-  console.log("Fetching item from:", url);
+    const url = `/api/item/fetch/?${code ? `code=${encodeURIComponent(code)}` : `name=${encodeURIComponent(name)}`}`;
 
-  fetch(url)
-    .then(res => {
-      if (!res.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return res.json();
-    })
-    .then(data => {
-      console.log(" Data received:", data);
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          console.warn("Item not found:", data.error);
+          return;
+        }
 
-      if (data.error) {
-        alert("Item not found");
-        return;
-      }
+        row.querySelector('.item-name').value = data.item_name;
+        row.querySelector('.item-code').value = data.code;
+        row.querySelector('.group').value = data.group;
+        row.querySelector('.brand').value = data.brand;
+        row.querySelector('.unit').value = data.unit;
+        row.querySelector('.tax').value = data.tax;
+        row.querySelector('.whole_price').value = data.wholesale;
+        row.querySelector('.whole_price_2').value = data.wholesale_1;
+        row.querySelector('.sale_price').value = data.sale_price;
+        row.querySelector('.mrp').value = data.mrp;
 
-      row.querySelector(".item-name").value = data.item_name || "";
-      row.querySelector(".item-code").value = data.code || "";
-      row.querySelector(".group").value = data.group || "";
-      row.querySelector(".brand").value = data.brand || "";
-      row.querySelector(".unit").value = data.unit || "";
-      row.querySelector(".tax").value = data.tax || 0;
-      row.querySelector(".whole_price").value = data.wholesale || 0;
-      row.querySelector(".whole_price_2").value = data.wholesale_1 || 0;
-      row.querySelector(".sale_price").value = data.sale_price || 0;
-      row.querySelector(".mrp").value = data.mrp || 0;
-      calculateRow(row);
-    })
-    .catch(err => {
-      console.error("Fetch failed:", err);
-      alert("Failed to fetch item. Check console for details.");
-    });
+        calculateRow(row);  // Make sure this function is also defined elsewhere
+      })
+      .catch(error => {
+        console.error("Fetch item failed:", error);
+      });
+  }
+
+  function getCSRFToken() {
+  const cookieValue = document.cookie.split('; ')
+    .find(row => row.startsWith('csrftoken='));
+  return cookieValue ? cookieValue.split('=')[1] : '';
 }
 
 function calculateRow(row) {
@@ -334,41 +242,47 @@ function calculateRow(row) {
   const tax = parseFloat(row.querySelector('.tax').value) || 0;
 
   const total = qty * price;
-  const net = total - discount + (total * tax / 100);
+  const discounted = total - discount;
+  const taxed = discounted + (discounted * (tax / 100));
+  const net = taxed;
 
   row.querySelector('.total').value = total.toFixed(2);
   row.querySelector('.net_price').value = net.toFixed(2);
 
-  updateTotals();
-}
-
-function deleteRow(button) {
-  button.closest("tr").remove();
-  updateSerialNumbers();
-  updateTotals();
-}
-
-function updateSerialNumbers() {
-  document.querySelectorAll('#productTableBody tr').forEach((row, i) => {
-    row.querySelector('.sno').textContent = i + 1;
-  });
+  updateTotals();  // Update overall totals
 }
 
 function updateTotals() {
-  let subtotal = 0, tax = 0, discount = 0;
+  let subtotal = 0;
+  let taxTotal = 0;
+  let discountTotal = 0;
 
   document.querySelectorAll('#productTableBody tr').forEach(row => {
     subtotal += parseFloat(row.querySelector('.total').value) || 0;
-    tax += ((parseFloat(row.querySelector('.total').value) || 0) * (parseFloat(row.querySelector('.tax').value) || 0)) / 100;
-    discount += parseFloat(row.querySelector('.discount').value) || 0;
+    discountTotal += parseFloat(row.querySelector('.discount').value) || 0;
+    const tax = parseFloat(row.querySelector('.tax').value) || 0;
+    const discounted = (parseFloat(row.querySelector('.total').value) || 0) - discountTotal;
+    taxTotal += discounted * (tax / 100);
   });
 
-  const total = subtotal + tax - discount;
+  const total = subtotal - discountTotal + taxTotal;
 
-  document.getElementById("subtotal").textContent = subtotal.toFixed(2);
-  document.getElementById("tax").textContent = tax.toFixed(2);
-  document.getElementById("discount").textContent = discount.toFixed(2);
-  document.getElementById("total").textContent = total.toFixed(2);
+  document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+  document.getElementById('discount').textContent = discountTotal.toFixed(2);
+  document.getElementById('tax').textContent = taxTotal.toFixed(2);
+  document.getElementById('total').textContent = total.toFixed(2);
 }
+
+function deleteRow(btn) {
+  const row = btn.closest('tr');
+  row.remove();
+  updateTotals();
+
+  // Recalculate serial numbers
+  document.querySelectorAll('#productTableBody .sno').forEach((cell, i) => {
+    cell.textContent = i + 1;
+  });
+}
+
 </script>
 {% endblock %}
