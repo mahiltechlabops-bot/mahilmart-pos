@@ -1,6 +1,7 @@
+from datetime import date
 from django.db import models
 from django.utils import timezone
-from django.utils import timezone
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission
 
 class Category(models.Model):
@@ -69,6 +70,95 @@ class Billing(models.Model):
 
     def __str__(self):
         return f"Invoice {self.bill_no} - {self.item_name}"
+    
+
+class Order(models.Model):
+    DELIVERY_CHOICES = [
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    ]
+
+    PAYMENT_TYPE_CHOICES = [
+        ('cash', 'Cash'),
+        ('gpay', 'GPay'),
+        ('card', 'Card'),
+        ('credit', 'Credit'),
+    ]
+
+    ORDER_STATUS_CHOICES = [
+        ('completed', 'Completed'),
+        ('pending', 'Pending'),
+        ('elapsed', 'Elapsed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    order_id = models.AutoField(primary_key=True)
+    customer_name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=10)
+    address = models.TextField()
+    email = models.EmailField()
+
+    date_of_order = models.DateTimeField(default=timezone.now)
+    expected_delivery_datetime = models.DateTimeField()
+
+    delivery = models.CharField(max_length=3, choices=DELIVERY_CHOICES)
+    charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    total_order_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    advance = models.DecimalField(max_digits=10, decimal_places=2)
+    due_balance = models.DecimalField(max_digits=10, decimal_places=2)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES)
+    order_status = models.CharField(max_length=10, choices=ORDER_STATUS_CHOICES)
+
+    def save(self, *args, **kwargs):
+        if self.advance >= self.total_order_amount:
+            self.full_amount_paid = True
+        else:
+            self.full_amount_paid = False
+        self.due_balance = self.total_order_amount - self.advance
+        super().save(*args, **kwargs)
+        
+    def __str__(self):
+        return f"Order #{self.order_id} - {self.customer_name}"
+
+class Quotation(models.Model):
+    sno = models.IntegerField()
+    qtn_no = models.CharField(max_length=100)
+    code = models.CharField(max_length=100)
+    item_name = models.CharField(max_length=200)
+    qty = models.IntegerField()
+    mrsp = models.FloatField()
+    selling_price = models.FloatField()
+    total_amount = models.FloatField()
+    points_earned = models.FloatField(default=0)
+    to = models.CharField(max_length=100)
+    bill_no = models.CharField(max_length=20)
+    date = models.DateField()
+    name = models.CharField(max_length=100)
+    email = models.EmailField(blank=True)
+    address = models.TextField(blank=True)
+    date_joined = models.DateField()
+    bill_type = models.CharField(max_length=100)
+    sale_type = models.CharField(max_length=100)
+    counter = models.CharField(max_length=100)
+    order_no = models.CharField(max_length=100, blank=True)
+    cell = models.CharField(max_length=20)
+    received = models.FloatField(default=0)
+    balance = models.FloatField(default=0)
+    discount = models.FloatField(default=0)    
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    item_name = models.CharField(max_length=100)
+    quantity = models.PositiveIntegerField()
+    rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return self.item_name          
     
 class Item(models.Model):
     code = models.CharField(max_length=30)
@@ -232,6 +322,54 @@ class StockAdjustment(models.Model):
     def __str__(self):
         return f"{self.adjustment_type.title()} {self.quantity} - {self.purchase_item}"  
     
+class Payment(models.Model):
+    payment_id = models.AutoField(primary_key=True)
+    bill_no = models.CharField(max_length=20)
+    customer = models.CharField(max_length=100) 
+    date_time = models.DateTimeField(auto_now_add=True)
+    cashier = models.CharField(max_length=50)  
+    payment_mode = models.CharField(max_length=50)
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    due_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_status = models.CharField(max_length=20)
+
+class Expense(models.Model):
+    PAYMENT_MODES = [
+        ('cash', 'Cash'),
+        ('bank', 'Bank'),
+        ('upi', 'UPI'),
+        ('cheque', 'Cheque'),
+    ]
+
+    CATEGORY_CHOICES = [
+    ('Staff Salaries','Staff Salaries'),
+    ('Water', 'Water Bill'),
+    ('Internet', 'Internet Bill'),
+    ('Electricity', 'Electricity Bill'),
+    ('Rent/Lease','Rent/Lease'),
+    ('Maintenance','Maintenance'),
+    ('Office Supplies','Office Supplies'),
+    ('Software Maintenance','Software Maintenance'),
+    ('Marketing','Marketing'),
+    ('Transport/Delivery','Transport/Delivery'),
+    ('Miscellaneous','Miscellaneous')
+]
+
+    expenseid = models.AutoField(primary_key=True)
+    datetime = models.DateTimeField()
+    category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
+    category_detail = models.CharField(max_length=200, blank=True, null=True)
+    paid_to = models.CharField(max_length=100, blank=True, null=True)
+    paymentmode = models.CharField(max_length=10, choices=PAYMENT_MODES, blank=True, null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    notes = models.TextField(blank=True, null=True)
+    refno = models.CharField(max_length=100, blank=True, null=True)
+    reorderedby = models.CharField(max_length=100, blank=True, null=True)
+    attachment = models.FileField(upload_to='expense_attachments/', blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.expenseid} - {self.category} - {self.amount}"    
+    
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, phone_number, role, status, password=None):
         if not email:
@@ -342,7 +480,7 @@ class CompanyDetails(models.Model):
 
     def __str__(self):
         return self.company_name
-   
+       
 # purchase & purchase items
 class Purchase(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)   

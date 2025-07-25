@@ -1,9 +1,6 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!DOCTYPE html>
-<html>
-<head>
     <title>Sales Creation</title>
     <style>
         body {
@@ -141,8 +138,7 @@
         }
 
     </style>
-</head>
-<body>
+
 <div class="main-container">
     <div class="title">Sales Creation</div>
     <form method="POST" action="{% url 'billing' %}">
@@ -253,11 +249,12 @@
 </table>
         <div class="footer-controls">
             <div class="buttons">
-                <a href=""><button type="button">Quotation</button></a>
+                <button type="button" onclick="submitAsQuotation()">Quotation</button>
 
-                <button type="button">Order</button>                
+                <a href="{% url 'order_list' %}"><button type="button">Order</button></a>
+                <button type="button">Option</button>
             </div>
-
+            
             <div>
                 <span class="total-red">0.00</span> Received :<input type="number" step="0.01" name="received">
                 <span class="total-blue">Balance :</span><input type="number" step="0.01" name="balance">
@@ -284,6 +281,12 @@
 </div>
 
 <script>
+  function submitAsQuotation() {
+    const form = document.querySelector('form');
+    form.action = "{% url 'create_quotation' %}";
+    form.submit();
+}
+
  document.addEventListener('DOMContentLoaded', function() {
     // Initialize all components
     initCustomerManagement();
@@ -488,6 +491,4 @@ function initBillingSystem() {
     updateCalculations();
 }
 </script>
-</body>
-</html>
-{% endblock content %}
+{% endblock %}

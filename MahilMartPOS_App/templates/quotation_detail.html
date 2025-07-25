@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 1000px; margin: 30px auto; background: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); font-family: Arial, sans-serif;">
+    
+    <h2 style="text-align: center; margin-bottom: 20px;">Quotation - {{ qtn_no }}</h2>
+
+    <div style="margin-bottom: 20px;">
+        <p><strong>Name:</strong> {{ customer.name }}</p>
+        <p><strong>Phone:</strong> {{ customer.cell }}</p>
+        <p><strong>Date:</strong> {{ customer.date }}</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; text-align: center;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="border: 1px solid #ccc; padding: 10px;">SNo</th>
+                <th style="border: 1px solid #ccc; padding: 10px;">Code</th>
+                <th style="border: 1px solid #ccc; padding: 10px;">Item</th>
+                <th style="border: 1px solid #ccc; padding: 10px;">Qty</th>
+                <th style="border: 1px solid #ccc; padding: 10px;">MRSP</th>
+                <th style="border: 1px solid #ccc; padding: 10px;">Price</th>
+                <th style="border: 1px solid #ccc; padding: 10px;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ item.sno }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ item.code }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">{{ item.item_name }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ item.qty }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ item.mrsp }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ item.selling_price }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ item.total_amount }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <button onclick="window.print()" style="padding: 10px 20px; margin-right: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Print
+        </button>
+        <a href="{% url 'billing' %}">
+            <button type="button" style="padding: 10px 20px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Back
+            </button>
+        </a>
+        <a href="{% url 'convert_to_order' qtn_no=quotation.qtn_no %}" class="btn btn-success">Convert to Order</a>
+    </div>
+</div>
+{% endblock %}

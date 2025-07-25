@@ -1,5 +1,6 @@
-from decimal import Decimal
 import json
+import os,datetime
+from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.db.models import Min, Q, Sum
@@ -9,6 +10,18 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 from .forms import SupplierForm, CompanySettingsForm
+from MahilMartPOS_App.models import Product as AppProduct
+from django.db.models.functions import Trim
+from datetime import datetime
+from django.core.serializers import serialize
+from django.contrib.auth.hashers import make_password, check_password
+from django.core.paginator import Paginator
+from .forms import OrderForm,OrderItem,ExpenseForm,PaymentForm
+from django.db import IntegrityError
+from collections import defaultdict
+from django.utils.timezone import localtime
+from django.http import HttpResponse
+from decimal import Decimal, ROUND_HALF_UP
 from .models import (
     Supplier,
     Customer,
@@ -27,9 +40,11 @@ from .models import (
     StockAdjustment,
     PurchaseItem,
     Inventory,
+    Order,
+    Billing,
+    Expense,
+    Quotation
 )
-from MahilMartPOS_App.models import Product as AppProduct
-from django.db.models.functions import Trim
 
 def home(request):
     return render(request, 'home.html')
@@ -128,6 +143,228 @@ def create_invoice_view(request):
         'today_date': today_date,
         'bill_no': next_bill_no
     })
+
+def order_view(request):
+    return render(request, 'order.html')
+
+def order_list(request):
+    query = request.GET.get('q', '')
+    status = request.GET.get('status', '')
+    date = request.GET.get('date', '')
+
+    orders = Order.objects.all()
+
+    if query:
+        orders = orders.filter(
+            Q(customer_name__icontains=query) | Q(phone_number__icontains=query)
+        )
+    if status:
+        orders = orders.filter(order_status=status)
+    if date:
+        orders = orders.filter(date_of_order__date=date)
+
+    paginator = Paginator(orders, 10)  
+    page_number = request.GET.get('page')
+    orders_page = paginator.get_page(page_number)
+
+    return render(request, 'order.html', {'orders': orders_page})
+
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, order_id=order_id)
+    paid_now = request.session.pop('paid_now', None)
+    return render(request, 'order_detail.html', {'order': order, 'paid_now': paid_now})
+
+def order_success(request):
+    return render(request, 'order_success.html')
+
+def create_order(request):
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            order = form.save()
+
+            item_names = request.POST.getlist('item_name')
+            quantities = request.POST.getlist('quantity')
+            rates = request.POST.getlist('rate')
+            amounts = request.POST.getlist('amount')
+
+            for i in range(len(item_names)):
+                if item_names[i] and quantities[i] and rates[i]:
+                    OrderItem.objects.create(
+                        order=order,
+                        item_name=item_names[i],
+                        quantity=int(quantities[i]),
+                        rate=float(rates[i]),
+                        amount=float(amounts[i]),
+                    )
+
+            return redirect('order_list')
+    else:
+        form = OrderForm()
+    return render(request, 'order_form.html', {'form': form})
+
+def create_quotation(request):
+    if request.method == 'POST':
+        cell = request.POST.get('cell')
+        latest = Quotation.objects.order_by('-id').first()
+        base_qtn_no = int(latest.qtn_no) + 1 if latest and str(latest.qtn_no).isdigit() else 1
+        qtn_no = str(base_qtn_no)
+
+        snos = request.POST.getlist('sno')
+        codes = request.POST.getlist('code')
+        item_names = request.POST.getlist('item_name')
+        qtys = request.POST.getlist('qty')
+        mrsps = request.POST.getlist('mrsp')
+        selling_prices = request.POST.getlist('sellingprice')
+
+        for i in range(len(item_names)):
+            if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
+                continue
+
+            try:
+                qty = int(qtys[i]) if qtys[i] else 0
+                mrsp = float(mrsps[i]) if mrsps[i] else 0.0
+                selling_price = float(selling_prices[i]) if selling_prices[i] else 0.0
+                amount = qty * selling_price
+
+                Quotation.objects.create(
+                    sno=int(snos[i]) if snos[i] else i + 1,
+                    qtn_no=qtn_no,
+                    date=timezone.now().date(),
+                    code=codes[i],
+                    item_name=item_names[i],
+                    qty=qty,
+                    mrsp=mrsp,
+                    selling_price=selling_price,
+                    total_amount=amount,
+                    name=request.POST.get('name'),
+                    email=request.POST.get('email'),
+                    address=request.POST.get('address'),
+                    date_joined=request.POST.get('date_joined') or timezone.now().date(),
+                    bill_type=request.POST.get('bill_type'),
+                    sale_type=request.POST.get('sale_type'),
+                    counter=request.POST.get('counter'),
+                    order_no=request.POST.get('order_no'),
+                    cell=cell,
+                )
+            except Exception as e:
+                print(f"Quotation Row Error {i+1}: {e}")
+                continue
+
+        return redirect('quotation_detail', qtn_no=qtn_no)
+
+def quotation_detail(request, qtn_no):
+    
+    quotation_items = Quotation.objects.filter(qtn_no=qtn_no)
+    if not quotation_items.exists():
+        return HttpResponse("Quotation not found") 
+    quotation = quotation_items.first()
+
+    return render(request, 'quotation_detail.html', {    
+        'quotation': quotation,
+        'quotation_items': quotation_items
+    })
+
+def update_payment(request, order_id):
+    order = get_object_or_404(Order, pk=order_id)
+
+    if request.method == "POST":
+        try:
+            paid_now = request.POST.get("paid_now")
+
+            if paid_now:
+                paid_now = Decimal(paid_now)
+                order.advance += paid_now
+                order.due_balance = (order.total_order_amount - order.advance).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
+
+                request.session['paid_now'] = str(paid_now)
+
+            else:
+                advance = Decimal(request.POST.get("advance", "0"))
+                due_balance = Decimal(request.POST.get("due_balance", "0"))
+                order.advance = advance
+                order.due_balance = due_balance
+
+            order.order_status = 'completed' if order.due_balance <= 0 else 'pending'
+
+            order.save()
+            messages.success(request, f"Order #{order_id} payment updated.")
+
+        except Exception as e:
+            messages.error(request, f"Error updating payment: {e}")
+
+    return redirect('order_detail', order_id=order.order_id)
+
+def edit_order(request, order_id):
+    order = get_object_or_404(Order, order_id=order_id)
+    items = order.items.all()
+
+    if request.method == 'POST':
+        form = OrderForm(request.POST, instance=order)
+        if form.is_valid():
+            updated_order = form.save()
+
+            order.items.all().delete()
+
+            item_names = request.POST.getlist('item_name')
+            quantities = request.POST.getlist('quantity')
+            rates = request.POST.getlist('rate')
+            amounts = request.POST.getlist('amount')
+
+            for name, qty, rate, amt in zip(item_names, quantities, rates, amounts):
+                OrderItem.objects.create(
+                    order=updated_order,
+                    item_name=name,
+                    quantity=qty,
+                    rate=rate,
+                    amount=amt
+                )
+
+            return redirect('order_detail', order.order_id)
+    else:
+        form = OrderForm(instance=order)
+
+    context = {
+        'form': form,
+        'order': order,
+        'items': items,
+        'editing': True  
+    }
+    return render(request, 'order_form.html', context)
+
+def convert_quotation_to_order(request, qtn_no):
+    quotations = Quotation.objects.filter(qtn_no=qtn_no)
+    if not quotations.exists():
+        return HttpResponse("Quotation not found") 
+
+    first_qtn = quotations.first()
+
+    order = Order.objects.create(
+        customer_name=first_qtn.name,
+        phone_number=first_qtn.cell,
+        address=first_qtn.address,
+        email=first_qtn.email,
+        date_of_order=timezone.now(),
+        expected_delivery_datetime=timezone.now(), 
+        delivery='no', 
+        charges=0,
+        total_order_amount=sum(q.total_amount for q in quotations),
+        advance=first_qtn.received,
+        due_balance=first_qtn.balance,
+        payment_type='cash',  
+        order_status='pending',  
+    )
+
+    for q in quotations:
+        OrderItem.objects.create(
+            order=order,
+            item_name=q.item_name,
+            quantity=q.qty,
+            rate=q.selling_price,
+            amount=q.total_amount,
+        )
+
+    return redirect('order_list')
 
 # Create your views
 def item_creation(request):  
@@ -343,9 +580,6 @@ def Tax_creation(request):
         return redirect('tax_creation')
     return render(request,'tax.html')
 
-def order_view(request):
-    return render(request, 'order.html')
-
 def products_view(request):
     query = request.GET.get('q', '').strip()
 
@@ -515,8 +749,8 @@ def create_purchase(request):
                     mrp_price=item['mrp'],
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
-                    sale_price=item['sale_price'],
-                    supplier_id=item.get('supplier_id'),
+                    sale_price=item['sale_price'],        
+                    supplier_id=supplier.supplier_id,
                     purchased_at=parse_date(item.get('purchased_at')),
                     batch_no=item.get('batch_no', ''),
                     expiry_date=parse_date(item.get('expiry_date')),
@@ -647,12 +881,11 @@ def stock_adjustment_view(request):
             return redirect('stock_adjustment')   
         
         StockAdjustment.objects.create(
-            purchase_item=selected_batch,
-            invoice_no=selected_batch.invoice_no,
+            purchase_item=selected_batch,       
             batch_no=selected_batch.batch_no,
             code=selected_batch.code,
             item_name=selected_batch.item_name,          
-            supplier_code=selected_batch.supplier_id,
+            supplier_code=selected_batch.purchase.supplier.supplier_id,          
             adjustment_type=adjustment_type,
             quantity=quantity,
             reason=reason,
@@ -681,14 +914,6 @@ def stock_adjustment_view(request):
 def stock_adjustment_list(request):
     adjustments = StockAdjustment.objects.all().order_by('-adjusted_at')
     return render(request, 'stock_adjustment_list.html', {'adjustments': adjustments})
-
-from django.shortcuts import get_object_or_404, redirect, render
-from .models import Inventory
-from django.utils import timezone
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from datetime import datetime
-from .models import Inventory, PurchaseItem
 
 def edit_bulk_item(request, item_id):
     bulk_item = get_object_or_404(PurchaseItem, id=item_id)
@@ -909,6 +1134,105 @@ def submit_customer(request):
         )
 
     return redirect('customers')
+
+def payments_view(request):
+    return render(request, 'payments.html')
+
+def payment_list_view(request):
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    payment_mode = request.GET.get('payment_mode')
+
+    billings = Billing.objects.all().order_by('id')
+
+    if from_date and to_date:
+        try:
+            from_date_obj = datetime.datetime.strptime(from_date, '%Y-%m-%d').date()
+            to_date_obj = datetime.datetime.strptime(to_date, '%Y-%m-%d').date()
+            billings = billings.filter(date__range=(from_date_obj, to_date_obj))
+        except Exception as e:
+            print("Date Filter Error:", e)
+
+    if payment_mode and payment_mode != 'all':
+        billings = billings.filter(bill_type__iexact=payment_mode)
+
+    return render(request, 'payments.html', {
+        'billings': billings,
+        'from_date': from_date,
+        'to_date': to_date,
+        'payment_mode': payment_mode,
+    })
+
+
+def purchase_items_view(request):
+    if request.method == 'POST':
+        return redirect('payment_list')  
+    return render(request, 'purchase_items.html')
+
+def create_expense(request):
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST, request.FILES)
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.category_detail = request.POST.get('category_detail')  
+            expense.save()
+            return redirect('expense')
+    else:
+        form = ExpenseForm()
+    return render(request, 'expense.html', {'form': form})
+
+def expense_list(request):
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    category = request.GET.get('category')
+
+    all_expenses = Expense.objects.all()
+
+    if from_date:
+        all_expenses = all_expenses.filter(datetime__date__gte=from_date)
+    if to_date:
+        all_expenses = all_expenses.filter(datetime__date__lte=to_date)
+
+    if category and category != 'all':
+        all_expenses = all_expenses.filter(category=category)
+
+    all_expenses = all_expenses.order_by('-datetime')
+
+    expenses_by_date = defaultdict(list)
+    for expense in all_expenses:
+        local_datetime = localtime(expense.datetime)
+        date_key = local_datetime.strftime('%Y-%m-%d')
+        expenses_by_date[date_key].append({
+            'category': expense.get_category_display(),
+            'detail': expense.category_detail,
+            'datetime': local_datetime,
+            'paid_to': expense.paid_to,
+            'payment_mode': expense.paymentmode,
+            'amount': expense.category_detail  
+        })
+
+    category_totals = defaultdict(float)
+    if from_date or to_date:
+        filtered_expenses = Expense.objects.all()
+        if from_date:
+            filtered_expenses = filtered_expenses.filter(datetime__date__gte=from_date)
+        if to_date:
+            filtered_expenses = filtered_expenses.filter(datetime__date__lte=to_date)
+
+        for exp in filtered_expenses:
+            try:
+                category_totals[exp.get_category_display()] += float(exp.category_detail)
+            except (ValueError, TypeError):
+                pass 
+
+    return render(request, 'expense_list.html', {
+        'expenses_by_date': dict(expenses_by_date),
+        'from_date': from_date,
+        'to_date': to_date,
+        'selected_category': category,
+        'category_totals': dict(category_totals),
+        'show_totals': bool(from_date or to_date),
+    })
 
 def user_view(request):
     if request.method == "POST":

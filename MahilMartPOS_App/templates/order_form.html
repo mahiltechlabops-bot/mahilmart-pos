@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="form-container">
+    <h2 style="text-align: center; color: #004d66;">New Order</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="form-group"><label>Customer Name:</label>{{ form.customer_name }}</div>
+            <div class="form-group"><label>Phone Number:</label>{{ form.phone_number }}</div>
+        </div>
+        <div class="row">
+            <div class="form-group"><label>Address:</label>{{ form.address }}</div>
+            <div class="form-group"><label>Email:</label>{{ form.email }}</div>
+        </div>
+        <div class="row">
+            <div class="form-group"><label>Date of Order:</label>{{ form.date_of_order }}</div>
+            <div class="form-group"><label>Expected Delivery:</label>{{ form.expected_delivery_datetime }}</div>
+        </div>
+        <div class="row">
+            <div class="form-group"><label>Delivery:</label>{{ form.delivery }}</div>
+            <div class="form-group"><label>Delivery Charges:</label>{{ form.charges }}</div>
+        </div>
+        <div class="row">
+            <div class="form-group"><label>Total Amount:</label>{{ form.total_order_amount }}</div>
+            <div class="form-group"><label>Advance:</label>{{ form.advance }}</div>
+        </div>
+        <div class="row">
+            <div class="form-group"><label>Due Balance:</label>{{ form.due_balance }}</div>        
+            <div class="form-group"><label>Paid Amount:</label>{{ form.paid_amount }}</div>
+        </div>
+        <div class="row">
+            <div class="form-group"><label>Payment Type:</label>{{ form.payment_type }}</div>
+            <div class="form-group"><label>Order Status:</label>{{ form.order_status }}</div>
+        </div>
+
+        <hr class="hr-line">
+        <h3 style="margin-top: 20px;">Order Items</h3>
+
+        <div id="items-container">
+            {% if editing %}
+            {% for item in items %}
+            <div class="item-row-flex">
+                <div class="item-fields">
+                    <div class="form-group">
+                        <label>Item Name:</label>
+                        <input type="text" name="item_name" value="{{ item.item_name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity:</label>
+                        <input type="number" name="quantity" value="{{ item.quantity }}" oninput="updateAmount(this)" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate:</label>
+                        <input type="number" name="rate" value="{{ item.rate }}" oninput="updateAmount(this)" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount:</label>
+                        <input type="number" name="amount" value="{{ item.amount }}" readonly>
+                    </div>
+                </div>
+                <div class="remove-column">
+                    <button type="button" onclick="removeThisItem(this)" class="remove-btn">❌</button>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="item-row-flex">
+                <div class="item-fields">
+                    <div class="form-group">
+                        <label>Item Name:</label>
+                        <input type="text" name="item_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity:</label>
+                        <input type="number" name="quantity" oninput="updateAmount(this)" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate:</label>
+                        <input type="number" name="rate" oninput="updateAmount(this)" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount:</label>
+                        <input type="number" name="amount" readonly>
+                    </div>
+                </div>
+                <div class="remove-column">
+                    <button type="button" onclick="removeThisItem(this)" class="remove-btn">❌</button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 15px; margin-top: 10px;">
+            <button type="button" onclick="addItem()">➕ Add Item</button>
+        </div>
+
+        <div class="button-group">
+            <button type="submit">Submit Order</button>
+            <a href="{% url 'order_list' %}">Back</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form-container {
+        width: 95%;
+        max-width: 1200px;
+        background-color: #ffffff;
+        margin: 40px auto;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+    }
+
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        width: 48%;
+    }
+
+    .form-group label {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 8px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background-color: #f9f9f9;
+    }
+
+    .button-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+    }
+
+    .button-group button,
+    .button-group a {
+        width: 48%;
+        padding: 12px;
+        font-size: 16px;
+        background-color: #0077b6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .hr-line {
+        margin: 30px 0;
+        border: none;
+        border-top: 2px solid #ccc;
+    }
+
+    .item-row-flex {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .item-fields {
+        display: flex;
+        flex: 1;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .item-fields .form-group {
+        flex: 1 1 22%;
+        min-width: 150px;
+    }
+
+    .remove-column {
+        display: flex;
+        align-items: center;
+    }
+
+    .remove-btn {
+        padding: 6px 10px;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+        .form-group {
+            width: 100%;
+        }
+
+        .button-group {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .button-group button,
+        .button-group a {
+            width: 100%;
+        }
+
+        .item-fields .form-group {
+            flex: 1 1 100%;
+        }
+    }
+</style>
+
+<script>
+    function addItem() {
+        const container = document.getElementById('items-container');
+        const row = document.createElement('div');
+        row.className = 'item-row-flex';
+        row.innerHTML = `
+            <div class="item-fields">
+                <div class="form-group">
+                    <label>Item Name:</label>
+                    <input type="text" name="item_name" required>
+                </div>
+                <div class="form-group">
+                    <label>Quantity:</label>
+                    <input type="number" name="quantity" oninput="updateAmount(this)" required>
+                </div>
+                <div class="form-group">
+                    <label>Rate:</label>
+                    <input type="number" name="rate" oninput="updateAmount(this)" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount:</label>
+                    <input type="number" name="amount" readonly>
+                </div>
+            </div>
+            <div class="remove-column">
+                <button type="button" onclick="removeThisItem(this)" class="remove-btn">❌</button>
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function removeThisItem(button) {
+        const row = button.closest('.item-row-flex');
+        const container = document.getElementById('items-container');
+        if (container.children.length > 1) {
+            container.removeChild(row);
+        } else {
+            alert("At least one item is required.");
+        }
+    }
+
+    function updateAmount(el) {
+        const row = el.closest('.item-row-flex') || el.closest('.item-row');
+        const qty = parseFloat(row.querySelector('input[name="quantity"]').value) || 0;
+        const rate = parseFloat(row.querySelector('input[name="rate"]').value) || 0;
+        const amount = qty * rate;
+        row.querySelector('input[name="amount"]').value = amount.toFixed(2);
+        calculateTotalAmount();
+    }
+
+    function calculateTotalAmount() {
+        let total = 0;
+        const amountFields = document.querySelectorAll('input[name="amount"]');
+        amountFields.forEach(field => {
+            total += parseFloat(field.value) || 0;
+        });
+
+        const totalField = document.querySelector('[name="total_order_amount"]');
+        if (totalField) {
+            totalField.value = total.toFixed(2);
+        }
+
+        calculateDueBalance();
+    }
+
+    function calculateDueBalance() {
+        const total = parseFloat(document.querySelector('[name="total_order_amount"]').value) || 0;
+        const advance = parseFloat(document.querySelector('[name="advance"]').value) || 0;
+        const dueField = document.querySelector('[name="due_balance"]');
+
+        if (dueField) {
+            dueField.value = (total - advance).toFixed(2);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const advanceInput = document.querySelector('[name="advance"]');
+        if (advanceInput) {
+            advanceInput.addEventListener('input', calculateDueBalance);
+        }
+    });
+</script>
+{% endblock %}

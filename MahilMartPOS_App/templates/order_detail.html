@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 40px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h2 style="text-align: center; color: #0077b6; margin-bottom: 30px;">Order Details {{ order.id }}</h2>
+
+    <p><strong>Customer Name:</strong> {{ order.customer_name }}</p>
+    <p><strong>Phone Number:</strong> {{ order.phone_number }}</p>
+    <p><strong>Address:</strong> {{ order.address }}</p>
+    <p><strong>Email:</strong> {{ order.email }}</p>
+
+    <hr>
+
+    <p><strong>Date of Order:</strong> {{ order.date_of_order|date:"d-m-Y H:i" }}</p>
+    <p><strong>Expected Delivery:</strong> {{ order.expected_delivery_datetime|date:"d-m-Y H:i" }}</p>
+    <p><strong>Delivery:</strong> {{ order.delivery }}</p>
+    <p><strong>Delivery Charges:</strong> ₹{{ order.charges }}</p>
+
+    <hr>
+
+    <p><strong>Total Order Amount:</strong> ₹{{ order.total_order_amount }}</p>
+    <p><strong>Advance Paid:</strong> ₹{{ order.advance }}</p>
+    <p><strong>Paid Amount:</strong> ₹{% if paid_now %}{{ paid_now }}{% else %}0.00{% endif %}</p>
+    <p><strong>Due Balance:</strong> ₹{{ order.due_balance }}</p>
+    <p><strong>Payment Type:</strong> {{ order.payment_type }}</p>
+    <p><strong>Status:</strong> {{ order.order_status }}</p>
+
+    <hr>
+
+    <h3 style="margin-top: 30px; color: #101111;">Ordered Items</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead>
+            <tr style="background-color: #f1f1f1;">
+                <th style="padding: 10px; border: 1px solid #ccc;">Item Name</th>
+                <th style="padding: 10px; border: 1px solid #ccc;">Quantity</th>
+                <th style="padding: 10px; border: 1px solid #ccc;">Rate</th>
+                <th style="padding: 10px; border: 1px solid #ccc;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.items.all %}
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ccc;">{{ item.item_name }}</td>
+                <td style="padding: 10px; border: 1px solid #ccc;">{{ item.quantity }}</td>
+                <td style="padding: 10px; border: 1px solid #ccc;">₹{{ item.rate }}</td>
+                <td style="padding: 10px; border: 1px solid #ccc;">₹{{ item.amount }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 10px;">No items added for this order.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 30px; text-align: center;">
+    {% if order.order_id %}
+    <a href="{% url 'edit_order' order.order_id %}" style="text-decoration: none; margin-right: 20px;">
+        <button style="padding: 10px 40px; background-color: #28a745; border: none; color: white; border-radius: 6px; font-size: 14px;">Edit</button>
+    </a>
+{% endif %}
+
+
+    <a href="{% url 'order_list' %}" style="text-decoration: none;">
+        <button style="padding: 10px 40px; background-color: #007bff; border: none; color: white; border-radius: 6px; font-size: 14px;">Back</button>
+    </a>
+</div>
+
+</div>
+{% endblock %}

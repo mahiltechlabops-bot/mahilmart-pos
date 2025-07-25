@@ -1,7 +1,10 @@
+from datetime import datetime
 from django import forms
 from .models import Supplier
-from .models import Billing
 from .models import CompanyDetails
+from .models import Billing,Order,OrderItem,Expense
+from django.forms.widgets import DateTimeInput
+from django.forms.widgets import DateInput
 
 class BillingForm(forms.ModelForm):
     class Meta:
@@ -9,7 +12,63 @@ class BillingForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'}),
-        }        
+        }    
+
+class OrderForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+        widgets = {
+            'customer_name': forms.TextInput(attrs={'placeholder': 'Enter customer name'}),
+            'phone_number': forms.TextInput(attrs={'placeholder': 'Enter phone number'}),
+            'address': forms.Textarea(attrs={'rows': 1, 'placeholder': 'Enter address'}),
+            'email': forms.EmailInput(attrs={'placeholder': 'Enter email'}),
+            'date_of_order': DateTimeInput(attrs={'type': 'datetime-local','readonly': 'readonly',},format='%Y-%m-%dT%H:%M'),
+            'expected_delivery_datetime': DateTimeInput(attrs={'type': 'datetime-local'},format='%Y-%m-%dT%H:%M'),
+            'delivery': forms.Select(choices=Order.DELIVERY_CHOICES),
+            'charges': forms.NumberInput(attrs={'placeholder': 'Delivery charges'}),
+            'total_order_amount': forms.NumberInput(attrs={'placeholder': 'Total order amount'}),
+            'advance': forms.NumberInput(attrs={'placeholder': 'Advance paid'}),
+            'due_balance': forms.NumberInput(attrs={'placeholder': 'Remaining balance'}),
+            'full_amount_paid': forms.CheckboxInput(attrs={'disabled': True}),
+            'payment_type': forms.Select(choices=Order.PAYMENT_TYPE_CHOICES),
+            'order_status': forms.Select(choices=Order.ORDER_STATUS_CHOICES),
+        }
+        
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            
+            if not self.is_bound:
+                self.fields['date_of_order'].initial = datetime.now().strftime('%Y-%m-%dT%H:%M')
+                self.fields['customer_name'].required = True
+                self.fields['address'].required = True
+                self.fields['email'].required = True
+
+class OrderItemForm(forms.ModelForm):
+    class Meta:
+        model = OrderItem
+        fields = ['item_name', 'quantity', 'rate', 'amount']
+
+
+class ExpenseForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = '__all__'
+        widgets = {
+            'datetime': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'readonly': 'readonly'
+            }),
+            'notes': forms.Textarea(attrs={'rows': 1}),
+            'date': DateInput(attrs={'type': 'date'}),
+        }
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ['total_order_amount','advance', 'due_balance']
+                    
 
 class SupplierForm(forms.ModelForm):
     phone = forms.RegexField(

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Purchase Payment Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            --background-color: #f5f5f5;
+            padding: 0;
+        }
+        .table-container {
+            max-width: 1400px;
+            margin: 30px auto;
+            
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px 8px;
+        }
+        
+        .status-paid {
+            color: green;
+            font-weight: bold;
+        }
+        .status-unpaid {
+            color: red;
+            font-weight: bold;
+        }
+        .status-partial {
+            color: orange;
+            font-weight: bold;
+        }
+        .btn-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .back-btn {
+            padding: 8px 20px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+    </style>
+</head>
+<body>
+<h2>Purchase Payment Details</h2>
+
+<div class="table-container">
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Payment ID</th>
+                <th>Purchase ID</th>
+                <th>Supplier ID</th>
+                <th>Payment Rate</th>
+                <th>Payment Mode</th>
+                <th>Amount Paid</th>
+                <th>Total Invoice Amount</th>
+                <th>Outstanding Amount</th>
+                <th>Discount</th>
+                <th>Payment Reference </th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payments %}
+            <tr>
+                <td>{{ p.payment_id }}</td>
+                <td>{{ p.purchase_id }}</td>
+                <td>{{ p.supplier_id }}</td>
+                <td>{{ p.payment_rate }}</td>
+                <td>{{ p.payment_mode }}</td>
+                <td>{{ p.amount_paid }}</td>
+                <td>{{ p.total_invoice_amount }}</td>
+                <td>{{ p.outstanding_amount }}</td>
+                <td>{{ p.discount }}</td>
+                <td>{{ p.payment_reference_number }}</td>
+                <td class="
+                    {% if p.payment_status == 'Paid' %}status-paid
+                    {% elif p.payment_status == 'Unpaid' %}status-unpaid
+                    {% elif p.payment_status == 'Partial' %}status-partial
+                    {% endif %}
+                ">
+                    {{ p.payment_status }}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="12">No purchase payments found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="btn-container">
+        <a href="{% url 'payment-list' %}">
+            <button class="back-btn" style="width: 100px; height: 40px; font-size: large;">Back</button>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>
+{% endblock %}

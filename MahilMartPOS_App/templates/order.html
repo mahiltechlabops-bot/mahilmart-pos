@@ -1,224 +1,276 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<main class="app-content" id="mainContent">
-  <div class="card">
-    <div class="order-header d-flex justify-content-between align-items-center mb-3">
-      <h3><i class="fas fa-receipt"></i> Order Management</h3>
-      <button class="btn btn-primary" id="newOrderBtn">
-        <i class="fas fa-plus"></i> New Order
-      </button>
-    </div>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Order Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+        }
 
-    <div class="search-bar d-flex gap-2 mb-3">
-      <input type="text" class="form-control" placeholder="Search orders...">
-      <select class="form-select" style="max-width: 150px;">
-        <option>All Status</option>
-        <option>Pending</option>
-        <option>Completed</option>
-        <option>Cancelled</option>
-      </select>
-      <input type="date" class="form-control" style="max-width: 150px;">
-      <button class="btn btn-outline-secondary">
-        <i class="fas fa-filter"></i> Filter
-      </button>
-    </div>
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
 
-    <div class="table-responsive">
-      <table class="table table-bordered order-table">
-        <thead class="table-light">
-          <tr>
-            <th>Order ID</th>
-            <th>Customer</th>
-            <th>Date</th>
-            <th>Items</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% comment %} Sample Orders {% endcomment %}
-          {% for order in orders %}
-          <tr>
-            <td>{{ order.order_id }}</td>
-            <td>{{ order.customer }}</td>
-            <td>{{ order.date }}</td>
-            <td>{{ order.items_count }}</td>
-            <td>${{ order.total }}</td>
-            <td><span class="badge bg-{{ order.status_class }}">{{ order.status }}</span></td>
-            <td>
-              <button class="btn btn-sm btn-info view-btn" data-order="{{ order.order_id }}">
-                <i class="fas fa-eye"></i>
-              </button>
-              {% if order.status == 'Pending' %}
-              <button class="btn btn-sm btn-success complete-btn" data-order="{{ order.order_id }}">
-                <i class="fas fa-check"></i>
-              </button>
-              <button class="btn btn-sm btn-danger cancel-btn" data-order="{{ order.order_id }}">
-                <i class="fas fa-times"></i>
-              </button>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
 
-    <nav aria-label="Page navigation">
-      <ul class="pagination justify-content-end mt-3">
-        <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
-        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-        <li class="page-item"><a class="page-link" href="#">2</a></li>
-        <li class="page-item"><a class="page-link" href="#">3</a></li>
-        <li class="page-item"><a class="page-link" href="#">&raquo;</a></li>
-      </ul>
-    </nav>
-  </div>
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-  <!-- Order Details Modal -->
-  <div class="modal" id="orderDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5>Order Details - ORD-<span id="orderId"></span></h5>
-          <button class="btn-close" id="closeOrderDetails"></button>
+        .header h2 {
+            margin: 0;
+            font-size: 22px;
+            color: #333;
+        }
+
+        .header button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .filters input,
+        .filters select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            flex: 1;
+        }
+
+        .filters button {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: capitalize;
+        }
+
+        .status.completed { background-color: #d4edda; color: #155724; }
+        .status.pending { background-color: #fff3cd; color: #856404; }
+        .status.cancelled { background-color: #f8d7da; color: #721c24; }
+
+        .pagination {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .pagination a {
+            display: inline-block;
+            padding: 8px 12px;
+            margin: 0 2px;
+            background-color: #eee;
+            color: #333;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+
+        .pagination a.active {
+            background-color: #007bff;
+            color: white;
+        }
+        
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <div class="header">
+            <div id="paymentModal" style="display:none; position:fixed; top:20%; left:35%; background:white; border:1px solid #ccc; padding:20px; z-index:9999;">
+                <h3>Update Payment</h3>
+                <form method="post" action="" id="paymentForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="order_id" id="popup_order_id">
+                    
+                    <label>Total Amount:</label>
+                    <input type="text" id="popup_total" readonly><br><br>
+                    
+                    <label>Advance Paid:</label>                   
+                    <input type="number" name="advance" id="popup_advance"><br><br>
+
+                     <label>Paid Amount:</label>
+                    <input type="number" name="paid_now" id="popup_paid_now"><br><br>
+                    
+                    <label>Due Balance:</label>                 
+                    <input type="number" name="due_balance" id="popup_due" readonly><br><br>
+                    
+                    <button type="submit">Save</button>
+                    <button type="button" onclick="closeModal()">Cancel</button>
+                </form>
+            </div>
+            
+            <h2>Order Management</h2>
+            <a href="{% url 'create_order' %}">
+                <button>+ New Order</button>
+            </a>
         </div>
 
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <p><strong>Customer:</strong> <span id="orderCustomer"></span></p>
-            <p><strong>Date:</strong> <span id="orderDate"></span></p>
-            <p><strong>Status:</strong> <span id="orderStatus"></span></p>
-          </div>
-          <div class="col-md-6">
-            <p><strong>Order Total:</strong> $<span id="orderTotal"></span></p>
-            <p><strong>Payment Method:</strong> <span id="orderPayment"></span></p>
-            <p><strong>Delivery Address:</strong> <span id="orderAddress"></span></p>
-          </div>
-        </div>
+        <form method="get" class="filters">
+            <input type="text" name="q" placeholder="Search orders..." value="{{ request.GET.q }}">
+            <select name="status">
+                <option value="">All Status</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
 
-        <h6>Order Items</h6>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Price</th>
-              <th>Qty</th>
-              <th>Total</th>
+            <input type="date" name="date" value="{{ request.GET.date }}">
+            <button type="submit">Filter</button>
+        </form>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.order_id }}</td>
+                    <td>{{ order.customer_name }}</td>
+                    <td>{{ order.date_of_order|date:"d-m-Y H:i" }}</td>
+                    <td>{{ order.items.count }}</td>
+                    <td>₹{{ order.total_order_amount }}</td>
+                    <td><span class="status {{ order.order_status }}">{{ order.order_status }}</span></td>
+                    <td>
+                        <a href="{% url 'order_detail' order.order_id %}">View</a>
+                        {% if order.order_status == 'pending' %}
+                        <span style="margin-left: 15px;">
+                            <a href="javascript:void(0);"
+                            class="mark-paid-link"
+                            data-order-id="{{ order.order_id }}"
+                            data-total="{{ order.total_order_amount }}"
+                            data-advance="{{ order.advance }}"
+                            data-due="{{ order.due_balance }}">
+                            Update
+                        </a>
+                    </span>
+                    {% endif %}
+                </td>
             </tr>
-          </thead>
-          <tbody id="orderItemsList"></tbody>
-        </table>
+            {% empty %}
+            <tr><td colspan="7">No orders found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-        <div class="text-end mt-4">
-          <button class="btn btn-primary" id="printOrderBtn">
-            <i class="fas fa-print"></i> Print Order
-          </button>
-          <button class="btn btn-secondary" id="closeOrderBtn">Close</button>
+        <div class="pagination">
+            {% if orders.has_previous %}
+                <a href="?page={{ orders.previous_page_number }}">&laquo;</a>
+            {% endif %}
+            {% for i in orders.paginator.page_range %}
+                <a href="?page={{ i }}" class="{% if orders.number == i %}active{% endif %}">{{ i }}</a>
+            {% endfor %}
+            {% if orders.has_next %}
+                <a href="?page={{ orders.next_page_number }}">&raquo;</a>
+            {% endif %}
         </div>
-      </div>
     </div>
-  </div>
-</main>
-{% endblock %}
+</div>
 
-{% block extra_js %}
+<div style="text-align: center; margin-top: 20px;">
+            <a href="{% url 'billing' %}">
+                <button style="padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer;">Back</button>
+            </a>
+        </div>
 <script>
-  // Modal toggling
-  const orderDetailsModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
-  const orderIdEl = document.getElementById("orderId");
-  const orderCustomer = document.getElementById("orderCustomer");
-  const orderDate = document.getElementById("orderDate");
-  const orderStatus = document.getElementById("orderStatus");
-  const orderTotal = document.getElementById("orderTotal");
-  const orderPayment = document.getElementById("orderPayment");
-  const orderAddress = document.getElementById("orderAddress");
-  const orderItemsList = document.getElementById("orderItemsList");
+    function closeModal() {
+        document.getElementById('paymentModal').style.display = 'none';
+    }
 
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const orderId = btn.dataset.order;
-      showOrderDetails(orderId);
-    });
-  });
+    document.querySelectorAll('.mark-paid-link').forEach(link => {
+        link.addEventListener('click', function () {
+            const orderId = this.getAttribute('data-order-id');
+            const total = parseFloat(this.getAttribute('data-total'));
+            const advance = parseFloat(this.getAttribute('data-advance'));
+            const due = parseFloat(this.getAttribute('data-due'));
 
-  function showOrderDetails(orderId) {
-    // Sample Data - Replace with actual API call
-    const mock = {
-      "1001": {
-        customer: "John Smith",
-        date: "2025-06-15",
-        status: "Completed",
-        total: "125.75",
-        payment: "Credit Card",
-        address: "123 Main St",
-        items: [
-          { name: "Product A", price: "10", qty: 3, total: "30" },
-          { name: "Product B", price: "15", qty: 2, total: "30" }
-        ]
-      }
-    };
+            document.getElementById('popup_order_id').value = orderId;
+            document.getElementById('popup_total').value = total.toFixed(2);
+            document.getElementById('popup_advance').value = advance.toFixed(2);
+            document.getElementById('popup_due').value = due.toFixed(2);
 
-    const data = mock[orderId] || {
-      customer: "Unknown",
-      date: "N/A",
-      status: "N/A",
-      total: "0.00",
-      payment: "N/A",
-      address: "N/A",
-      items: []
-    };
-
-    orderIdEl.textContent = orderId;
-    orderCustomer.textContent = data.customer;
-    orderDate.textContent = data.date;
-    orderStatus.textContent = data.status;
-    orderTotal.textContent = data.total;
-    orderPayment.textContent = data.payment;
-    orderAddress.textContent = data.address;
-
-    orderItemsList.innerHTML = "";
-    data.items.forEach(i => {
-      orderItemsList.innerHTML += `<tr>
-        <td>${i.name}</td>
-        <td>$${i.price}</td>
-        <td>${i.qty}</td>
-        <td>$${i.total}</td>
-      </tr>`;
+            document.getElementById('paymentForm').action = `/update-payment/${orderId}/`;
+            document.getElementById('paymentModal').style.display = 'block';
+        });
     });
 
-    orderDetailsModal.show();
-  }
-
-  document.getElementById("closeOrderDetails").addEventListener("click", () => orderDetailsModal.hide());
-  document.getElementById("closeOrderBtn").addEventListener("click", () => orderDetailsModal.hide());
-
-  document.querySelectorAll(".complete-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const orderId = btn.dataset.order;
-      if (confirm(`Mark Order ORD-${orderId} as completed?`)) {
-        alert(`Order ${orderId} completed.`);
-      }
+    document.getElementById('popup_advance').addEventListener('input', function () {
+        const total = parseFloat(document.getElementById('popup_total').value) || 0;
+        const advance = parseFloat(this.value) || 0;
+        const due = total - advance;
+        document.getElementById('popup_due').value = due.toFixed(2);
     });
-  });
 
-  document.querySelectorAll(".cancel-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const orderId = btn.dataset.order;
-      if (confirm(`Cancel Order ORD-${orderId}?`)) {
-        alert(`Order ${orderId} cancelled.`);
-      }
-    });
-  });
+     document.getElementById('popup_paid_now').addEventListener('input', function () {
+    const total = parseFloat(document.getElementById('popup_total').value) || 0;
+    const currentAdvance = parseFloat(document.getElementById('popup_advance').value) || 0;
+    const paidNow = parseFloat(this.value) || 0;
+    const newAdvance = currentAdvance + paidNow;
+    const due = total - newAdvance;
 
-  document.getElementById("printOrderBtn").addEventListener("click", () => {
-    alert("Print Order (not implemented).");
-  });
-
-  document.getElementById("newOrderBtn").addEventListener("click", () => {
-    alert("Redirect to new order form.");
-  });
+    document.getElementById('popup_due').value = due.toFixed(2);
+});
 </script>
+
+
+</body>
+</html>
+
 {% endblock %}

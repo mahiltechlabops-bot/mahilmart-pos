@@ -1,7 +1,65 @@
 {% extends "base.html" %}
+{% block style %}
+<style>
+  #purchaseTable input {
+    width: 80px;            /* compact input width */
+    padding: 4px 6px;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+
+  #purchaseTable td,
+  #purchaseTable th {
+    white-space: nowrap;
+    padding: 4px 6px;
+    font-size: 13px;
+  }
+
+  #purchaseTable th {
+    font-weight: 600;
+  }
+
+  .table-responsive {
+    overflow-x: hidden;
+  }
+
+  #purchaseTable {
+    width: 100%;
+    table-layout: auto;
+  }
+
+  #purchaseTable td:nth-child(3) input,
+  #purchaseTable td:nth-child(7) input,  /* Qty */
+  #purchaseTable td:nth-child(8) input,  /* Price */
+  #purchaseTable td:nth-child(9) input,  /* Total */
+  #purchaseTable td:nth-child(10) input, /* Discount */
+  #purchaseTable td:nth-child(11) input, /* Tax */
+  #purchaseTable td:nth-child(12) input, /* Net */
+  #purchaseTable td:nth-child(13) input, /* MRP */
+  #purchaseTable td:nth-child(14) input, /* Wh */
+  #purchaseTable td:nth-child(15) input, /* Wh 1 */
+  #purchaseTable td:nth-child(16) input  /* Sale Price */ {
+    width: 55px !important;
+    padding: 3px 4px;
+    font-size: 12px;
+    box-sizing: border-box;
+  }
+
+  #purchaseTable td:nth-child(2) input,
+  #purchaseTable td:nth-child(17) input,
+  #purchaseTable td:nth-child(19) input {
+    width: 90px !important;
+    padding: 3px 4px;
+    font-size: 12px;
+    box-sizing: border-box;
+  }
+</style>
+
+{% endblock %}
+
 {% block content %}
 <main class="app-content">
-  <div class="card p-4 mx-auto" style="width:150%;">
+  <div class="card p-4 mx-auto container-fluid">
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
 
     <!-- Purchase Header -->
@@ -48,15 +106,21 @@
 
     <!-- Products Table -->
     <h5>Add Products</h5>
-    <table class="table table-bordered mt-3" id="purchaseTable">
-      <thead class="table-light"><tr>
-        <th>S.no</th><th>Item</th><th>Code</th><th>Group</th><th>Brand</th><th>Unit</th>
-        <th>Qty</th><th>Price</th><th>Total</th><th>Discount</th><th>Tax</th><th>Net</th>
-        <th>MRP</th><th>Wh</th><th>Wh 1</th><th>Sale Price</th><th>Purchased At</th>
-        <th>Batch No</th><th>Expiry Date</th><th>Action</th>
-      </tr></thead>
-      <tbody id="productTableBody"></tbody>
-    </table>
+    <!-- <div class="table-responsive" style="overflow-x: auto; max-width: 100%;">
+        <table class="table table-sm table-bordered mt-3" id="purchaseTable" style="font-size: 0.85rem; min-width: 1500px;"> -->
+        <div class="table-responsive" style="overflow-x: auto; max-width: 100%;">
+          <table class="table table-sm table-bordered mt-3" id="purchaseTable" style="min-width: 1500px; font-size: 0.85rem;">
+            <thead class="table-light">
+              <tr>
+                <th>S.no</th><th>Item</th><th>Code</th><th>Group</th><th>Brand</th><th>Unit</th>
+                <th>Qty</th><th>Price</th><th>Total</th><th>Discount</th><th>Tax</th><th>Net</th>
+                <th>MRP</th><th>Wh</th><th>Wh 1</th><th>Sale Price</th><th>Purchased At</th>
+                <th>Batch No</th><th>Expiry Date</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="productTableBody"></tbody>
+          </table>
+       </div>
     <button id="addProductBtn" class="btn btn-primary">+ Add Product</button>
 
     <!-- Summary -->
