@@ -19,8 +19,8 @@
     <hr>
 
     <p><strong>Total Order Amount:</strong> ₹{{ order.total_order_amount }}</p>
-    <p><strong>Advance Paid:</strong> ₹{{ order.advance }}</p>
-    <p><strong>Paid Amount:</strong> ₹{% if paid_now %}{{ paid_now }}{% else %}0.00{% endif %}</p>
+    <p><strong>Advance Paid:</strong> ₹{{ order.advance }}</p>   
+    <p><strong>Paid Amount:</strong> ₹{% if paid_now %}{{ paid_now }}{% else %}{{ order.paid_amount|default:"0.00" }}{% endif %}</p>
     <p><strong>Due Balance:</strong> ₹{{ order.due_balance }}</p>
     <p><strong>Payment Type:</strong> {{ order.payment_type }}</p>
     <p><strong>Status:</strong> {{ order.order_status }}</p>

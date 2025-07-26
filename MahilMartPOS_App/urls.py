@@ -42,7 +42,6 @@ urlpatterns = [
     path('customers/', views.customers_view, name='customers'),
     path('add-customer/', views.add_customer, name='add_customer'),
     path('submit-customer/', views.submit_customer, name='submit_customer'),
-    path('payments/', views.payments_view, name='payments'),
     path('payments/', views.payment_list_view, name='payment-list'),
     path('purchase_items/', views.purchase_items_view, name='purchase_items'),
     path('expense/',views.create_expense,name='expense'),

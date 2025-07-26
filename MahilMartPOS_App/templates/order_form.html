@@ -27,8 +27,9 @@
             <div class="form-group"><label>Advance:</label>{{ form.advance }}</div>
         </div>
         <div class="row">
-            <div class="form-group"><label>Due Balance:</label>{{ form.due_balance }}</div>        
+            <div class="form-group"><label>Due Balance:</label>{{ form.due_balance }}</div>
             <div class="form-group"><label>Paid Amount:</label>{{ form.paid_amount }}</div>
+            
         </div>
         <div class="row">
             <div class="form-group"><label>Payment Type:</label>{{ form.payment_type }}</div>
@@ -260,13 +261,14 @@
         const container = document.getElementById('items-container');
         if (container.children.length > 1) {
             container.removeChild(row);
+            calculateTotalAmount();  
         } else {
             alert("At least one item is required.");
         }
     }
 
     function updateAmount(el) {
-        const row = el.closest('.item-row-flex') || el.closest('.item-row');
+        const row = el.closest('.item-row-flex');
         const qty = parseFloat(row.querySelector('input[name="quantity"]').value) || 0;
         const rate = parseFloat(row.querySelector('input[name="rate"]').value) || 0;
         const amount = qty * rate;
@@ -291,18 +293,42 @@
 
     function calculateDueBalance() {
         const total = parseFloat(document.querySelector('[name="total_order_amount"]').value) || 0;
-        const advance = parseFloat(document.querySelector('[name="advance"]').value) || 0;
+        let advance = parseFloat(document.querySelector('[name="advance"]').value) || 0;
+        let paid = parseFloat(document.querySelector('[name="paid_amount"]').value) || 0;
+
+        const advanceField = document.querySelector('[name="advance"]');
+        const paidField = document.querySelector('[name="paid_amount"]');
         const dueField = document.querySelector('[name="due_balance"]');
 
-        if (dueField) {
+        if (advance > 0 && paid > 0) {
+            alert("Please enter either Advance or Paid Amount, not both.");
+            advanceField.value = 0;
+            paidField.value = 0;
+            dueField.value = total.toFixed(2);
+            return;
+        }
+
+        if (paid > 0) {
+            advanceField.value = 0;
+            dueField.value = (total - paid).toFixed(2);
+        } else if (advance > 0) {
+            paidField.value = 0;
             dueField.value = (total - advance).toFixed(2);
+        } else {
+            dueField.value = total.toFixed(2);
         }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
         const advanceInput = document.querySelector('[name="advance"]');
+        const paidInput = document.querySelector('[name="paid_amount"]');
+
         if (advanceInput) {
             advanceInput.addEventListener('input', calculateDueBalance);
+        }
+
+        if (paidInput) {
+            paidInput.addEventListener('input', calculateDueBalance);
         }
     });
 </script>

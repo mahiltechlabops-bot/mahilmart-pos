@@ -238,54 +238,39 @@ def create_order(request):
         form = OrderForm()
     return render(request, 'order_form.html', {'form': form})
 
-from django.shortcuts import redirect
-from django.http import HttpResponse
-from django.utils import timezone
-from .models import Quotation
-import logging
-
-logger = logging.getLogger(__name__)
-
-def create_quotation(request):
+def create_quotation(request): 
     if request.method == 'POST':
-        try:
-            # Get customer details from form fields
-            name = request.POST.get('name')
-            email = request.POST.get('email')
-            cell = request.POST.get('cell')
-            address = request.POST.get('address')
-            bill_type = request.POST.get('bill_type')
-            sale_type = request.POST.get('sale_type')
-            counter = request.POST.get('counter')
-            order_no = request.POST.get('order_no')
-            date_joined = request.POST.get('date_joined') or timezone.now().date()
+        cell = request.POST.get('cell')
+        latest = Quotation.objects.order_by('-id').first()
+        base_qtn_no = int(latest.qtn_no) + 1 if latest and str(latest.qtn_no).isdigit() else 1
+        qtn_no = str(base_qtn_no)
 
-            logger.info(f"Received quotation from {name}, Phone: {cell}")
+        sno = request.POST.getlist('sno')
+        codes = request.POST.getlist('code')
+        item_names = request.POST.getlist('item_name')
+        qtys = request.POST.getlist('qty')
+        mrsps = request.POST.getlist('mrsp')
+        selling_prices = request.POST.getlist('sellingprice')
 
-            # Generate quotation number
-            latest = Quotation.objects.order_by('-id').first()
-            base_qtn_no = int(latest.qtn_no) + 1 if latest and str(latest.qtn_no).isdigit() else 1
-            qtn_no = str(base_qtn_no)
+        # min_len = min(len(sno), len(codes), len(item_names), len(qtys), len(mrsps), len(selling_prices))
 
-            # Get lists of item data
-            snos = request.POST.getlist('sno')
-            codes = request.POST.getlist('code')
-            item_names = request.POST.getlist('item_name')
-            qtys = request.POST.getlist('qty')
-            mrsps = request.POST.getlist('mrsp')
-            selling_prices = request.POST.getlist('sellingprice')
+        # for i in range(min_len):
+        #     if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
+        #         continue
 
-            for i in range(len(item_names)):
-                if not item_names[i].strip():
-                    continue  # Skip empty rows
+        for i in range(len(item_names)):
+            if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
+                continue
 
+            try:
                 qty = int(qtys[i]) if qtys[i] else 0
                 mrsp = float(mrsps[i]) if mrsps[i] else 0.0
                 selling_price = float(selling_prices[i]) if selling_prices[i] else 0.0
                 amount = qty * selling_price
 
+                print(f"Creating quotation row {i+1}: qtn_no={qtn_no}, code={codes[i]}")
                 Quotation.objects.create(
-                    sno=int(snos[i]) if snos[i] else i + 1,
+                    sno=int(sno[i]) if sno[i] else i + 1,
                     qtn_no=qtn_no,
                     date=timezone.now().date(),
                     code=codes[i],
@@ -294,24 +279,22 @@ def create_quotation(request):
                     mrsp=mrsp,
                     selling_price=selling_price,
                     total_amount=amount,
-                    name=name,
-                    email=email,
-                    address=address,
-                    date_joined=date_joined,
-                    bill_type=bill_type,
-                    sale_type=sale_type,
-                    counter=counter,
-                    order_no=order_no,
+                    name=request.POST.get('name'),
+                    email=request.POST.get('email'),
+                    address=request.POST.get('address'),
+                    date_joined=request.POST.get('date_joined') or timezone.now().date(),
+                    bill_type=request.POST.get('bill_type'),
+                    sale_type=request.POST.get('sale_type'),
+                    counter=request.POST.get('counter'),
+                    order_no=request.POST.get('order_no'),
                     cell=cell,
                 )
+                print(f"Created quotation row {i+1}")
+            except Exception as e:
+                print(f"Quotation Row Error {i+1}: {e}")
+                continue
 
-            return redirect('quotation_detail', qtn_no=qtn_no)
-
-        except Exception as e:
-            logger.exception("Error while creating quotation")
-            return HttpResponse("Internal server error", status=500)
-
-    return HttpResponse("Method not allowed", status=405)
+        return redirect('quotation_detail', qtn_no=qtn_no)
 
 def quotation_detail(request, qtn_no):
     quotation_items = Quotation.objects.filter(qtn_no=qtn_no)
@@ -337,20 +320,15 @@ def update_payment(request, order_id):
 
             if paid_now:
                 paid_now = Decimal(paid_now)
-                order.advance += paid_now
-                order.due_balance = (order.total_order_amount - order.advance).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
+                order.paid_amount = paid_now
 
-                request.session['paid_now'] = str(paid_now)
+                total_paid = order.advance + paid_now
+                order.due_balance = (order.total_order_amount - total_paid).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
 
             else:
-                advance = Decimal(request.POST.get("advance", "0"))
-                due_balance = Decimal(request.POST.get("due_balance", "0"))
-                order.advance = advance
-                order.due_balance = due_balance
-
-            order.order_status = 'completed' if order.due_balance <= 0 else 'pending'
-
-            order.save()
+                 order.paid_amount = Decimal("0.00")
+                 order.due_balance = (order.total_order_amount - order.advance).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
+                 order.order_status = 'completed' if order.due_balance <= 0 else 'pending'                
             messages.success(request, f"Order #{order_id} payment updated.")
 
         except Exception as e:
@@ -1198,9 +1176,6 @@ def submit_customer(request):
 
     return redirect('customers')
 
-def payments_view(request):
-    return render(request, 'payments.html')
-
 def payment_list_view(request):
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
@@ -1210,14 +1185,18 @@ def payment_list_view(request):
 
     if from_date and to_date:
         try:
-            from_date_obj = datetime.datetime.strptime(from_date, '%Y-%m-%d').date()
-            to_date_obj = datetime.datetime.strptime(to_date, '%Y-%m-%d').date()
-            billings = billings.filter(date__range=(from_date_obj, to_date_obj))
+            from_date_obj = datetime.datetime.strptime(from_date, '%Y-%m-%d')
+            to_date_obj = datetime.datetime.strptime(to_date, '%Y-%m-%d')
+            start_dt = datetime.datetime.combine(from_date_obj.date(), datetime.time.min)
+            end_dt = datetime.datetime.combine(to_date_obj.date(), datetime.time.max)
+            billings = billings.filter(date__range=(start_dt, end_dt))
         except Exception as e:
             print("Date Filter Error:", e)
 
     if payment_mode and payment_mode != 'all':
         billings = billings.filter(bill_type__iexact=payment_mode)
+
+    print("Filtered billings count:", billings.count())
 
     return render(request, 'payments.html', {
         'billings': billings,

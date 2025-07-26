@@ -230,9 +230,14 @@
             <td><input type="number" name="qty" class="table-input"></td>
             <td><input type="number" name="mrsp" class="table-input" readonly></td>
             <td><input type="number" name="sellingprice" class="table-input" readonly></td>
+            <!-- <td><input type="number" name="sno[]" class="table-input"></td>
+            <td><input type="text" name="code[]" class="table-input"></td>
+            <td><input type="text" name="item_name[]" class="table-input"></td>
+            <td><input type="number" name="qty[]" class="table-input"></td>
+            <td><input type="number" name="mrsp[]" class="table-input"></td>
+            <td><input type="number" name="sellingprice[]" class="table-input"></td> -->
             <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
             <td><button type="button" class="delete-row-btn">Delete</button></td>
-
         </tr>
     </tbody>
 </table>
@@ -295,12 +300,13 @@
 <script>
     
     const itemTableBody = document.getElementById('itemTableBody');
-
+  
     function submitAsQuotation() {
-    const form = document.querySelector('form');
-    form.action = "{% url 'create_quotation' %}";
-    form.submit();
-}
+        const form = document.querySelector('form');
+        form.action = "{% url 'create_quotation' %}";
+        form.method = "POST";
+        form.submit();
+    }
 
   document.addEventListener('DOMContentLoaded', function () {
     const cellInput = document.getElementById('cell');

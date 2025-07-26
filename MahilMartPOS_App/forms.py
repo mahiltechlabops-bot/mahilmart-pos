@@ -5,6 +5,7 @@ from .models import CompanyDetails
 from .models import Billing,Order,OrderItem,Expense
 from django.forms.widgets import DateTimeInput
 from django.forms.widgets import DateInput
+import re
 
 class BillingForm(forms.ModelForm):
     class Meta:
@@ -12,7 +13,13 @@ class BillingForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'}),
-        }    
+        }  
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email and not re.match(r'^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$', email, re.IGNORECASE):
+            raise forms.ValidationError("Please enter a valid email address.")
+        return email  
 
 class OrderForm(forms.ModelForm):
     class Meta:
@@ -27,10 +34,10 @@ class OrderForm(forms.ModelForm):
             'date_of_order': DateTimeInput(attrs={'type': 'datetime-local','readonly': 'readonly',},format='%Y-%m-%dT%H:%M'),
             'expected_delivery_datetime': DateTimeInput(attrs={'type': 'datetime-local'},format='%Y-%m-%dT%H:%M'),
             'delivery': forms.Select(choices=Order.DELIVERY_CHOICES),
-            'charges': forms.NumberInput(attrs={'placeholder': 'Delivery charges'}),
-            'total_order_amount': forms.NumberInput(attrs={'placeholder': 'Total order amount'}),
-            'advance': forms.NumberInput(attrs={'placeholder': 'Advance paid'}),
-            'due_balance': forms.NumberInput(attrs={'placeholder': 'Remaining balance'}),
+            'charges': forms.NumberInput(attrs={'placeholder': 'Delivery charges'}),     
+            'total_order_amount': forms.NumberInput(attrs={'readonly': 'readonly'}),
+            'advance': forms.NumberInput(attrs={'placeholder': 'Advance paid'}),        
+            'due_balance': forms.NumberInput(attrs={'readonly': 'readonly'}),
             'full_amount_paid': forms.CheckboxInput(attrs={'disabled': True}),
             'payment_type': forms.Select(choices=Order.PAYMENT_TYPE_CHOICES),
             'order_status': forms.Select(choices=Order.ORDER_STATUS_CHOICES),

@@ -38,15 +38,24 @@
     </table>
 
     <div style="text-align: center; margin-top: 30px;">
-        <button onclick="window.print()" style="padding: 10px 20px; margin-right: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+    <a href="#" onclick="window.print()" style="text-decoration: none; display: inline-block; margin: 0 10px;">
+        <button type="button" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
             Print
         </button>
-        <a href="{% url 'billing' %}">
-            <button type="button" style="padding: 10px 20px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                Back
-            </button>
-        </a>
-        <a href="{% url 'convert_to_order' qtn_no=quotation.qtn_no %}" class="btn btn-success">Convert to Order</a>
-    </div>
+    </a>
+
+    <a href="{% url 'billing' %}" style="text-decoration: none; display: inline-block; margin: 0 10px;">
+        <button type="button" style="padding: 10px 20px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Back
+        </button>
+    </a>
+
+    <a href="{% url 'convert_to_order' qtn_no=quotation.qtn_no %}" style="text-decoration: none; display: inline-block; margin: 0 10px;">
+        <button type="button" style="padding: 10px 10px; background: #008CBA; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Convert to Order
+        </button>
+    </a>
+</div>
+
 </div>
 {% endblock %}

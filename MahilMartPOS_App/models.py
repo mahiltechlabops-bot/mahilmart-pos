@@ -319,16 +319,6 @@ class StockAdjustment(models.Model):
     def __str__(self):
         return f"{self.adjustment_type.title()} {self.quantity} - {self.purchase_item}"  
     
-class Payment(models.Model):
-    payment_id = models.AutoField(primary_key=True)
-    bill_no = models.CharField(max_length=20)
-    customer = models.CharField(max_length=100) 
-    date_time = models.DateTimeField(auto_now_add=True)
-    cashier = models.CharField(max_length=50)  
-    payment_mode = models.CharField(max_length=50)
-    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
-    due_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_status = models.CharField(max_length=20)
 
 class Expense(models.Model):
     PAYMENT_MODES = [

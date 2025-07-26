@@ -81,7 +81,7 @@
     <table>
         <thead>
             <tr>
-                <th>Payment ID</th>
+                <th>S No</th>
                 <th>Bill No</th>
                 <th>Customer</th>
                 <th>Date & Time</th>
@@ -94,19 +94,19 @@
         <tbody>
             {% for bill in billings %}
             <tr>
-                <td>{{ bill.id }}</td>
+                <td>{{ forloop.counter }}</td>
                 <td>{{ bill.bill_no }}</td>
                 <td>{{ bill.name }}</td>
                 <td>{{ bill.date|date:"d-m-Y h:i A" }}</td>
                 <td>{{ bill.counter }}</td>
                 <td>{{ bill.bill_type }}</td>
                 <td>{{ bill.received }}</td>
-                <td class="status-{% if bill.received|add:0 >= bill.total_amount|add:0 %}paid
-                    {% elif bill.received|add:0 == 0 %}unpaid
-                    {% else %}partial{% endif %}">
-                    {% if bill.received|add:0 >= bill.total_amount|add:0 %}
+                <td class="status-{% if bill.received >= bill.total_amount %}paid
+                                 {% elif bill.received == 0 %}unpaid
+                                 {% else %}partial{% endif %}">
+                    {% if bill.received >= bill.total_amount %}
                         Paid
-                    {% elif bill.received|add:0 == 0 %}
+                    {% elif bill.received == 0 %}
                         Unpaid
                     {% else %}
                         Partially Paid
