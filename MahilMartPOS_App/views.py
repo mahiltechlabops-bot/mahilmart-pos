@@ -67,82 +67,117 @@ def dashboard_view(request):
     return render(request, 'dashboard.html') 
 
 def create_invoice_view(request):
-    # Handle AJAX request for autofill
     if request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         phone = request.GET.get('phone')
-        latest_bill = Billing.objects.filter(phone=phone).order_by('-id').first()
-        total_earned = Billing.objects.filter(phone=phone).aggregate(total=Sum('points_earned'))['total'] or 0
-
+        latest_bill = Billing.objects.filter(cell=phone).order_by('-id').first()
         return JsonResponse({
             'name': latest_bill.name if latest_bill else '',
             'points': latest_bill.points if latest_bill else 0,
             'email': latest_bill.email if latest_bill else '',
             'address': latest_bill.address if latest_bill else '',
-            'date_joined': latest_bill.date_joined.strftime('%Y-%m-%d') if latest_bill else '',
+            'date_joined': str(latest_bill.date_joined) if latest_bill and latest_bill.date_joined else '',
         })
 
-    # Handle form submission
     if request.method == 'POST':
-        try:
-            latest_bill = Billing.objects.order_by('-id').first()
-            next_bill_no = str(int(latest_bill.bill_no) + 1) if latest_bill and latest_bill.bill_no.isdigit() else '1'
+        cell = request.POST.get('cell')
 
-            qty = int(request.POST.get('qty', 0))
-            mrsp = float(request.POST.get('mrsp', 0))
-            total_amount = qty * mrsp
-            points_earned = total_amount / 200
+        latest = Billing.objects.order_by('-id').first()
+        base_bill_no = int(latest.bill_no) + 1 if latest and str(latest.bill_no).isdigit() else 1
+        bill_no = str(base_bill_no)
 
-            customer_phone = request.POST.get('phone')
-            previous_billing = Billing.objects.filter(phone=customer_phone).order_by('-id').first()
-            previous_points = previous_billing.points if previous_billing else 0.0
-            total_points = previous_points + points_earned
+        snos = request.POST.getlist('sno')
+        codes = request.POST.getlist('code')
+        item_names = request.POST.getlist('item_name')
+        qtys = request.POST.getlist('qty')
+        mrsps = request.POST.getlist('mrsp')
+        selling_prices = request.POST.getlist('sellingprice')
 
-            billing = Billing(
-                to=request.POST.get('to'),
-                name=request.POST.get('name'),
-                phone=customer_phone,
-                email=request.POST.get('email'),
-                address=request.POST.get('address'),
-                date_joined=request.POST.get('date_joined') or timezone.now(),
-                bill_no=next_bill_no,
-                date=timezone.now().date(),
-                bill_type=request.POST.get('bill_type'),
-                counter=request.POST.get('counter'),
-                order_no=request.POST.get('order_no'),
-                sale_type=request.POST.get('sale_type'),
-                sno=int(request.POST.get('sno')) if request.POST.get('sno') else None,
-                code=request.POST.get('code'),
-                item_name=request.POST.get('item_name'),
-                qty=qty,
-                mrsp=mrsp,
-                total_items=1,
-                selling_price=mrsp,  # Assuming selling_price = mrsp; update logic if needed
-                total_amount=total_amount,
-                received=float(request.POST.get('received', 0)),
-                balance=float(request.POST.get('balance', 0)),
-                discount=float(request.POST.get('discount', 0)),
-                points_earned=points_earned,
-                points=total_points,
-            )
-            billing.save()
-            return redirect('billing')
+        previous_bill = Billing.objects.filter(cell=cell).order_by('-id').first()
+        total_points = previous_bill.points if previous_bill else 0.0
 
-        except Exception as e:
-            return render(request, 'billing.html', {
-                'error': f"Error occurred: {str(e)}",
-                'today_date': timezone.now().strftime('%Y-%m-%d'),
-                'bill_no': next_bill_no
-            })
+        for i in range(len(item_names)):
+            if not any([
+                codes[i].strip(),
+                item_names[i].strip(),
+                qtys[i].strip(),
+                selling_prices[i].strip()
+                ]):
+                continue
 
-    # For GET page render
+            try:
+                qty = int(qtys[i]) if qtys[i] else 0
+                mrsp = float(mrsps[i]) if mrsps[i] else 0.0
+                selling_price = float(selling_prices[i]) if selling_prices[i] else 0.0
+                amount = qty * selling_price
+                points_earned = amount / 200
+                total_points += points_earned
+                
+                Billing.objects.create(
+                    sno=int(snos[i]) if snos[i] else i + 1,
+                    code=codes[i],
+                    item_name=item_names[i],
+                    qty=qty,
+                    mrsp=mrsp,
+                    selling_price=selling_price,
+                    total_amount=amount,
+                    points_earned=points_earned,
+                    points=total_points,
+                    to=request.POST.get('to'),
+                    bill_no=bill_no,
+                    date=timezone.now().date(),
+                    name=request.POST.get('name'),
+                    email=request.POST.get('email'),
+                    address=request.POST.get('address'),
+                    date_joined=request.POST.get('date_joined') or timezone.now().date(),
+                    bill_type=request.POST.get('bill_type'),
+                    sale_type=request.POST.get('sale_type'),
+                    counter=request.POST.get('counter'),
+                    order_no=request.POST.get('order_no'),
+                    cell=cell,
+                    received=request.POST.get('received') or 0,
+                    balance=request.POST.get('balance') or 0,
+                    discount=request.POST.get('discount') or 0,
+                )
+            except IntegrityError as e:
+                print(f"Bill number conflict: {e}")
+                base_bill_no += 1
+                bill_no = str(base_bill_no)
+                continue
+            except Exception as e:
+                print(f"Error in row {i+1}: {e}")
+                continue
+
+        return redirect('billing')
+
     latest_bill = Billing.objects.order_by('-id').first()
-    next_bill_no = str(int(latest_bill.bill_no) + 1) if latest_bill and latest_bill.bill_no.isdigit() else '1'
+    next_bill_no = str(int(latest_bill.bill_no) + 1) if latest_bill and str(latest_bill.bill_no).isdigit() else '1'
     today_date = timezone.now().strftime('%Y-%m-%d')
 
     return render(request, 'billing.html', {
         'today_date': today_date,
         'bill_no': next_bill_no
     })
+
+
+def get_item_info(request):
+    code = request.GET.get('code', '').strip()
+    name = request.GET.get('name', '').strip()
+
+    item = None
+    if code:
+        item = Item.objects.filter(code__iexact=code).first()
+    elif name:
+        item = Item.objects.filter(item_name__iexact=name).first()
+        
+    if item:
+        return JsonResponse({
+            'item_name': item.item_name,
+            'item_code': item.code,
+            'mrsp': item.MRSP,
+            'sale_rate': item.sale_rate,
+        })
+    else:
+        return JsonResponse({'error': 'Item not found'}, status=404)
 
 def order_view(request):
     return render(request, 'order.html')
@@ -203,25 +238,47 @@ def create_order(request):
         form = OrderForm()
     return render(request, 'order_form.html', {'form': form})
 
+from django.shortcuts import redirect
+from django.http import HttpResponse
+from django.utils import timezone
+from .models import Quotation
+import logging
+
+logger = logging.getLogger(__name__)
+
 def create_quotation(request):
     if request.method == 'POST':
-        cell = request.POST.get('cell')
-        latest = Quotation.objects.order_by('-id').first()
-        base_qtn_no = int(latest.qtn_no) + 1 if latest and str(latest.qtn_no).isdigit() else 1
-        qtn_no = str(base_qtn_no)
+        try:
+            # Get customer details from form fields
+            name = request.POST.get('name')
+            email = request.POST.get('email')
+            cell = request.POST.get('cell')
+            address = request.POST.get('address')
+            bill_type = request.POST.get('bill_type')
+            sale_type = request.POST.get('sale_type')
+            counter = request.POST.get('counter')
+            order_no = request.POST.get('order_no')
+            date_joined = request.POST.get('date_joined') or timezone.now().date()
 
-        snos = request.POST.getlist('sno')
-        codes = request.POST.getlist('code')
-        item_names = request.POST.getlist('item_name')
-        qtys = request.POST.getlist('qty')
-        mrsps = request.POST.getlist('mrsp')
-        selling_prices = request.POST.getlist('sellingprice')
+            logger.info(f"Received quotation from {name}, Phone: {cell}")
 
-        for i in range(len(item_names)):
-            if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
-                continue
+            # Generate quotation number
+            latest = Quotation.objects.order_by('-id').first()
+            base_qtn_no = int(latest.qtn_no) + 1 if latest and str(latest.qtn_no).isdigit() else 1
+            qtn_no = str(base_qtn_no)
 
-            try:
+            # Get lists of item data
+            snos = request.POST.getlist('sno')
+            codes = request.POST.getlist('code')
+            item_names = request.POST.getlist('item_name')
+            qtys = request.POST.getlist('qty')
+            mrsps = request.POST.getlist('mrsp')
+            selling_prices = request.POST.getlist('sellingprice')
+
+            for i in range(len(item_names)):
+                if not item_names[i].strip():
+                    continue  # Skip empty rows
+
                 qty = int(qtys[i]) if qtys[i] else 0
                 mrsp = float(mrsps[i]) if mrsps[i] else 0.0
                 selling_price = float(selling_prices[i]) if selling_prices[i] else 0.0
@@ -237,33 +294,39 @@ def create_quotation(request):
                     mrsp=mrsp,
                     selling_price=selling_price,
                     total_amount=amount,
-                    name=request.POST.get('name'),
-                    email=request.POST.get('email'),
-                    address=request.POST.get('address'),
-                    date_joined=request.POST.get('date_joined') or timezone.now().date(),
-                    bill_type=request.POST.get('bill_type'),
-                    sale_type=request.POST.get('sale_type'),
-                    counter=request.POST.get('counter'),
-                    order_no=request.POST.get('order_no'),
+                    name=name,
+                    email=email,
+                    address=address,
+                    date_joined=date_joined,
+                    bill_type=bill_type,
+                    sale_type=sale_type,
+                    counter=counter,
+                    order_no=order_no,
                     cell=cell,
                 )
-            except Exception as e:
-                print(f"Quotation Row Error {i+1}: {e}")
-                continue
 
-        return redirect('quotation_detail', qtn_no=qtn_no)
+            return redirect('quotation_detail', qtn_no=qtn_no)
+
+        except Exception as e:
+            logger.exception("Error while creating quotation")
+            return HttpResponse("Internal server error", status=500)
+
+    return HttpResponse("Method not allowed", status=405)
 
 def quotation_detail(request, qtn_no):
-    
     quotation_items = Quotation.objects.filter(qtn_no=qtn_no)
     if not quotation_items.exists():
         return HttpResponse("Quotation not found") 
+    
     quotation = quotation_items.first()
 
-    return render(request, 'quotation_detail.html', {    
-        'quotation': quotation,
-        'quotation_items': quotation_items
-    })
+    context = {
+        'qtn_no': qtn_no,
+        'customer': quotation,        
+        'items': quotation_items,    
+        'quotation': quotation        
+    }
+    return render(request, 'quotation_detail.html', context)
 
 def update_payment(request, order_id):
     order = get_object_or_404(Order, pk=order_id)
@@ -1084,7 +1147,7 @@ def customers_view(request):
         # Customers from Billing table (unique by phone, grouped)
         billing_customers = (
             Billing.objects
-            .values('name', 'phone', 'address', 'email')
+            .values('name', 'cell', 'address', 'email')
             .annotate(date_joined=Min('date_joined'))
             .order_by('-date_joined')
         )
@@ -1101,13 +1164,13 @@ def customers_view(request):
 def add_customer(request):
     if request.method == 'POST':
         name = request.POST.get('name')
-        phone = request.POST.get('phone')
+        cell = request.POST.get('cell')
         address = request.POST.get('address')
         email = request.POST.get('email')
 
         Customer.objects.create(
             name=name,
-            phone=phone,
+            cell=cell,
             address=address,
             email=email,
             date_joined=timezone.now()
@@ -1120,14 +1183,14 @@ def add_customer(request):
 def submit_customer(request):
     if request.method == 'POST':
         name = request.POST['customer_name']
-        phone = request.POST['phone_number']
+        cell = request.POST['phone_number']
         address = request.POST['address']
         email = request.POST.get('email')
         date_joined = request.POST.get('date_joined')
 
         Customer.objects.create(
             name=name,
-            phone_number=phone,
+            phone_number=cell,
             address=address,
             email=email,
             date_joined=date_joined
@@ -1162,7 +1225,6 @@ def payment_list_view(request):
         'to_date': to_date,
         'payment_mode': payment_mode,
     })
-
 
 def purchase_items_view(request):
     if request.method == 'POST':

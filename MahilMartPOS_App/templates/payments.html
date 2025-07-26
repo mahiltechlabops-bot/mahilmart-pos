@@ -1,87 +1,83 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Billing as Payment Records</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 0px;
-        }
-        h2 {
-            text-align: center;
-        }
-        form {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        input[type="date"] {
-            padding: 5px;
-            margin: 0 10px;
-        }
-        button {
-            padding: 6px 12px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        th, td {
-            border: 1px solid #aaa;
-            padding: 8px 10px;
-            text-align: center;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        
-        .status-paid {
-            color: green;
-            font-weight: bold;
-        }
-        .status-unpaid {
-            color: red;
-            font-weight: bold;
-        }
-        .status-partial {
-            color: orange;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
+<style>
+    .payment-dashboard {
+        font-family: Arial, sans-serif;
+        padding: 0px;
+    }
+    .payment-dashboard h2 {
+        text-align: center;
+    }
+    .payment-dashboard form {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .payment-dashboard input[type="date"] {
+        padding: 5px;
+        margin: 0 10px;
+    }
+    .payment-dashboard button {
+        padding: 6px 12px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    .payment-dashboard table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    .payment-dashboard th, .payment-dashboard td {
+        border: 1px solid #aaa;
+        padding: 8px 10px;
+        text-align: center;
+    }
+    .payment-dashboard th {
+        background-color: #f2f2f2;
+    }
+
+    .payment-dashboard .status-paid {
+        color: green;
+        font-weight: bold;
+    }
+    .payment-dashboard .status-unpaid {
+        color: red;
+        font-weight: bold;
+    }
+    .payment-dashboard .status-partial {
+        color: orange;
+        font-weight: bold;
+    }
+</style>
+
+<div class="payment-dashboard">
     <h2>Payment Records</h2>
 
-<form method="get" style="margin-bottom: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-        
-        <div style="display: flex; align-items: center; gap: 5px;">
-            <label for="from_date" style="font-weight: bold;">From Date:</label>
-            <input type="date" name="from_date" id="from_date" value="{{ from_date }}">
+    <form method="get">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <label for="from_date" style="font-weight: bold;">From Date:</label>
+                <input type="date" name="from_date" id="from_date" value="{{ from_date }}">
 
-            <label for="to_date" style="font-weight: bold;">To Date:</label>
-            <input type="date" name="to_date" id="to_date" value="{{ to_date }}">
+                <label for="to_date" style="font-weight: bold;">To Date:</label>
+                <input type="date" name="to_date" id="to_date" value="{{ to_date }}">
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <label for="payment_mode" style="font-weight: bold;">Payment Mode:</label>
+                <select name="payment_mode" id="payment_mode" style="width: 80px; height: 35px;">
+                    <option value="all" {% if payment_mode == 'all' or not payment_mode %}selected{% endif %}>All</option>
+                    <option value="cash" {% if payment_mode == 'cash' %}selected{% endif %}>Cash</option>
+                    <option value="card" {% if payment_mode == 'card' %}selected{% endif %}>Card</option>
+                </select>
+
+                <button type="submit">Filter</button>
+            </div>
         </div>
+    </form>
 
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <label for="payment_mode" style="font-weight: bold;">Payment Mode:</label>
-            <select name="payment_mode" id="payment_mode"  style="width: 80px; height: 35px;">
-                <option value="all" {% if payment_mode == 'all' or not payment_mode %}selected{% endif %}>All</option>
-                <option value="cash" {% if payment_mode == 'cash' %}selected{% endif %}>Cash</option>
-                <option value="card" {% if payment_mode == 'card' %}selected{% endif %}>Card</option>
-            </select>
-
-            <button type="submit">Filter</button>
-        </div>
-    </div>
-</form>
     <table>
         <thead>
             <tr>
@@ -102,7 +98,6 @@
                 <td>{{ bill.bill_no }}</td>
                 <td>{{ bill.name }}</td>
                 <td>{{ bill.date|date:"d-m-Y h:i A" }}</td>
-
                 <td>{{ bill.counter }}</td>
                 <td>{{ bill.bill_type }}</td>
                 <td>{{ bill.received }}</td>
@@ -119,17 +114,16 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="14">No billing records found.</td></tr>
+            <tr><td colspan="8">No billing records found.</td></tr>
             {% endfor %}
         </tbody>
     </table>
-     <div style="text-align: center; margin-top: 40px; margin-bottom: 10px;">
+
+    <div style="text-align: center; margin-top: 40px; margin-bottom: 10px;">
         <button type="button" onclick="window.location.href='/purchase_items/'"
             style="background-color: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px;">
             Purchase
         </button>
     </div>
-
-</body>
-</html>
+</div>
 {% endblock %}

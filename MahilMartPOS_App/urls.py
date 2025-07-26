@@ -6,19 +6,17 @@ urlpatterns = [
     path('', views.login_view, name='home'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('billing/', views.create_invoice_view, name='billing'),
+    path('ajax/get-item-info/', views.get_item_info, name='get_item_info'),
     path('order/', views.order_view, name='order'),
-   
     path('orders/', views.order_list, name='order_list'),
     path('order-success/', views.order_success, name='order_success'),
     path('orders/<int:order_id>/', views.order_detail, name='order_detail'),
     path('new-order/', views.create_order, name='create_order'),
     path('orders/<int:order_id>/edit/', views.edit_order, name='edit_order'),
-
     path('quotation/save/', views.create_quotation, name='create_quotation'),
     path('quotation/detail/<str:qtn_no>/', views.quotation_detail, name='quotation_detail'),
     path('update-payment/<int:order_id>/', views.update_payment, name='update_payment'),
     path('convert-to-order/<str:qtn_no>/', views.convert_quotation_to_order, name='convert_to_order'),
-
     path('products/', views.products_view, name='products'),
     path('item/create', views.item_creation, name='items'),
     path('barcode',views.Item_barcode,name='item_barcode'),
@@ -44,15 +42,11 @@ urlpatterns = [
     path('customers/', views.customers_view, name='customers'),
     path('add-customer/', views.add_customer, name='add_customer'),
     path('submit-customer/', views.submit_customer, name='submit_customer'),
-
-
     path('payments/', views.payments_view, name='payments'),
     path('payments/', views.payment_list_view, name='payment-list'),
     path('purchase_items/', views.purchase_items_view, name='purchase_items'),
     path('expense/',views.create_expense,name='expense'),
     path('expense/list/', views.expense_list, name='expense_list'),
-    
-
     path('user/', views.user_view, name='user'),
     path('company/', views.company_settings_view, name='company_details'),
     path('company-details/view/', views.view_company_details, name='view_company_details'),

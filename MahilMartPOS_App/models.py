@@ -31,25 +31,20 @@ class Supplier(models.Model):
 
 class Customer(models.Model):
     name = models.CharField(max_length=100)
-    phone = models.CharField(max_length=20, blank=True, null=True)
+    cell = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.name} ({self.phone})"        
+        return f"{self.name} ({self.cell})"        
 
 class Billing(models.Model):
     to = models.CharField(max_length=100, blank=True, null=True)
     name = models.TextField(blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True, null=True)
-
-    email = models.EmailField(blank=True, null=True)          
-    address = models.TextField(blank=True, null=True)          
-    date_joined = models.DateTimeField(default=timezone.now)  
-
-    bill_no = models.CharField(max_length=20, unique=True)
-    date = models.DateField()
+    cell = models.CharField(max_length=10, blank=True, null=True)
+    bill_no = models.CharField(max_length=20)
+    date = models.DateTimeField(auto_now_add=True)
     bill_type = models.CharField(max_length=20, blank=True, null=True)  
     counter = models.CharField(max_length=50,  blank=True, null=True)
     order_no = models.CharField(max_length=50, blank=True, null=True)
@@ -67,10 +62,12 @@ class Billing(models.Model):
     discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     points = models.FloatField(default=0.0)  
     points_earned = models.FloatField(default=0.0)
+    email = models.EmailField(blank=True, null=True)  
+    address = models.TextField(blank=True, null=True)  
+    date_joined = models.DateField(blank=True, null=True)
 
     def __str__(self):
-        return f"Invoice {self.bill_no} - {self.item_name}"
-    
+        return f"Invoice {self.bill_no} - {self.item_name}"    
 
 class Order(models.Model):
     DELIVERY_CHOICES = [

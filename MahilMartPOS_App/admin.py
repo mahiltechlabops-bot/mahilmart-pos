@@ -4,13 +4,6 @@ from django.contrib import admin
 from .models import Customer
 from .models import Billing
 
-
-# @admin.register(Product)
-# class ProductAdmin(admin.ModelAdmin):
-#     list_display = ('name', 'category', 'supplier', 'stock', 'reorder_level')
-#     list_filter = ('category', 'supplier')
-#     search_fields = ('name',)
-
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name',)
@@ -22,11 +15,11 @@ class SupplierAdmin(admin.ModelAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'email', 'date_joined')
-    search_fields = ('name', 'phone', 'email')
+    list_display = ('name', 'cell', 'email', 'date_joined')
+    search_fields = ('name', 'cell', 'email')
 
 
 @admin.register(Billing)
 class BillingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'email', 'date_joined')
-    search_fields = ('name', 'phone', 'email')
+    list_display = ('name', 'cell', 'email', 'date_joined')
+    search_fields = ('name', 'cell', 'email')

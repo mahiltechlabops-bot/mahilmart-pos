@@ -1,144 +1,158 @@
 {% extends 'base.html' %}
+{% block title %}Sales Creation{% endblock %} 
+
+{% block style %}
+    <style>
+    .sales-page {
+        font-family: Arial, sans-serif;
+    }
+
+    .sales-page .main-container {
+        max-width: 1700px;
+        margin: 40px auto;
+        background-color: #7eeaee;
+        padding: 0;
+    }
+
+    .sales-page .title {
+        text-align: center;
+        color: #0e0d0d;
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .sales-page form {
+        background-color: #7eeaee;
+        max-width: 1550px;
+        padding: 10px;
+        margin: 5px auto;
+    }
+
+    .sales-page .form-grid {
+        display: grid;
+        grid-template-columns: 0.4fr 0.4fr;
+        gap: 15px 40px;
+        color: black;
+        margin-bottom: 20px;
+    }
+
+    .sales-page .form-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .sales-page .form-group label {
+        width: 90px;
+        font-weight: bold;
+    }
+
+    .sales-page .form-group input,
+    .sales-page .form-group textarea {
+        flex: 1;
+        padding: 6px;
+        box-sizing: border-box;
+    }
+
+    .sales-page .item-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        background-color: white;
+    }
+
+    .sales-page .item-table th,
+    .sales-page .item-table td {
+        border: 1px solid black;
+        padding: 6px;
+        text-align: center;
+    }
+
+    .sales-page .item-table th {
+        background-color: rgb(206, 238, 238);
+    }
+
+    .sales-page .footer-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-weight: bold;
+        padding: 10px;
+        background-color: rgb(206, 238, 238);
+    }
+
+    .sales-page .footer-summary span {
+        font-size: 18px;
+    }
+
+    .sales-page .total-red {
+        color: red;
+        font-size: 28px;
+    }
+
+    .sales-page .total-blue {
+        color: blue;
+        font-size: 20px;
+    }
+
+    .sales-page .footer-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #5debf0;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .sales-page .footer-controls > div,
+    .sales-page .footer-controls .buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .sales-page .footer-controls input[type="number"] {
+        width: 100px;
+        padding: 5px;
+    }
+
+    .sales-page .footer-controls .buttons button {
+        padding: 8px 16px;
+        font-weight: bold;
+    }
+
+    .sales-page .table-input {
+        width: 100%;
+        padding: 6px;
+        box-sizing: border-box;
+        border: none;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .sales-page .item-table td {
+        padding: 0;
+    }
+
+    .sales-page .delete-row-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .sales-page .delete-row-btn:hover {
+        background-color: #c82333;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <title>Sales Creation</title>
-    <style>
-        body {
-            --background-color: #34ceec;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        .main-container {
-            max-width: 2000px;
-            height: 1000px;
-            margin: 40px auto;
-            background-color: #7eeaee;
-            padding: 0;
-        }
-
-        .title {
-            text-align: center;
-            color: #0e0d0d;
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-
-        form {
-            background-color: #7eeaee;
-            max-width: 1550px;
-            padding: 10px;
-            margin: 5px auto;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 0.4fr 0.4fr;
-            gap: 15px 40px;
-            color: black;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            align-items: center;
-        }
-
-        .form-group label {
-            width: 90px;
-            font-weight: bold;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            flex: 1;
-            padding: 6px;
-            box-sizing: border-box;
-        }
-
-        .item-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            background-color: white;
-        }
-
-        .item-table th,
-        .item-table td {
-            border: 1px solid black;
-            padding: 6px;
-            text-align: center;
-        }
-
-        .item-table th {
-            background-color: rgb(206, 238, 238);
-        }
-
-        .footer-summary {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-weight: bold;
-            padding: 10px;
-            background-color: rgb(206, 238, 238);
-        }
-
-        .footer-summary span {
-            font-size: 18px;
-        }
-
-        .total-red {
-            color: red;
-            font-size: 28px;
-        }
-
-        .total-blue {
-            color: blue;
-            font-size: 20px;
-        }
-
-        .footer-controls {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #5debf0;
-            padding: 10px;
-            gap: 10px;
-        }
-
-        .footer-controls > div,
-        .footer-controls .buttons {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .footer-controls input[type="number"] {
-            width: 100px;
-            padding: 5px;
-        }
-
-        .footer-controls .buttons button {
-            padding: 8px 16px;
-            font-weight: bold;
-        }
-        .table-input {
-            width: 100%;
-            padding: 6px;
-            box-sizing: border-box;
-            border: none;
-            outline: none;
-            font-size: 14px;
-        }
-        .item-table td {
-            padding: 0; 
-        }
-
-    </style>
-
+<div class="sales-page">
 <div class="main-container">
     <div class="title">Sales Creation</div>
     <form method="POST" action="{% url 'billing' %}">
@@ -172,24 +186,15 @@
                 </select>
             </div>
 
-            <div class="form-group"><label>Cust Id :</label><input type="text" name="order_no"></div>            
-            <div class="form-group"><label>Phone :</label><input
-                type="text"
-                id="cell"
-                name="cell"
-                placeholder="Enter phone number"
-                required
-                maxlength="10"
-                pattern="[6-9][0-9]{9}"
-                title="Phone number must start with 6, 7, 8, or 9 and be exactly 10 digits"
-                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);"
-                />
-            </div>
+            <div class="form-group"><label>Order No :</label><input type="text" name="order_no"></div>
+            <div class="form-group"><label>Phone :</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
             <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
-            <div class="form-group"><label>Email :</label><input type="email" name="email" id="email"></div>
-            <div class="form-group"><label>Join Date :</label><input type="date" name="date_joined" id="date_joined" value="{{ today_date }}"></div>
-
-            
+            <div class="form-group"><label>Email :</label><input type="email" name="email" id="email" required
+                pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|net|org|gov|edu|in|co|info|biz)$"
+                title="Enter a valid email address like name@example.com"
+                autocomplete="off">
+            </div>
+            <div class="form-group"><label>Join Date :</label><input type="text" name="date_joined" id="date_joined" value="{{ today_date }}" readonly></div>            
             <div id="nameModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
             background-color: rgba(0,0,0,0.4); justify-content:center; align-items:center; z-index:1000;">
             
@@ -204,33 +209,38 @@
         <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div>
             
         </div>
-        <table class="item-table table table-bordered" style="width: 100%;">
-    <thead>
+        <table class="item-table">
+            <thead>
         <tr>
             <th style="width: 10%;">Sno</th>
-            <th style="width: 10%;">Code</th>
-            <th style="width: 30%;">Item Name</th>
-            <th style="width: 10%;">Qty</th>
-            <th style="width: 15%;">MRP Price</th>
-            <th style="width: 15%;">Sale Price</th>
+            <th style="width: 15%;">Code</th>
+            <th style="width: 15%;">Item Name</th>
+            <th style="width: 15%;">Qty</th>
+            <th style="width: 15%;">MRSP</th>
+            <th style="width: 15%;">Sellprice</th>
             <th style="width: 15%;">Amount</th>
+            <th style="width: 15%;">Action</th>
         </tr>
     </thead>
-    <tbody id="itemTableBody">
+   <tbody id="itemTableBody">
         <tr>
-            <td><input type="number" name="sno" class="table-input"></td>
+            <td><input type="number" name="sno" class="table-input" readonly></td>
             <td><input type="text" name="code" class="table-input"></td>
             <td><input type="text" name="item_name" class="table-input"></td>
-            <td><input type="number" name="qty" class="table-input" oninput="updateAmount(this)"></td>
-            <td><input type="number" name="mrp" class="table-input"></td>
-            <td><input type="number" name="sale_price" class="table-input" oninput="updateAmount(this)"></td>
-            <td><input type="text" class="table-input amount-output" readonly></td>
+            <td><input type="number" name="qty" class="table-input"></td>
+            <td><input type="number" name="mrsp" class="table-input" readonly></td>
+            <td><input type="number" name="sellingprice" class="table-input" readonly></td>
+            <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
+            <td><button type="button" class="delete-row-btn">Delete</button></td>
+
         </tr>
     </tbody>
 </table>
-<button id="addItemButton" type="button" class="btn btn-success mt-2">Add Item</button>
-<br><br>
 
+<br><br>
+<div style="text-align: left; margin: 10px;">
+            <button type="button" id="addRowBtn">+ Add Item</button>
+        </div>
 <table class="item-table">
     <tbody>
         <tr style="background-color: rgb(206, 238, 238); font-weight: bold;">
@@ -254,7 +264,7 @@
                 <a href="{% url 'order_list' %}"><button type="button">Order</button></a>
                 <button type="button">Option</button>
             </div>
-            
+
             <div>
                 <span class="total-red">0.00</span> Received :<input type="number" step="0.01" name="received">
                 <span class="total-blue">Balance :</span><input type="number" step="0.01" name="balance">
@@ -264,11 +274,11 @@
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
     <div style="display: flex; align-items: center; gap: 8px;">
         <label for="points">Total Points:</label>
-        <input type="text" id="points" name="points" readonly style="width: 100px; height: 7px; font-size: 16px; padding: 6px;">
+        <input type="text" id="points" name="points" readonly style="width: 100px; height: 6px; font-size: 16px; padding: 10px;">
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
         <label for="total_earned">Today Points:</label>
-        <input type="text" id="total_earned" name="total_earned" readonly style="width: 100px; height: 6px; font-size: 16px; padding: 6px;">
+        <input type="text" id="total_earned" name="total_earned" readonly style="width: 100px; height: 6px; font-size: 16px; padding: 10px;">
     </div>
 </div>
 <div class="buttons">
@@ -279,92 +289,61 @@
         </div>
     </form>
 </div>
-
+</div>
+{% endblock %}
+{% block extra_js %}
 <script>
-  function submitAsQuotation() {
+    
+    const itemTableBody = document.getElementById('itemTableBody');
+
+    function submitAsQuotation() {
     const form = document.querySelector('form');
     form.action = "{% url 'create_quotation' %}";
     form.submit();
 }
 
- document.addEventListener('DOMContentLoaded', function() {
-    // Initialize all components
-    initCustomerManagement();
-    initPointsSystem();
-    initBillingSystem();
-});
-
-function initCustomerManagement() {
-    const phoneInput = document.getElementById('cell');
+  document.addEventListener('DOMContentLoaded', function () {
+    const cellInput = document.getElementById('cell');
     const nameInput = document.getElementById('name');
     const modal = document.getElementById('nameModal');
     const modalNameInput = document.getElementById('modalNameInput');
+    const pointsInput = document.getElementById('points');
+    const totalEarnedInput = document.getElementById('total_earned');
 
-    if (!phoneInput) return;
-
-    phoneInput.addEventListener('change', function() {
-        const phone = phoneInput.value.trim();
-        if (phone.length > 4) {
-            fetchCustomerData(phone);
-        }
-    });
-
-    phoneInput.addEventListener('blur', function() {
-        const phone = phoneInput.value.trim();
+    cellInput.addEventListener('blur', function () {
+        const phone = cellInput.value.trim();
         if (phone !== "") {
-            fetchCustomerData(phone);
+            fetch(`?phone=${encodeURIComponent(phone)}`, {
+                method: "GET",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.name) {
+                    nameInput.value = data.name;
+                    pointsInput.value = data.points || 0;
+                    document.getElementById('email').value = data.email || '';
+                    document.getElementById('address').value = data.address || '';
+                    const joinDateInput = document.getElementById('date_joined');
+                    joinDateInput.value = data.date_joined || new Date().toISOString().split('T')[0];
+                    joinDateInput.readOnly = !!data.date_joined;
+                } else {
+                    modal.style.display = 'flex';
+                    modalNameInput.value = '';
+                    modalNameInput.focus();
+                }
+            });
         }
     });
 
- function fetchCustomerData(phone) {
-    fetch(`?phone=${encodeURIComponent(phone)}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.name) {
-                // Existing customer found
-                nameInput.value = data.name;
-                document.getElementById('email').value = data.email || '';
-                document.getElementById('address').value = data.address || '';
-                updateJoinDate(data.date_joined);
-                document.getElementById('points').value = data.points || 0;
-            } else {
-                // New customer - show modal
-                showNameModal();
-            }
-        })
-        .catch(error => console.error('Error fetching customer:', error));
-    }
-
-    function updateJoinDate(date) {
-        const joinDateInput = document.getElementById('date_joined');
-        if (date) {
-            joinDateInput.value = date;
-            joinDateInput.readOnly = true;
-        } else {
-            joinDateInput.value = new Date().toISOString().split('T')[0];
-            joinDateInput.readOnly = false;
+    modalNameInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();  
+            submitName();            
         }
-    }
+    });
 
-    function showNameModal() {
-        if (!modal) return;
-        modal.style.display = 'flex';
-        modalNameInput.value = '';
-        modalNameInput.focus();
-    }
-
-    if (modalNameInput) {
-        modalNameInput.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                submitName();
-            }
-        });
-    }
-
-    window.submitName = function() {
+    window.submitName = function () {
         const enteredName = modalNameInput.value.trim();
         if (enteredName !== "") {
             nameInput.value = enteredName;
@@ -373,122 +352,216 @@ function initCustomerManagement() {
             modalNameInput.style.border = "2px solid red";
         }
     };
-}
+});
 
-function initPointsSystem() {
-    const pointsInput = document.getElementById('points');
-    const totalEarnedInput = document.getElementById('total_earned');
-    const pointsEarnedInput = document.getElementById('points_earned');
 
-    if (!pointsInput) return;
+document.querySelectorAll('table tr').forEach(row => {
+    attachAutoFill(row);
+});
 
-    // Event delegation for points calculation
-    document.getElementById('itemTableBody')?.addEventListener('input', function(e) {
-        if (e.target.name === 'qty' || e.target.name === 'sale_price') {
-            calculatePoints();
-        }
-    });
 
-    function calculatePoints() {
-        let totalPoints = 0;
-        document.querySelectorAll('#itemTableBody tr').forEach(row => {
-            const qty = parseFloat(row.querySelector('input[name="qty"]')?.value) || 0;
-            const salePrice = parseFloat(row.querySelector('input[name="sale_price"]')?.value) || 0;
-            totalPoints += (qty * salePrice) / 200;
-        });
-
-        if (pointsEarnedInput) pointsEarnedInput.value = totalPoints.toFixed(2);
-        if (totalEarnedInput) totalEarnedInput.value = totalPoints.toFixed(2);
-    }
-}
-
-function initBillingSystem() {
+document.addEventListener('DOMContentLoaded', function () {
+    const addRowBtn = document.getElementById('addRowBtn');
+    const itemTableBody = document.getElementById('itemTableBody');
     const receivedInput = document.querySelector('input[name="received"]');
     const balanceInput = document.querySelector('input[name="balance"]');
+    const totalText = document.querySelector('.total-red');
     const itemCountDisplay = document.getElementById('item-count');
-    const qtyTotalDisplay = document.getElementById('qty-total');
-    const totalAmountDisplay = document.querySelector('.total-red');
-
-    if (!itemCountDisplay) return;
-
-    // Event delegation for dynamic rows
-    document.getElementById('itemTableBody')?.addEventListener('input', function(e) {
-        if (e.target.name === 'qty' || e.target.name === 'sale_price') {
-            updateRowAmount(e.target.closest('tr'));
-            updateCalculations();
-        }
-    });
-
-    if (receivedInput) {
-        receivedInput.addEventListener('input', updateCalculations);
-    }
-
-    document.getElementById('addItemButton')?.addEventListener('click', addNewRow);
+    const qtyTotal = document.getElementById('qty-total');
+    const totalEarnedInput = document.getElementById('total_earned');
 
     function updateCalculations() {
         let totalAmount = 0;
         let itemCount = 0;
         let totalQty = 0;
 
-        document.querySelectorAll('#itemTableBody tr').forEach(row => {
-            const qty = parseFloat(row.querySelector('input[name="qty"]')?.value) || 0;
-            const salePrice = parseFloat(row.querySelector('input[name="sale_price"]')?.value) || 0;
-            
+        const rows = itemTableBody.querySelectorAll('tr');
+
+        rows.forEach(row => {
+            const qtyInput = row.querySelector('input[name="qty"]');
+            const sellingInput = row.querySelector('input[name="sellingprice"]');
+            const amountOutput = row.querySelector('.amount-output');
+
+            const qty = parseFloat(qtyInput?.value || 0);
+            const price = parseFloat(sellingInput?.value || 0);
+            const rowAmount = qty * price;
+
             if (qty > 0) {
                 itemCount++;
                 totalQty += qty;
-                totalAmount += qty * salePrice;
+                totalAmount += rowAmount;
+            }
+
+            if (amountOutput) {
+                amountOutput.value = rowAmount.toFixed(2);
             }
         });
 
-        totalAmountDisplay.textContent = totalAmount.toFixed(2);
+        const received = parseFloat(receivedInput?.value || 0);
+        const balance = received - totalAmount;
+
+        totalText.textContent = totalAmount.toFixed(2);
+        balanceInput.value = balance.toFixed(2);
         itemCountDisplay.textContent = itemCount;
-        qtyTotalDisplay.textContent = totalQty;
+        qtyTotal.textContent = totalQty;
 
-        if (receivedInput && balanceInput) {
-            const received = parseFloat(receivedInput.value) || 0;
-            balanceInput.value = (received - totalAmount).toFixed(2);
+        const todayPoints = totalAmount / 200;
+        totalEarnedInput.value = todayPoints.toFixed(2);
+    }
+
+    function attachInputListeners(row) {
+        const qtyInput = row.querySelector('input[name="qty"]');
+        const sellingInput = row.querySelector('input[name="sellingprice"]');
+
+        if (qtyInput) qtyInput.addEventListener('input', updateCalculations);
+        if (sellingInput) sellingInput.addEventListener('input', updateCalculations);
+    }
+
+    function attachDeleteListener(row) {
+        const deleteBtn = row.querySelector('.delete-row-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                const totalRows = itemTableBody.querySelectorAll('tr').length;
+                if (totalRows <= 1) {
+                    alert("At least one row must be present.");
+                    return;
+                }
+
+                row.remove();
+                updateSerialNumbers();
+                updateCalculations();
+
+                if (prevRow) {
+                const codeInput = prevRow.querySelector('input[name="code"]');
+                if (codeInput) codeInput.focus();
+                }
+            });
         }
     }
 
-    function updateRowAmount(row) {
-        const qty = parseFloat(row.querySelector('input[name="qty"]')?.value) || 0;
-        const salePrice = parseFloat(row.querySelector('input[name="sale_price"]')?.value) || 0;
-        const amountOutput = row.querySelector('.amount-output');
-        
-        if (amountOutput) {
-            amountOutput.value = (qty * salePrice).toFixed(2);
-        }
-    }
+    function addNewRow() {
 
-    function addNewRow(e) {
-        e.preventDefault();
-        const tableBody = document.getElementById('itemTableBody');
-        if (!tableBody || tableBody.rows.length === 0) return;
+        const lastRow = itemTableBody.querySelector('tr:last-child');
+        const requiredFields = ['code', 'item_name', 'qty', 'sellingprice'];
 
-        const newRow = tableBody.rows[0].cloneNode(true);
-        
-        newRow.querySelectorAll('input').forEach(input => {
-            if (!input.classList.contains('amount-output')) {
-                input.value = '';
+        let isValid = true;
+
+        requiredFields.forEach(field => {
+            const input = lastRow.querySelector(`input[name="${field}"]`);
+            if (!input || !input.value.trim()) {
+                input?.classList.add('input-error');
+                isValid = false;
             } else {
-                input.value = '0.00';
+                input.classList.remove('input-error');
             }
         });
 
-        tableBody.appendChild(newRow);
+        if (!isValid) {
+            alert("Please fill all required fields (Code, Item Name, Qty, Selling Price) before adding a new item.");
+            lastRow.querySelector('.input-error')?.focus();
+            return;
+        }
+
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td><input type="number" name="sno" class="table-input"></td>
+            <td><input type="text" name="code" class="table-input"></td>
+            <td><input type="text" name="item_name" class="table-input"></td>
+            <td><input type="number" name="qty" class="table-input"></td>
+            <td><input type="number" name="mrsp" class="table-input"></td>
+            <td><input type="number" name="sellingprice" class="table-input"></td>
+            <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
+            <td><button type="button" class="delete-row-btn">Delete</button></td>
+
+        `;
+        itemTableBody.appendChild(newRow);
+        attachInputListeners(newRow);
+        attachDeleteListener(newRow);
+        updateCalculations();
+        attachAutoFill(newRow);
         updateSerialNumbers();
-    }
+
+        const newCodeInput = newRow.querySelector('input[name="code"]');
+        if (newCodeInput) newCodeInput.focus();
+
+        // For existing default row:
+        const initialRow = itemTableBody.querySelector('tr');
+        if (initialRow) {
+            attachAutoFill(initialRow);
+            }
+        }
+
+        addRowBtn.addEventListener('click', addNewRow);
+        receivedInput.addEventListener('input', updateCalculations);
+
+        // Attach listeners to first default row
+        const initialRow = itemTableBody.querySelector('tr');
+        if (initialRow) {
+            attachInputListeners(initialRow);
+            attachDeleteListener(initialRow);
+            attachAutoFill(initialRow);
+        }
+
+        updateSerialNumbers();
+        updateCalculations();
+    });
 
     function updateSerialNumbers() {
-        document.querySelectorAll('#itemTableBody tr').forEach((row, index) => {
+        const rows = itemTableBody.querySelectorAll('tr');
+        rows.forEach((row, index) => {
             const snoInput = row.querySelector('input[name="sno"]');
-            if (snoInput) snoInput.value = index + 1;
+            if (snoInput) {
+                snoInput.value = index + 1;
+            }
         });
     }
 
-    // Initial calculations
-    updateCalculations();
-}
+    function attachAutoFill(row) {
+        const codeInput = row.querySelector('input[name="code"]');
+        const nameInput = row.querySelector('input[name="item_name"]');
+        const mrspInput = row.querySelector('input[name="mrsp"]');
+        const priceInput = row.querySelector('input[name="sellingprice"]');
+
+        function fetchItemInfo(field, value) {
+            if (!value.trim()) return;
+
+            const url = `/ajax/get-item-info/?${field}=${encodeURIComponent(value.trim())}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        if (data.item_code && codeInput) codeInput.value = data.item_code;
+                        if (data.item_name && nameInput) nameInput.value = data.item_name;
+                        if (mrspInput) mrspInput.value = data.mrsp ?? '';
+                        if (priceInput) priceInput.value = data.sale_rate ?? '';
+                    } else {
+                        alert("Item not found!");
+                        // Optionally clear inputs
+                        if (codeInput) codeInput.value = '';
+                        if (nameInput) nameInput.value = '';
+                        if (mrspInput) mrspInput.value = '';
+                        if (priceInput) priceInput.value = '';
+                    }
+                })
+                .catch(err => {
+                    console.error('Item fetch error:', err);
+                });
+        }
+
+        if (codeInput) {
+            codeInput.addEventListener('blur', () => {
+                fetchItemInfo('code', codeInput.value);
+            });
+        }
+
+        if (nameInput) {
+            nameInput.addEventListener('blur', () => {
+                if (codeInput && codeInput.value.trim() !== '') return;
+                fetchItemInfo('name', nameInput.value);
+            });
+        }
+    }
 </script>
+</div>
 {% endblock %}
