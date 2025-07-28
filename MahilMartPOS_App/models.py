@@ -49,14 +49,7 @@ class Billing(models.Model):
     counter = models.CharField(max_length=50,  blank=True, null=True)
     order_no = models.CharField(max_length=50, blank=True, null=True)
     sale_type = models.CharField(max_length=20,  blank=True, null=True)
-    sno = models.IntegerField(null=True, blank=True)
-    code = models.CharField(max_length=50)
-    item_name = models.CharField(max_length=100)
-    qty = models.PositiveIntegerField()
-    mrsp = models.DecimalField(max_digits=10, decimal_places=2)
-    total_items = models.PositiveIntegerField(default=1)
-    selling_price = models.FloatField(default=0)
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    item_details = models.JSONField(default=list)
     received = models.DecimalField(max_digits=10, decimal_places=2)
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -120,31 +113,39 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.order_id} - {self.customer_name}"
 
+from django.db import models
+
 class Quotation(models.Model):
-    sno = models.IntegerField()
-    qtn_no = models.CharField(max_length=100)
-    code = models.CharField(max_length=100)
-    item_name = models.CharField(max_length=200)
-    qty = models.IntegerField()
-    mrsp = models.FloatField()
-    selling_price = models.FloatField()
-    total_amount = models.FloatField()
-    points_earned = models.FloatField(default=0)
-    to = models.CharField(max_length=100)
-    bill_no = models.CharField(max_length=20)
-    date = models.DateField()
+    qtn_no = models.CharField(max_length=20, unique=True)
+    date = models.DateField(auto_now_add=True)
+
+    # Customer info
     name = models.CharField(max_length=100)
-    email = models.EmailField(blank=True)
-    address = models.TextField(blank=True)
+    cell = models.CharField(max_length=15)
+    email = models.EmailField()
+    address = models.TextField(blank=True, null=True)
     date_joined = models.DateField()
-    bill_type = models.CharField(max_length=100)
-    sale_type = models.CharField(max_length=100)
-    counter = models.CharField(max_length=100)
-    order_no = models.CharField(max_length=100, blank=True)
-    cell = models.CharField(max_length=20)
-    received = models.FloatField(default=0)
-    balance = models.FloatField(default=0)
-    discount = models.FloatField(default=0)    
+
+    # Transaction meta
+    sale_type = models.CharField(max_length=50)
+    bill_type = models.CharField(max_length=50)
+    counter = models.CharField(max_length=50)
+    # order_no = models.CharField(max_length=50, blank=True, null=True)
+
+    # # Amount info
+    # received = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    # Points
+    points = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    points_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    # Item data
+    items = models.JSONField()
+
+    def __str__(self):
+        return f"Quotation #{self.qtn_no} - {self.name}"
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
