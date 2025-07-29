@@ -22,7 +22,11 @@ from collections import defaultdict
 from django.utils.timezone import localtime
 from django.http import HttpResponse
 from decimal import Decimal, ROUND_HALF_UP
-from datetime import date
+from datetime import date        
+from django.shortcuts import render, redirect
+from django.shortcuts import redirect, HttpResponse
+from .models import Quotation, Order, OrderItem
+from django.utils import timezone
 from .models import (
     Supplier,
     Customer,
@@ -295,12 +299,7 @@ def create_quotation(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': f"Failed to save quotation. {str(e)}"})
 
-    return redirect('quotation_detail', qtn_no=quotation.qtn_no)
-        
-        
-from django.shortcuts import render, redirect
-from .models import Quotation
-import json
+    return redirect('quotation_detail', qtn_no=quotation.qtn_no)    
 
 def quotation_detail(request, qtn_no=None):
     # If qtn_no is undefined/empty, fetch the last quotation
@@ -317,12 +316,12 @@ def quotation_detail(request, qtn_no=None):
         
         # Handle items (check if already a list or needs JSON parsing)
         if isinstance(quotation.items, list):
-            items = quotation.items  # Already a list, no parsing needed
+            items = quotation.items
         else:
             try:
                 items = json.loads(quotation.items) if quotation.items else []
             except (TypeError, json.JSONDecodeError):
-                items = []  # Fallback if parsing fails
+                items = []
         
         context = {
             'quotation': quotation,
@@ -342,7 +341,6 @@ def quotation_detail(request, qtn_no=None):
         return render(request, 'quotation_detail.html', {'quotation': None, 'qtn_no': qtn_no})
     
 def get_last_quotation(request):
-    # Get the most recent quotation
     last_quotation = Quotation.objects.last()
     
     if not last_quotation:
@@ -431,34 +429,48 @@ def edit_order(request, order_id):
 def convert_quotation_to_order(request, qtn_no):
     quotations = Quotation.objects.filter(qtn_no=qtn_no)
     if not quotations.exists():
-        return HttpResponse("Quotation not found") 
+        return HttpResponse("Quotation not found")
 
     first_qtn = quotations.first()
 
+    items = first_qtn.items or []
+    advance = float(getattr(first_qtn, 'advance', 0) or 0)
+    paid = float(getattr(first_qtn, 'paid', 0) or 0)
+
+    total_amount = sum(float(item.get('amount', 0)) for item in items)
+    due = total_amount - (advance + paid)
+           
+    # Create the Order
     order = Order.objects.create(
         customer_name=first_qtn.name,
         phone_number=first_qtn.cell,
         address=first_qtn.address,
         email=first_qtn.email,
         date_of_order=timezone.now(),
-        expected_delivery_datetime=timezone.now(), 
-        delivery='no', 
+        expected_delivery_datetime=timezone.now(),
+        delivery='no',
         charges=0,
-        total_order_amount=sum(q.total_amount for q in quotations),
-        advance=first_qtn.received,
-        due_balance=first_qtn.balance,
-        payment_type='cash',  
-        order_status='pending',  
+        total_order_amount=total_amount,
+        advance=advance,
+        due_balance=due,
+        payment_type='cash',
+        order_status='pending',
     )
 
+    # Create OrderItem records
     for q in quotations:
-        OrderItem.objects.create(
-            order=order,
-            item_name=q.item_name,
-            quantity=q.qty,
-            rate=q.selling_price,
-            amount=q.total_amount,
-        )
+        q_items = q.items or []
+        for item in q_items:
+            print("Item:", item)
+            rate = float(item.get("sellingprice", 0))   # Use correct key
+            amount = float(item.get("amount", 0))  
+            OrderItem.objects.create(
+                order=order,
+                item_name=item.get("item_name", ""),
+                quantity=item.get("qty", 0),
+                rate=rate,
+                amount=amount,
+            )
 
     return redirect('order_list')
 
@@ -510,7 +522,7 @@ def item_creation(request):
             P_unit=P_unit,
             group=group,
             brand=brand,
-            tax=gst_percent,  # Save the gst_percent directly
+            tax=gst_percent,
             HSN_SAC=HSN_SAC,
             use_MRP=use_MRP,
             points=points,
@@ -709,6 +721,7 @@ def purchase_view(request):
 
         rows = zip(
             request.POST.getlist('item_code'),
+            request.POST.getlist('hsn'),
             request.POST.getlist('qty'),
             request.POST.getlist('price'),
             request.POST.getlist('discount'),
@@ -719,7 +732,7 @@ def purchase_view(request):
             request.POST.getlist('sale_price'),
         )
 
-        for code, qty, price, disc, tax, mrp, wp, wp1, sp in rows:
+        for code, hsn, qty, price, disc, tax, mrp, wp, wp1, sp in rows:
             item = get_object_or_404(Item, code=code)
             qty = float(qty)
             price = float(price)
@@ -731,7 +744,8 @@ def purchase_view(request):
 
             PurchaseItem.objects.create(
                 purchase=purchase,
-                item=item,
+                item=item,  
+                hsn=hsn,              
                 quantity=qty,
                 unit_price=price,
                 total_price=total,
@@ -772,6 +786,7 @@ def fetch_item(request):
         return JsonResponse({
             'item_name': item.item_name,
             'code': item.code,
+            'hsn': item.HSN_SAC or '',
             'group': item.group or '',
             'brand': item.brand or '',
             'unit': item.unit or '',
@@ -798,8 +813,7 @@ def create_purchase(request):
             supplier_id = data.get("supplier_id")          
             items_data = data.get("items", [])
 
-            supplier = Supplier.objects.get(id=supplier_id)
-            # purchase = Purchase.objects.create(supplier=supplier)    
+            supplier = Supplier.objects.get(id=supplier_id)     
             invoice_no = data.get("invoice_no", "").strip()
             purchase = Purchase.objects.create(supplier=supplier, invoice_no=invoice_no)                
 
@@ -830,12 +844,13 @@ def create_purchase(request):
                 # Save purchase item with correct qtys
                 PurchaseItem.objects.create(
                     purchase=purchase,
-                    item=item_obj,                  
+                    item=item_obj,                                  
                     group=item_obj.group,
                     brand=item_obj.brand,
                     unit=item_obj.unit,
                     code=item.get('item_code', ''),
-                    item_name=item.get('item_name', ''),                   
+                    item_name=item.get('item_name', ''),    
+                    hsn=item.get('hsn', None),               
                     quantity=qty_purchased,
                     unit_price=item['price'],
                     total_price=item['total_price'],
@@ -858,6 +873,7 @@ def create_purchase(request):
                     item=item_obj,
                     item_name=item.get('item_name', ''),
                     code=item.get('item_code', ''),
+                    hsn=item.get('hsn', None),
                     group=item_obj.group,
                     brand=item_obj.brand,
                     unit=item_obj.unit,
@@ -1082,7 +1098,8 @@ def inventory_view(request):
             Q(item__item_name__icontains=query) |
             Q(item__code__icontains=query) |
             Q(item__brand__icontains=query) |
-            Q(item__unit__icontains=query)
+            Q(item__unit__icontains=query)  |
+            Q(item__hsn__icontains=query)
         )
 
     return render(request, 'inventory.html', {

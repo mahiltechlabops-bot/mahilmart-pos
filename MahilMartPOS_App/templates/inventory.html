@@ -70,6 +70,7 @@
           <th>Group</th>
           <th>Brand</th>
           <th>Unit</th>
+          <th>HSN Code</th>
           <th>Sale Price</th>
           <th>Discount</th>
           <th>Tax</th>
@@ -88,10 +89,11 @@
           <td>{{ forloop.counter }}</td>
           <td>{{ item.id }}</td>
           <td>{{ item.supplier_id }}</td>
-          <td>{{ item.item.item_name }}</td>
+          <td>{{ item.item.item_name }}</td>          
           <td>{{ item.item.group }}</td>
           <td>{{ item.item.brand }}</td>
           <td>{{ item.item.unit }}</td>
+          <td>{{ item.item.HSN_SAC }}</td>
           <td>₹ {{ item.sale_price }}</td>
           <td>{{ item.discount }}%</td>
           <td>{{ item.tax }}%</td>
@@ -101,14 +103,7 @@
           <td>{{ item.quantity|add:item.previous_qty }}</td>
           <td>{{ item.purchased_at|date:"Y-m-d" }}</td>
           <td>{{ item.batch_no }}</td>
-          <td>{{ item.expiry_date|date:"Y-m-d" }}</td>
-          <!-- <td>
-            {% if item.item.id %}           
-              <a href="{% url 'stock_adjustment' %}?product={{ item.item.id }}" class="btn btn-sm btn-warning">Adjust Stock</a>
-            {% else %}
-              <span class="text-muted">No Product</span>
-            {% endif %}
-          </td> -->
+          <td>{{ item.expiry_date|date:"Y-m-d" }}</td>         
         </tr>
         {% empty %}
         <tr>

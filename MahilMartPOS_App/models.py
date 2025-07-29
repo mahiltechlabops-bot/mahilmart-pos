@@ -113,34 +113,19 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.order_id} - {self.customer_name}"
 
-from django.db import models
-
 class Quotation(models.Model):
     qtn_no = models.CharField(max_length=20, unique=True)
     date = models.DateField(auto_now_add=True)
-
-    # Customer info
     name = models.CharField(max_length=100)
     cell = models.CharField(max_length=15)
     email = models.EmailField()
     address = models.TextField(blank=True, null=True)
     date_joined = models.DateField()
-
-    # Transaction meta
     sale_type = models.CharField(max_length=50)
     bill_type = models.CharField(max_length=50)
     counter = models.CharField(max_length=50)
-    # order_no = models.CharField(max_length=50, blank=True, null=True)
-
-    # # Amount info
-    # received = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    # balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-
-    # Points
     points = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     points_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-
-    # Item data
     items = models.JSONField()
 
     def __str__(self):
@@ -161,7 +146,7 @@ class OrderItem(models.Model):
 class Item(models.Model):
     code = models.CharField(max_length=30)
     item_name = models.CharField(max_length=50)
-    print_name = models.CharField(max_length=50, blank=True, null=True)
+    print_name = models.CharField(max_length=50, blank=True, null=True)    
     status = models.CharField(max_length=10)
     unit = models.CharField(max_length=20, blank=True, null=True)
     P_unit = models.CharField(max_length=20, blank=True, null=True)
@@ -481,7 +466,7 @@ class Purchase(models.Model):
 class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
-
+    hsn = models.CharField(max_length=50, blank=True, null=True)
     group = models.CharField(max_length=50, blank=True, null=True)
     brand = models.CharField(max_length=50, blank=True, null=True)
     unit = models.CharField(max_length=20, blank=True, null=True)
@@ -511,6 +496,7 @@ class Inventory(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     item_name = models.CharField(max_length=255)
     code = models.CharField(max_length=100)
+    hsn = models.CharField(max_length=20, blank=True, null=True)
     group = models.CharField(max_length=100, blank=True, null=True)
     brand = models.CharField(max_length=100, blank=True, null=True)
     unit = models.CharField(max_length=50)
@@ -520,23 +506,18 @@ class Inventory(models.Model):
     quantity = models.FloatField(default=0)
     previous_qty = models.FloatField(default=0)
     total_qty = models.FloatField(default=0)
-
     unit_price = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
     discount = models.FloatField(default=0)
     tax = models.FloatField(default=0)
     net_price = models.FloatField(default=0)
-
     mrp_price = models.FloatField(default=0)
     whole_price = models.FloatField(default=0)
     whole_price_2 = models.FloatField(default=0)
     sale_price = models.FloatField(default=0)
-
     purchased_at = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
-
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, null=True, blank=True)  # Optional
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

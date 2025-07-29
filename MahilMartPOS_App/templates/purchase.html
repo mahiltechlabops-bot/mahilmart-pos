@@ -29,6 +29,7 @@
   }
 
   #purchaseTable td:nth-child(3) input,
+  #purchaseTable td:nth-child(4) input,
   #purchaseTable td:nth-child(7) input,  /* Qty */
   #purchaseTable td:nth-child(8) input,  /* Price */
   #purchaseTable td:nth-child(9) input,  /* Total */
@@ -39,7 +40,7 @@
   #purchaseTable td:nth-child(14) input, /* Wh */
   #purchaseTable td:nth-child(15) input, /* Wh 1 */
   #purchaseTable td:nth-child(16) input  /* Sale Price */ {
-    width: 55px !important;
+    width: 50px !important;
     padding: 3px 4px;
     font-size: 12px;
     box-sizing: border-box;
@@ -47,8 +48,10 @@
 
   #purchaseTable td:nth-child(2) input,
   #purchaseTable td:nth-child(17) input,
-  #purchaseTable td:nth-child(19) input {
-    width: 90px !important;
+  #purchaseTable td:nth-child(18) input,
+  #purchaseTable td:nth-child(19) input,
+  #purchaseTable td:nth-child(20) input {
+    width: 87px !important;
     padding: 3px 4px;
     font-size: 12px;
     box-sizing: border-box;
@@ -88,19 +91,26 @@
       </div>
     </div>
 
-    <!-- Auto-filled Supplier Details -->
+    <!-- Two-column Supplier Details -->
     <div class="row mb-3" id="supplierDetails" style="display:none;">
       <div class="col-md-12">
-        <h6>Supplier Details:</h6>
-        <div><b>Contact Person:</b> <span id="supplierContact"></span></div>
-        <div><b>Phone:</b> <span id="supplierPhone"></span></div>
-        <div><b>Email:</b> <span id="supplierEmail"></span></div>
-        <div><b>Address:</b> <span id="supplierAddress"></span></div>
-        <div><b>Bank:</b> <span id="supplierBank"></span></div>
-        <div><b>Account #:</b> <span id="supplierAccount"></span></div>
-        <div><b>IFSC:</b> <span id="supplierIFSC"></span></div>
-        <div><b>GST No:</b> <span id="supplierGST"></span></div>
-        <div><b>Credit Terms:</b> <span id="supplierCredit"></span></div>
+        <h6><b>Supplier Details:</b></h6>
+        <div class="row">
+          <div class="col-md-6">
+            <div><b>Contact Person:</b> <span id="supplierContact"></span></div>
+            <div><b>Phone:</b> <span id="supplierPhone"></span></div>
+            <div><b>Email:</b> <span id="supplierEmail"></span></div>
+            <div><b>Address:</b> <span id="supplierAddress"></span></div>
+            
+          </div>
+          <div class="col-md-6">
+            <div><b>Bank:</b> <span id="supplierBank"></span></div>
+            <div><b>Account #:</b> <span id="supplierAccount"></span></div>
+            <div><b>IFSC:</b> <span id="supplierIFSC"></span></div>
+            <div><b>GST No:</b> <span id="supplierGST"></span></div>
+            <div><b>Credit Terms:</b> <span id="supplierCredit"></span></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -112,7 +122,7 @@
           <table class="table table-sm table-bordered mt-3" id="purchaseTable" style="min-width: 1500px; font-size: 0.85rem;">
             <thead class="table-light">
               <tr>
-                <th>S.no</th><th>Item</th><th>Code</th><th>Group</th><th>Brand</th><th>Unit</th>
+                <th>S.no</th><th>Item</th><th>Code</th><th>HSN</th><th>Group</th><th>Brand</th><th>Unit</th>
                 <th>Qty</th><th>Price</th><th>Total</th><th>Discount</th><th>Tax</th><th>Net</th>
                 <th>MRP</th><th>Wh</th><th>Wh 1</th><th>Sale Price</th><th>Purchased At</th>
                 <th>Batch No</th><th>Expiry Date</th><th>Action</th>
@@ -162,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <td class="sno"></td>
       <td><input class="form-control item-name" onblur="fetchItemDetails(this)"></td>
       <td><input class="form-control item-code" onblur="fetchItemDetails(this)"></td>
+      <td><input class="form-control hsn" readonly></td>
       <td><input class="form-control group" readonly></td>
       <td><input class="form-control brand" readonly></td>
       <td><input class="form-control unit" readonly></td>
@@ -182,6 +193,9 @@ document.addEventListener("DOMContentLoaded", () => {
     productTableBody.appendChild(row);
     updateSerials();
     calculateRow(row);
+
+    const itemInput = row.querySelector('.item-name');
+    if (itemInput) itemInput.focus();
   });
 
   // populate supplier details
@@ -221,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const items = Array.from(productTableBody.querySelectorAll('tr')).map(r => ({
       item_name: r.querySelector('.item-name').value,
       item_code: r.querySelector('.item-code').value,
+      hsn: r.querySelector('.hsn').value, 
       quantity: r.querySelector('.qty').value,
       price: r.querySelector('.price').value,
       total_price: r.querySelector('.total').value,
@@ -277,6 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         row.querySelector('.item-name').value = data.item_name;
         row.querySelector('.item-code').value = data.code;
+        row.querySelector('.hsn').value = data.hsn;
         row.querySelector('.group').value = data.group;
         row.querySelector('.brand').value = data.brand;
         row.querySelector('.unit').value = data.unit;
@@ -286,7 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
         row.querySelector('.sale_price').value = data.sale_price;
         row.querySelector('.mrp').value = data.mrp;
 
-        calculateRow(row);  // Make sure this function is also defined elsewhere
+        calculateRow(row);
       })
       .catch(error => {
         console.error("Fetch item failed:", error);
@@ -346,7 +362,12 @@ function deleteRow(btn) {
   document.querySelectorAll('#productTableBody .sno').forEach((cell, i) => {
     cell.textContent = i + 1;
   });
-}
 
+  // Focus item name input of previous row (if exists)
+  if (previousRow) {
+    const input = previousRow.querySelector('.item-name');
+    if (input) input.focus();
+  }
+}
 </script>
 {% endblock %}
