@@ -219,7 +219,7 @@
                     <th>Item Name</th>
                     <th>Qty</th>
                     <th>MRSP</th>
-                    <th>Sellprice</th>
+                    <th>Sellprice</th>                    
                     <th>Amount</th>
                     <th>Action</th>
                 </tr>
@@ -231,7 +231,7 @@
                     <td><input type="text" name="item_name" class="table-input"></td>
                     <td><input type="number" name="qty" class="table-input"></td>
                     <td><input type="number" name="mrsp" class="table-input" readonly></td>
-                    <td><input type="number" name="sellingprice" class="table-input" readonly></td>         
+                    <td><input type="number" name="sellingprice" class="table-input" readonly></td>                         
                     <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
                     <td><button type="button" class="delete-row-btn">Delete</button></td>
                 </tr>
@@ -560,6 +560,21 @@
                             if (data.item_name && nameInput) nameInput.value = data.item_name;
                             if (mrspInput) mrspInput.value = data.mrsp ?? '';
                             if (priceInput) priceInput.value = data.sale_rate ?? '';
+                          
+                                    const availableQty = parseFloat(data.available_qty || 0);
+                                    const availableInput = row.querySelector('input[name="available"]');
+                                    if (availableInput) availableInput.value = availableQty;
+                                    
+                                    if (availableQty < 1) {
+                                        alert(`⚠️ Warning: No stock available for "${data.item_name}" (Code: ${data.item_code})`);
+                                         row.querySelectorAll('input').forEach(input => {
+                                            if (input.name !== 'available') input.value = '';
+                                        });
+
+                                        if (codeInput) codeInput.focus();
+                                        updateSerialNumbers();
+                                    }
+
                             updateCalculations();
                         } else {
                             alert("Item not found!");

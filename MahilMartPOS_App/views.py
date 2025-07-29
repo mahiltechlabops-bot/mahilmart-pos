@@ -27,6 +27,7 @@ from django.shortcuts import render, redirect
 from django.shortcuts import redirect, HttpResponse
 from .models import Quotation, Order, OrderItem
 from django.utils import timezone
+from django.db.models import F
 from .models import (
     Supplier,
     Customer,
@@ -108,7 +109,7 @@ def create_invoice_view(request):
 
             for i in range(len(item_names)):
                 if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
-                    continue  # Skip empty rows
+                    continue
 
                 qty = int(qtys[i]) if qtys[i] else 0
                 mrsp = float(mrsps[i]) if mrsps[i] else 0.0
@@ -116,6 +117,52 @@ def create_invoice_view(request):
                 amount = qty * selling_price
                 points_earned = amount / 200
                 points_earned_total += points_earned
+
+
+                item_code = codes[i]
+                remaining_qty = qty
+                
+               
+                # Ordered by purchased_at (oldest first) and then by id (as tiebreaker)
+                inventory_items = Inventory.objects.filter(
+                    code=item_code,
+                    quantity__gt=0
+                ).order_by('purchased_at', 'id')
+                
+                item_inventory_details = []
+                
+                for inv_item in inventory_items:
+                    if remaining_qty <= 0:
+                        break
+                    
+                    available_qty = inv_item.quantity
+                    deduct_qty = min(available_qty, remaining_qty)
+                    
+                    # Record inventory details before updating
+                    item_inventory_details.append({
+                        'inventory_id': inv_item.id,
+                        'batch_no': inv_item.batch_no,
+                        'purchased_at': str(inv_item.purchased_at),
+                        'original_qty': available_qty,
+                        'deducted_qty': deduct_qty,
+                        'remaining_qty': available_qty - deduct_qty
+                    })
+                    
+                    # Update inventory quantity
+                    inv_item.quantity -= deduct_qty
+                    inv_item.save()
+                    
+                    remaining_qty -= deduct_qty
+                
+                if remaining_qty > 0:
+                    # Rollback any already deducted quantities
+                    for inv_detail in item_inventory_details:
+                        inv_item = Inventory.objects.get(id=inv_detail['inventory_id'])  # Changed to id
+                        inv_item.quantity += inv_detail['deducted_qty']
+                        inv_item.save()
+                    
+                    raise ValueError(f"Insufficient stock for item {item_names[i]} (Code: {item_code}). Needed {qty}, only {qty - remaining_qty} available")
+
 
                 item_details.append({
                     'sno': int(snos[i]) if snos[i] else i + 1,
@@ -125,10 +172,7 @@ def create_invoice_view(request):
                     'mrsp': mrsp,
                     'selling_price': selling_price,
                     'amount': amount
-                })
-
-            # Total from form or calculate sum of item amounts
-            total_amount = sum(item['amount'] for item in item_details)
+                })                
 
             # Save as one Billing row
             Billing.objects.create(
@@ -179,13 +223,21 @@ def get_item_info(request):
         item = Item.objects.filter(code__iexact=code).first()
     elif name:
         item = Item.objects.filter(item_name__iexact=name).first()
-        
+
     if item:
+        # Calculate total available quantity from Inventory
+        total_available = (
+            Inventory.objects
+            .filter(item=item)
+            .aggregate(total=Sum('quantity'))['total'] or 0
+        )
+
         return JsonResponse({
             'item_name': item.item_name,
             'item_code': item.code,
             'mrsp': item.MRSP,
             'sale_rate': item.sale_rate,
+            'available_qty': total_available,
         })
     else:
         return JsonResponse({'error': 'Item not found'}, status=404)
@@ -766,6 +818,35 @@ def purchase_view(request):
     }
     return render(request, 'purchase.html', context)
 
+def purchase_list(request):
+    supplier_id = request.GET.get('supplier')
+    sort_order = request.GET.get('sort', 'desc')
+
+    purchases = PurchaseItem.objects.all()
+
+    if supplier_id == 'None':
+        purchases = purchases.filter(supplier_id__isnull=True) | purchases.filter(supplier_id='')
+    elif supplier_id:
+        purchases = purchases.filter(supplier_id=supplier_id)
+
+    # Sort logic
+    if sort_order == 'asc':
+        purchases = purchases.order_by('purchased_at')
+    else:
+        purchases = purchases.order_by('-purchased_at') 
+
+    supplier_ids = (
+        PurchaseItem.objects
+        .values_list('supplier_id', flat=True)
+        .distinct()
+    )
+
+    return render(request, 'purchase_list.html', {
+        'purchases': purchases,
+        'supplier_ids': supplier_ids,
+        'selected_supplier': supplier_id,
+    })
+
 def fetch_item(request):
     name = request.GET.get('name', '').strip()
     code = request.GET.get('code', '').strip()
@@ -1098,8 +1179,7 @@ def inventory_view(request):
             Q(item__item_name__icontains=query) |
             Q(item__code__icontains=query) |
             Q(item__brand__icontains=query) |
-            Q(item__unit__icontains=query)  |
-            Q(item__hsn__icontains=query)
+            Q(item__unit__icontains=query)           
         )
 
     return render(request, 'inventory.html', {

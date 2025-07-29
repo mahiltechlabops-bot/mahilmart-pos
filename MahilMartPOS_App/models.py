@@ -515,7 +515,7 @@ class Inventory(models.Model):
     whole_price = models.FloatField(default=0)
     whole_price_2 = models.FloatField(default=0)
     sale_price = models.FloatField(default=0)
-    purchased_at = models.DateField(null=True, blank=True)
+    purchased_at = models.DateTimeField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, null=True, blank=True)  # Optional
     created_at = models.DateTimeField(auto_now_add=True)

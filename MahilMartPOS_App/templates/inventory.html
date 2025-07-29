@@ -67,6 +67,7 @@
           <th>Inventory ID</th>
           <th>Supplier ID</th>
           <th>Item Name</th>
+          <th>Item Code</th>
           <th>Group</th>
           <th>Brand</th>
           <th>Unit</th>
@@ -75,9 +76,7 @@
           <th>Discount</th>
           <th>Tax</th>
           <th>Net Price</th>
-          <th>Qty Purchased</th>
-          <th>Previous Qty</th>
-          <th>Total Qty</th>
+          <th>Quantity</th>          
           <th>Purchased At</th>
           <th>Batch No</th>
           <th>Expiry Date</th>      
@@ -89,7 +88,8 @@
           <td>{{ forloop.counter }}</td>
           <td>{{ item.id }}</td>
           <td>{{ item.supplier_id }}</td>
-          <td>{{ item.item.item_name }}</td>          
+          <td>{{ item.item.item_name }}</td> 
+          <td>{{ item.item.code }}</td>         
           <td>{{ item.item.group }}</td>
           <td>{{ item.item.brand }}</td>
           <td>{{ item.item.unit }}</td>
@@ -98,9 +98,7 @@
           <td>{{ item.discount }}%</td>
           <td>{{ item.tax }}%</td>
           <td>₹ {{ item.net_price }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ item.previous_qty }}</td>
-          <td>{{ item.quantity|add:item.previous_qty }}</td>
+          <td>{{ item.quantity }}</td>          
           <td>{{ item.purchased_at|date:"Y-m-d" }}</td>
           <td>{{ item.batch_no }}</td>
           <td>{{ item.expiry_date|date:"Y-m-d" }}</td>         
