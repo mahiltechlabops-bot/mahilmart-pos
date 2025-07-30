@@ -58,6 +58,7 @@ class Billing(models.Model):
     email = models.EmailField(blank=True, null=True)  
     address = models.TextField(blank=True, null=True)  
     date_joined = models.DateField(blank=True, null=True)
+    remarks = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"Invoice {self.bill_no} - {self.item_name}"    
@@ -154,12 +155,12 @@ class Item(models.Model):
     brand = models.CharField(max_length=100, blank=True, null=True)
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     HSN_SAC = models.IntegerField(blank=True, null=True)
-    P_rate = models.IntegerField()
-    cost_rate = models.IntegerField()
-    MRSP = models.IntegerField()
-    sale_rate = models.IntegerField()
-    whole_rate = models.IntegerField()
-    whole_rate_2 = models.IntegerField()
+    P_rate = models.FloatField()
+    cost_rate = models.FloatField()
+    MRSP = models.FloatField()
+    sale_rate = models.FloatField()
+    whole_rate = models.FloatField()
+    whole_rate_2 = models.FloatField()
     use_MRP = models.CharField(max_length=10)
     min_stock = models.CharField(max_length=100)
     stock_item = models.CharField(max_length=10)

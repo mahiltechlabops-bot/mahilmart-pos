@@ -3,32 +3,28 @@
 
 {% block content %}
 <div class="container mt-4" style="max-width: 1800px;">
-    <h2 class="mb-4">Purchase Records</h2>
+    <h2 class="mb-4">Purchase Records</h2>     
     <!-- Filter Form -->
      <form method="get" class="mb-3">
-        <label for="supplier">Filter by Supplier</label>
+        <!-- Supplier Filter -->
+        <label for="supplier">Filter by Supplier:</label>
         <select name="supplier" id="supplier" class="form-select w-auto d-inline-block" onchange="this.form.submit()">
             <option value="">-- All Suppliers --</option>
             {% for sid in supplier_ids %}
                 {% if sid %}
-                    <option value="{{ sid }}" {% if selected_supplier == sid %}selected{% endif %}>
-                        {{ sid }}
-                    </option>
+                    <option value="{{ sid }}" {% if selected_supplier == sid %}selected{% endif %}>{{ sid }}</option>
                 {% else %}
-                    <option value="None" {% if selected_supplier == 'None' %}selected{% endif %}>
-                        Unknown Supplier
-                    </option>
+                    <option value="None" {% if selected_supplier == 'None' %}selected{% endif %}>Unknown Supplier</option>
                 {% endif %}
             {% endfor %}
         </select>
 
-        <!-- Sort order -->
+        <!-- Sort Order -->
         <label for="sort">Sort by:</label>
         <select name="sort" id="sort" class="form-select d-inline-block w-auto" onchange="this.form.submit()">
             <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Latest First</option>
             <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Oldest First</option>
-        </select>
-   
+        </select>      
     </form>
 
     <table class="table table-bordered table-striped table-hover">
@@ -55,7 +51,6 @@
                 <th style="white-space: nowrap;">Supplier</th>
             </tr>
         </thead>
-
         <tbody>
             {% for p in purchases %}
             <tr>
@@ -83,6 +78,6 @@
             <tr><td colspan="19">No purchases found.</td></tr>
             {% endfor %}
         </tbody>
-    </table>
+    </table>    
 </div>
 {% endblock %}

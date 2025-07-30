@@ -71,7 +71,9 @@
   <select name="product" id="product_combined" class="form-control select2" required>
     <option value="">-- Select Product --</option>
     {% for product in products %}
-      <option value="{{ product.id }}">
+      <option value="{{ product.id }}"
+              data-code="{{ product.code }}"
+              data-name="{{ product.item_name }}">
         {{ product.code }} - Batch {{ product.batch_no }} ({{ product.purchased_at|date:"d M Y" }})
       </option>
     {% endfor %}
@@ -112,6 +114,7 @@
 {% block scripts %}
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+
     const form = document.getElementById('stockAdjustmentForm');
 
     form.addEventListener('submit', function (e) {
@@ -119,6 +122,31 @@
       if (qty <= 0) {
         e.preventDefault();
         alert('Quantity must be greater than 0');
+      }
+    });
+
+    const productUnique = document.getElementById("product_unique");
+    const productCombined = document.getElementById("product_combined");
+    const allOptions = Array.from(productCombined.options);
+
+    productUnique.addEventListener("change", () => {
+      const selectedOption = productUnique.options[productUnique.selectedIndex];
+      const selectedText = selectedOption.textContent.trim();
+      const [selectedCode] = selectedText.split(" - ");
+
+      // Reset and rebuild options in product_combined
+      productCombined.innerHTML = '<option value="">-- Select Product --</option>';
+
+      allOptions.forEach(option => {
+        if (!option.dataset.code) return;
+        if (option.dataset.code === selectedCode) {
+          productCombined.appendChild(option.cloneNode(true));
+        }
+      });
+
+      // Trigger Select2 refresh if used
+      if ($(productCombined).hasClass("select2")) {
+        $(productCombined).val("").trigger("change");
       }
     });
   });

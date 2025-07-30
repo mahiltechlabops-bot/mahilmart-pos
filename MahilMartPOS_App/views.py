@@ -28,6 +28,7 @@ from django.shortcuts import redirect, HttpResponse
 from .models import Quotation, Order, OrderItem
 from django.utils import timezone
 from django.db.models import F
+from django.db.models import Q
 from .models import (
     Supplier,
     Customer,
@@ -82,6 +83,7 @@ def create_invoice_view(request):
             'email': latest_bill.email if latest_bill else '',
             'address': latest_bill.address if latest_bill else '',
             'date_joined': str(latest_bill.date_joined) if latest_bill and latest_bill.date_joined else '',
+            'remarks': latest_bill.remarks if latest_bill else '',
         })
 
     if request.method == 'POST':
@@ -192,8 +194,9 @@ def create_invoice_view(request):
                 points=total_points + points_earned_total,
                 points_earned=points_earned_total,
                 email=request.POST.get('email'),
-                address=request.POST.get('address'),
-                date_joined=request.POST.get('date_joined') or timezone.now().date()
+                address = request.POST.get('address', '').strip(),
+                date_joined=request.POST.get('date_joined') or timezone.now().date(),
+                remarks=request.POST.get('remarks')
             )
 
             return redirect('billing')
@@ -241,7 +244,7 @@ def get_item_info(request):
         })
     else:
         return JsonResponse({'error': 'Item not found'}, status=404)
-
+    
 def order_view(request):
     return render(request, 'order.html')
 
@@ -597,6 +600,40 @@ def item_creation(request):
     }
     return render(request, 'items.html', context)
 
+def fetch_item_by_code(request):
+    code = request.GET.get('code')
+    if not code:
+        return JsonResponse({'exists': False})
+
+    try:
+        item = Item.objects.get(code=code)
+        return JsonResponse({
+            'exists': True,
+            'item': {
+                'item_name': item.item_name,
+                'print_name': item.print_name,
+                'status': item.status,
+                'unit': item.unit.id if item.unit else '',
+                'P_unit': item.P_unit.id if item.P_unit else '',
+                'group': item.group.id if item.group else '',
+                'brand': item.brand.id if item.brand else '',
+                'tax_id': item.tax_id if item.tax_id else '',
+                'HSN_SAC': item.HSN_SAC,
+                'use_MRP': item.use_MRP,
+                'points': item.points,
+                'cess_per_qty': item.cess_per_qty,
+                'P_rate': item.P_rate,
+                'cost_rate': item.cost_rate,
+                'MRSP': item.MRSP,
+                'sale_rate': item.sale_rate,
+                'whole_rate': item.whole_rate,
+                'whole_rate_2': item.whole_rate_2,
+                'min_stock': item.min_stock
+            }
+        })
+    except Item.DoesNotExist:
+        return JsonResponse({'exists': False})
+
 def Item_barcode(request):
     if request.method == 'POST':
         barcode = request.POST.get('barcode')
@@ -776,6 +813,7 @@ def purchase_view(request):
             request.POST.getlist('hsn'),
             request.POST.getlist('qty'),
             request.POST.getlist('price'),
+            request.POST.getlist('cost_rate'),
             request.POST.getlist('discount'),
             request.POST.getlist('tax'),
             request.POST.getlist('mrp'),
@@ -824,28 +862,25 @@ def purchase_list(request):
 
     purchases = PurchaseItem.objects.all()
 
+    # Filter by supplier
     if supplier_id == 'None':
-        purchases = purchases.filter(supplier_id__isnull=True) | purchases.filter(supplier_id='')
+        purchases = purchases.filter(Q(supplier_id__isnull=True) | Q(supplier_id=''))
     elif supplier_id:
         purchases = purchases.filter(supplier_id=supplier_id)
 
-    # Sort logic
+    # Apply sort order
     if sort_order == 'asc':
-        purchases = purchases.order_by('purchased_at')
+        purchases = purchases.order_by('id')  # Oldest first
     else:
-        purchases = purchases.order_by('-purchased_at') 
+        purchases = purchases.order_by('-id')  # Latest first
 
-    supplier_ids = (
-        PurchaseItem.objects
-        .values_list('supplier_id', flat=True)
-        .distinct()
-    )
-
-    return render(request, 'purchase_list.html', {
+    context = {
         'purchases': purchases,
-        'supplier_ids': supplier_ids,
+        'supplier_ids': PurchaseItem.objects.values_list('supplier_id', flat=True).distinct(),
         'selected_supplier': supplier_id,
-    })
+        'sort_order': sort_order,
+    }
+    return render(request, 'purchase_list.html', context)
 
 def fetch_item(request):
     name = request.GET.get('name', '').strip()
@@ -871,11 +906,12 @@ def fetch_item(request):
             'group': item.group or '',
             'brand': item.brand or '',
             'unit': item.unit or '',
+            'price': item.cost_rate or '',
             'tax': item.tax,
             'wholesale': item.whole_rate,
             'wholesale_1': item.whole_rate_2,
             'sale_price': item.sale_rate,
-            'mrp': item.MRSP,
+            'mrp': item.MRSP,           
         })
 
     return JsonResponse({'error': 'Item not found'}, status=404)
@@ -1092,6 +1128,39 @@ def stock_adjustment_view(request):
             batch.total_qty = cumulative_total + batch.quantity
             batch.save()
             cumulative_total = batch.total_qty
+
+
+        try:
+            # Find the specific inventory row for the same batch and item code
+            inventory_record = Inventory.objects.get(
+                code=selected_batch.code,
+                batch_no=selected_batch.batch_no
+            )
+
+            # Recalculate the batch-specific quantity
+            batch_qty = PurchaseItem.objects.filter(
+                code=selected_batch.code,
+                batch_no=selected_batch.batch_no
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+
+            inventory_record.quantity = batch_qty
+            inventory_record.save()
+
+        except Inventory.DoesNotExist:
+            # Create a new inventory record for this batch
+            Inventory.objects.create(
+                item_code=selected_batch.code,
+                item_name=selected_batch.item_name,
+                quantity=quantity if adjustment_type == 'add' else 0,
+                sale_price=selected_batch.sale_price,
+                brand=selected_batch.brand,
+                group=selected_batch.group,
+                unit=selected_batch.unit,
+                hsn_code=selected_batch.hsn_code,
+                supplier=selected_batch.purchase.supplier,
+                purchased_at=selected_batch.purchased_at,
+                batch_no=selected_batch.batch_no  # Ensure batch is tracked
+            )            
 
         messages.success(
             request,

@@ -2,151 +2,144 @@
 {% block title %}Sales Creation{% endblock %} 
 
 {% block style %}
-    <style>
+   <style>
+    body {
+        background-color: #f0f4f8;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
     .sales-page {
-        font-family: Arial, sans-serif;
+        padding: 20px;
     }
 
     .sales-page .main-container {
-        max-width: 2500px;
-        margin: 40px auto;
-        background-color: #7eeaee;
-        padding: 0;
+        max-width: 1700px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #e0f7fa, #ffffff);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
 
     .sales-page .title {
         text-align: center;
+        font-size: 32px;
         color: #0e0d0d;
-        font-size: 28px;
-        font-weight: bold;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
     }
 
     .sales-page form {
-        background-color: #7eeaee;
-        max-width: 1550px;
-        padding: 10px;
-        margin: 5px auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
     }
 
     .sales-page .form-grid {
         display: grid;
-        grid-template-columns: 0.4fr 0.4fr;
-        gap: 15px 40px;
-        color: black;
-        margin-bottom: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
     }
 
     .sales-page .form-group {
         display: flex;
-        align-items: center;
+        flex-direction: column;
     }
 
     .sales-page .form-group label {
-        width: 90px;
-        font-weight: bold;
+        font-weight: 600;
+        margin-bottom: 5px;
     }
 
     .sales-page .form-group input,
-    .sales-page .form-group textarea {
-        flex: 1;
-        padding: 6px;
-        box-sizing: border-box;
+    .sales-page .form-group textarea,
+    .sales-page .form-group select {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 15px;
     }
 
     .sales-page .item-table {
         width: 100%;
         border-collapse: collapse;
-        margin: 15px 0;
-        background-color: white;
+        border-radius: 8px;
+        overflow: hidden;
+        background-color: #f9f9f9;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .sales-page .item-table th,
     .sales-page .item-table td {
-        border: 1px solid black;
-        padding: 6px;
+        border: 1px solid #ddd;
+        padding: 10px;
         text-align: center;
+        font-size: 14px;
     }
 
     .sales-page .item-table th {
-        background-color: rgb(206, 238, 238);
-    }
-
-    .sales-page .footer-summary {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-weight: bold;
-        padding: 10px;
-        background-color: rgb(206, 238, 238);
-    }
-
-    .sales-page .footer-summary span {
-        font-size: 18px;
-    }
-
-    .sales-page .total-red {
-        color: red;
-        font-size: 28px;
-    }
-
-    .sales-page .total-blue {
-        color: blue;
-        font-size: 20px;
-    }
-
-    .sales-page .footer-controls {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #5debf0;
-        padding: 10px;
-        gap: 10px;
-    }
-
-    .sales-page .footer-controls > div,
-    .sales-page .footer-controls .buttons {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .sales-page .footer-controls input[type="number"] {
-        width: 100px;
-        padding: 5px;
-    }
-
-    .sales-page .footer-controls .buttons button {
-        padding: 8px 16px;
-        font-weight: bold;
+        background-color: #e1f7f7;
     }
 
     .sales-page .table-input {
         width: 100%;
-        padding: 6px;
-        box-sizing: border-box;
         border: none;
-        outline: none;
+        padding: 8px;
+        background-color: transparent;
         font-size: 14px;
     }
 
-    .sales-page .item-table td {
-        padding: 0;
+    .sales-page .footer-summary,
+    .sales-page .footer-controls {
+        background-color: #e1f7f7;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: center;
     }
 
-    .sales-page .delete-row-btn {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        cursor: pointer;
-        border-radius: 4px;
+    .sales-page .total-red {
+        color: #d9534f;
+        font-size: 28px;
         font-weight: bold;
     }
 
+    .sales-page .total-blue {
+        color: #0275d8;
+        font-size: 20px;
+    }
+
+    .sales-page button,
+    .sales-page input[type="submit"],
+    .sales-page input[type="button"] {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        background-color: #0275d8;
+        color: white;
+        transition: background 0.2s ease-in-out;
+    }
+
+    .sales-page button:hover {
+        background-color: #025aa5;
+    }
+
+    .sales-page .delete-row-btn {
+        background-color: #d9534f;
+    }
+
     .sales-page .delete-row-btn:hover {
-        background-color: #c82333;
+        background-color: #c9302c;
+    }
+
+    #nameModal input {
+        border: 1px solid #ccc;
+        border-radius: 6px;
     }
 </style>
 {% endblock %}
@@ -186,15 +179,15 @@
                     <option value="Estimate">Estimate</option>
                 </select>
             </div>
-
-            <div class="form-group"><label>Order No :</label><input type="text" name="order_no"></div>
-            <div class="form-group"><label>Phone :</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
-            <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
-            <div class="form-group"><label>Email :</label><input type="email" name="email" id="email" required
+            <div class="form-group"><label>Email :</label><input type="email" name="email" placeholder="Optional" id="email"
                 pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|net|org|gov|edu|in|co|info|biz)$"
                 title="Enter a valid email address like name@example.com"
                 autocomplete="off">
             </div>
+                       
+            <div class="form-group"><label>Phone :</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
+            <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;" required></textarea></div>
+            
             <div class="form-group"><label>Join Date :</label><input type="text" name="date_joined" id="date_joined" value="{{ today_date }}" readonly></div>            
             <div id="nameModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
             background-color: rgba(0,0,0,0.4); justify-content:center; align-items:center; z-index:1000;">
@@ -207,8 +200,8 @@
             </div>
             </div>
         
-        <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div>
-            
+            <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div> 
+             <div class="form-group"><label>Remarks :</label><input type="text" name="remarks" placeholder="Optional"></div>            
         </div>
         <!-- Item Table -->
         <table class="item-table">
@@ -218,7 +211,7 @@
                     <th>Code</th>
                     <th>Item Name</th>
                     <th>Qty</th>
-                    <th>MRSP</th>
+                    <th>MRP</th>
                     <th>Sellprice</th>                    
                     <th>Amount</th>
                     <th>Action</th>
@@ -266,8 +259,7 @@
         <div class="footer-controls">
             <div class="buttons">
                 <button type="button" onclick="submitAsQuotation()">Quotation</button>
-                <a href="{% url 'order_list' %}"><button type="button">Order</button></a>
-                <button type="button">Option</button>
+                <a href="{% url 'order_list' %}"><button type="button">Order</button></a>                
             </div>
             <div>
                 <span class="total-red">0.00</span> Received :<input type="number" step="0.01" name="received">
