@@ -55,7 +55,7 @@
       <div>
         <a href="{% url 'stock_adjustment' %}" class="btn btn-sm btn-primary">Stock Adjustement</a>
         <a href="{% url 'stock_adjustment_list' %}" class="btn btn-sm btn-success">View Adjusted Stock</a>
-        <a href="{% url 'split_stock' %}" class="btn btn-sm btn-success">Split Stock</a>
+        <a href="{% url 'split_stock' %}" class="btn btn-sm btn-success">Bulk Stock Details</a>
       </div>
     </div>
 
@@ -72,6 +72,8 @@
           <th>Brand</th>
           <th>Unit</th>
           <th>HSN Code</th>
+          <th>MRP</th>
+          <th>Cost Price</th>
           <th>Sale Price</th>
           <th>Discount</th>
           <th>Tax</th>
@@ -94,8 +96,10 @@
           <td>{{ item.item.brand }}</td>
           <td>{{ item.item.unit }}</td>
           <td>{{ item.item.HSN_SAC }}</td>
+          <td>{{ item.item.MRSP }}</td>
+          <td>₹ {{ item.unit_price }}</td>
           <td>₹ {{ item.sale_price }}</td>
-          <td>{{ item.discount }}%</td>
+          <td>{{ item.discount }}</td>
           <td>{{ item.tax }}%</td>
           <td>₹ {{ item.net_price }}</td>
           <td>{{ item.quantity }}</td>          

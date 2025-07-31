@@ -60,7 +60,7 @@
     {% csrf_token %}
 
     <label for="product_unique">Product (Unique)</label>
-    <select name="product" id="product_unique" class="form-control" required>
+    <select name="product" id="product_unique" class="form-control select2" required>
       <option value="">-- Select Product --</option>
       {% for product in unique_products %}
         <option value="{{ product.id }}">{{ product.code }} - {{ product.item_name }}</option>
@@ -112,6 +112,9 @@
 {% endblock %}
 
 {% block scripts %}
+  <!-- BODY END: jQuery + Select2 JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
 
@@ -150,5 +153,14 @@
       }
     });
   });
+
+  $(document).ready(function () {
+    $('.select2').select2({
+      width: '100%',
+      placeholder: '-- Select Product --',
+      allowClear: true
+    });
+  });
+
 </script>
 {% endblock %}

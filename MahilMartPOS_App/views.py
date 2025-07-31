@@ -29,6 +29,9 @@ from .models import Quotation, Order, OrderItem
 from django.utils import timezone
 from django.db.models import F
 from django.db.models import Q
+from decimal import Decimal
+from django.utils.timezone import now
+from django.db.models import Max
 from .models import (
     Supplier,
     Customer,
@@ -315,10 +318,7 @@ def create_quotation(request):
             date_joined = request.POST.get('date_joined')
             sale_type = request.POST.get('sale_type')
             bill_type = request.POST.get('bill_type')
-            counter = request.POST.get('counter')
-            # order_no = request.POST.get('order_no')
-            # received = float(request.POST.get('received') or 0)
-            # balance = float(request.POST.get('balance') or 0)
+            counter = request.POST.get('counter')            
             total_points = float(request.POST.get('points') or 0)
             earned_points = float(request.POST.get('total_earned') or 0)
             item_data_raw = request.POST.get('item_data')    
@@ -932,7 +932,8 @@ def create_purchase(request):
 
             supplier = Supplier.objects.get(id=supplier_id)     
             invoice_no = data.get("invoice_no", "").strip()
-            purchase = Purchase.objects.create(supplier=supplier, invoice_no=invoice_no)                
+            total_products = len(items_data)
+            purchase = Purchase.objects.create(supplier=supplier, invoice_no=invoice_no,total_products=total_products)                
 
             # Track quantities during this request
             latest_qty_cache = {}
@@ -958,6 +959,30 @@ def create_purchase(request):
                 # Update in-memory cache
                 latest_qty_cache[item_id] = total_qty
 
+
+                # Generate batch number if not provided
+                raw_batch_no = item.get('batch_no', '').strip()
+                if not raw_batch_no:
+                    # Try to get latest batch for this item
+                    last_batch = (
+                        PurchaseItem.objects
+                        .filter(code=item_code)
+                        .exclude(batch_no__isnull=True)
+                        .exclude(batch_no__exact='')
+                        .order_by('-id')
+                        .first()
+                    )
+                    if last_batch and last_batch.batch_no.startswith('B'):
+                        try:
+                            last_num = int(last_batch.batch_no[1:])
+                            new_batch_no = f'B{last_num + 1:03d}'
+                        except ValueError:
+                            new_batch_no = 'B001'
+                    else:
+                        new_batch_no = 'B001'
+                else:
+                    new_batch_no = raw_batch_no
+
                 # Save purchase item with correct qtys
                 PurchaseItem.objects.create(
                     purchase=purchase,
@@ -970,6 +995,7 @@ def create_purchase(request):
                     hsn=item.get('hsn', None),               
                     quantity=qty_purchased,
                     unit_price=item['price'],
+                    split_unit=item['split_unit'],
                     total_price=item['total_price'],
                     discount=item['discount'],
                     tax=item['tax'],
@@ -979,8 +1005,9 @@ def create_purchase(request):
                     whole_price_2=item['whole_price_2'],
                     sale_price=item['sale_price'],        
                     supplier_id=supplier.supplier_id,
-                    purchased_at=parse_date(item.get('purchased_at')),
-                    batch_no=item.get('batch_no', ''),
+                    # purchased_at=parse_date(item.get('purchased_at')),
+                    purchased_at = now().date(),              
+                    batch_no=new_batch_no,
                     expiry_date=parse_date(item.get('expiry_date')),
                     previous_qty=previous_qty,
                     total_qty=total_qty
@@ -993,14 +1020,14 @@ def create_purchase(request):
                     hsn=item.get('hsn', None),
                     group=item_obj.group,
                     brand=item_obj.brand,
-                    unit=item_obj.unit,
-                    batch_no=item.get('batch_no', ''),
-                    invoice_no=item.get('invoice_no', ''),                   
+                    unit=item_obj.unit,                 
+                    batch_no=new_batch_no,                                     
                     supplier=supplier,
                     quantity=qty_purchased,
                     previous_qty=previous_qty,
                     total_qty=total_qty,
                     unit_price=item['price'],
+                    split_unit=item['split_unit'],
                     total_price=item['total_price'],
                     discount=item['discount'],
                     tax=item['tax'],
@@ -1009,7 +1036,8 @@ def create_purchase(request):
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
                     sale_price=item['sale_price'],
-                    purchased_at=parse_date(item.get('purchased_at')),
+                    # purchased_at=parse_date(item.get('purchased_at')),
+                    purchased_at = now().date(),
                     expiry_date=parse_date(item.get('expiry_date')),
                     purchase=purchase
                 )
@@ -1038,13 +1066,16 @@ def create_purchase(request):
 
 @csrf_exempt
 def stock_adjustment_view(request):
-    # Unique products (for dropdown)
-    unique_products = (
+    # Get latest item ID for each code
+    latest_by_code = (
         PurchaseItem.objects
-        .filter(item_name__isnull=False)
-        .order_by('item_name', 'id')
-        .distinct('item_name')
+        .filter(code__isnull=False)
+        .values('code')
+        .annotate(latest_id=Max('id'))
     )
+
+    # Then fetch those rows
+    unique_products = PurchaseItem.objects.filter(id__in=[entry['latest_id'] for entry in latest_by_code])
 
     # All products with batch info
     products = PurchaseItem.objects.filter(item_name__isnull=False)
@@ -1079,7 +1110,11 @@ def stock_adjustment_view(request):
         all_batches = PurchaseItem.objects.filter(item=item).order_by('purchased_at', 'id')
 
         if adjustment_type == "add":
-            selected_batch.quantity += quantity
+            selected_batch.quantity += quantity      
+            selected_batch.save()
+
+            selected_batch.total_price = selected_batch.quantity * selected_batch.unit_price
+            selected_batch.net_price = selected_batch.total_price - (selected_batch.discount or 0)
             selected_batch.save()
 
         elif adjustment_type == "subtract":
@@ -1105,20 +1140,33 @@ def stock_adjustment_view(request):
                     remaining -= batch.quantity
                     batch.quantity = Decimal("0")
                     batch.save()
+
+            for batch in ordered_batches:
+                batch.total_price = batch.quantity * batch.unit_price
+                batch.net_price = batch.total_price - (batch.discount or 0)
+                batch.save()
+
         else:
             messages.error(request, "Invalid adjustment type.")
             return redirect('stock_adjustment')   
         
+        purchase = selected_batch.purchase
+
         StockAdjustment.objects.create(
+            purchase=purchase,
+            invoice_no=purchase.invoice_no,
             purchase_item=selected_batch,       
             batch_no=selected_batch.batch_no,
             code=selected_batch.code,
-            item_name=selected_batch.item_name,          
+            item_name=selected_batch.item_name, 
+            unit=selected_batch.unit, 
+            unit_price=selected_batch.unit_price,         
             supplier_code=selected_batch.purchase.supplier.supplier_id,          
             adjustment_type=adjustment_type,
-            quantity=quantity,
+            quantity=quantity,            
+            adjusted_net_price=quantity * selected_batch.unit_price,
             reason=reason,
-            remarks=remarks,            
+            remarks=remarks,                    
         )
 
         # Recalculate `previous_qty` and `total_qty` for all batches of this item
@@ -1145,6 +1193,9 @@ def stock_adjustment_view(request):
 
             inventory_record.quantity = batch_qty
             inventory_record.save()
+            inventory_record.total_price = batch_qty * selected_batch.unit_price
+            inventory_record.net_price = inventory_record.total_price - (selected_batch.discount or 0)
+            inventory_record.save()
 
         except Inventory.DoesNotExist:
             # Create a new inventory record for this batch
@@ -1159,7 +1210,9 @@ def stock_adjustment_view(request):
                 hsn_code=selected_batch.hsn_code,
                 supplier=selected_batch.purchase.supplier,
                 purchased_at=selected_batch.purchased_at,
-                batch_no=selected_batch.batch_no  # Ensure batch is tracked
+                batch_no=selected_batch.batch_no,
+                total_price=quantity * selected_batch.unit_price if adjustment_type == 'add' else 0,
+                net_price=(quantity * selected_batch.unit_price - (selected_batch.discount or 0)) if adjustment_type == 'add' else 0
             )            
 
         messages.success(
@@ -1174,11 +1227,41 @@ def stock_adjustment_view(request):
     })
 
 def stock_adjustment_list(request):
-    adjustments = StockAdjustment.objects.all().order_by('-adjusted_at')
-    return render(request, 'stock_adjustment_list.html', {'adjustments': adjustments})
+    adjustments = StockAdjustment.objects.all()
+
+    code = request.GET.get('code')
+    invoice_no = request.GET.get('invoice_no')
+    item_name = request.GET.get('item_name')
+    supplier_code = request.GET.get('supplier_code')
+    batch_no = request.GET.get('batch_no')
+
+    if code:
+        adjustments = adjustments.filter(code__icontains=code)
+    if invoice_no:
+        adjustments = adjustments.filter(invoice_no__icontains=invoice_no)
+    if item_name:
+        adjustments = adjustments.filter(item_name__icontains=item_name)
+    if supplier_code:
+        adjustments = adjustments.filter(supplier_code__icontains=supplier_code)
+    if batch_no:
+        adjustments = adjustments.filter(batch_no__icontains=batch_no)
+
+    # Order by most recent adjustment
+    adjustments = adjustments.order_by('-adjusted_at')
+
+    return render(request, 'stock_adjustment_list.html', {
+        'adjustments': adjustments,
+        'filters': {
+            'code': code or '',
+            'invoice_no': invoice_no or '',
+            'item_name': item_name or '',
+            'supplier_code': supplier_code or '',
+            'batch_no': batch_no or '',
+        }
+    })
 
 def edit_bulk_item(request, item_id):
-    bulk_item = get_object_or_404(PurchaseItem, id=item_id)
+    bulk_item = get_object_or_404(Inventory, id=item_id)
 
     if request.method == 'POST':
         print("POST request received:", request.POST)
@@ -1256,9 +1339,8 @@ def inventory_view(request):
     })
 
 def split_stock_page(request):
-    bulk_items = PurchaseItem.objects.filter(unit__icontains='bulk')
-    return render(request, 'split_stock.html', {'bulk_items': bulk_items})
-   
+    bulk_items = Inventory.objects.filter(unit__icontains='bulk')
+    return render(request, 'split_stock.html', {'bulk_items': bulk_items})   
 
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)

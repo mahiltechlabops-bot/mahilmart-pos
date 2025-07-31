@@ -2,6 +2,7 @@ from datetime import date
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission
 
 class Category(models.Model):
@@ -290,15 +291,18 @@ class StockAdjustment(models.Model):
         ('manual_adjustment', 'Manual Adjustment'),
     ]
 
-    invoice_no = models.CharField(max_length=100, default='UNKNOWN')
+    purchase = models.ForeignKey('Purchase', on_delete=models.CASCADE, null=True, blank=True)
+    invoice_no = models.CharField(max_length=100, blank=True, null=True)
     batch_no = models.CharField(max_length=100, default='UNKNOWN')
     code = models.CharField(max_length=100, default='UNKNOWN')
     item_name = models.CharField(max_length=255, default='UNKNOWN')
+    unit = models.CharField(max_length=100, blank=True, null=True)
     supplier_code = models.CharField(max_length=20, default='UNKNOWN')
-
     purchase_item = models.ForeignKey('MahilMartPOS_App.PurchaseItem', on_delete=models.CASCADE)
     adjustment_type = models.CharField(max_length=10, choices=ADJUSTMENT_TYPES)
-    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)    
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    adjusted_net_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     reason = models.CharField(max_length=30, choices=REASONS, default='manual_adjustment')
     remarks = models.TextField(blank=True, null=True)
     adjusted_at = models.DateTimeField(auto_now_add=True)
@@ -460,6 +464,7 @@ class Purchase(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)   
     invoice_no = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
+    total_products = models.FloatField(default=0)
 
     def __str__(self):
         return f"Purchase #{self.id} - {self.supplier.name}"          
@@ -475,6 +480,7 @@ class PurchaseItem(models.Model):
     code = models.CharField(max_length=30, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    split_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0) #kg/ltr/pcs
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -501,10 +507,10 @@ class Inventory(models.Model):
     group = models.CharField(max_length=100, blank=True, null=True)
     brand = models.CharField(max_length=100, blank=True, null=True)
     unit = models.CharField(max_length=50)
-    batch_no = models.CharField(max_length=100, blank=True, null=True)
-    invoice_no = models.CharField(max_length=100, blank=True, null=True)
+    batch_no = models.CharField(max_length=100, blank=True, null=True)   
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True)
     quantity = models.FloatField(default=0)
+    split_unit = models.FloatField(default=0) #kg/ltr/pcs
     previous_qty = models.FloatField(default=0)
     total_qty = models.FloatField(default=0)
     unit_price = models.FloatField(default=0)
