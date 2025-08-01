@@ -210,6 +210,7 @@
                     <th>Sno</th>
                     <th>Code</th>
                     <th>Item Name</th>
+                    <th>Unit</th>
                     <th>Qty</th>
                     <th>MRP</th>
                     <th>Sellprice</th>                    
@@ -222,6 +223,7 @@
                     <td><input type="number" name="sno" class="table-input" readonly></td>
                     <td><input type="text" name="code" class="table-input"></td>
                     <td><input type="text" name="item_name" class="table-input"></td>
+                    <td><input type="text" name="unit" class="table-input"></td>
                     <td><input type="number" name="qty" class="table-input"></td>
                     <td><input type="number" name="mrsp" class="table-input" readonly></td>
                     <td><input type="number" name="sellingprice" class="table-input" readonly></td>                         
@@ -372,6 +374,7 @@
                 sno: row.querySelector('input[name="sno"]')?.value || "",
                 code: row.querySelector('input[name="code"]')?.value || "",
                 item_name: row.querySelector('input[name="item_name"]')?.value || "",
+                unit: row.querySelector('input[name="unit"]')?.value || "",
                 qty: parseFloat(row.querySelector('input[name="qty"]')?.value) || 0,
                 mrsp: parseFloat(row.querySelector('input[name="mrsp"]')?.value) || 0,
                 sellingprice: parseFloat(row.querySelector('input[name="sellingprice"]')?.value) || 0,
@@ -476,7 +479,7 @@
         // Add new row to the table
         function addNewRow() {
             const lastRow = itemTableBody.querySelector('tr:last-child');
-            const requiredFields = ['code', 'item_name', 'qty', 'sellingprice'];
+            const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
             let isValid = true;
 
             // Validate required fields
@@ -502,6 +505,7 @@
                 <td><input type="number" name="sno" class="table-input" readonly></td>
                 <td><input type="text" name="code" class="table-input"></td>
                 <td><input type="text" name="item_name" class="table-input"></td>
+                <td><input type="text" name="unit" class="table-input"></td>
                 <td><input type="number" name="qty" class="table-input" value="1"></td>
                 <td><input type="number" name="mrsp" class="table-input" readonly></td>
                 <td><input type="number" name="sellingprice" class="table-input" readonly></td>
@@ -536,6 +540,7 @@
         function attachAutoFill(row) {
             const codeInput = row.querySelector('input[name="code"]');
             const nameInput = row.querySelector('input[name="item_name"]');
+            const unitInput = row.querySelector('input[name="unit"]');
             const mrspInput = row.querySelector('input[name="mrsp"]');
             const priceInput = row.querySelector('input[name="sellingprice"]');
 
@@ -550,6 +555,7 @@
                         if (!data.error) {
                             if (data.item_code && codeInput) codeInput.value = data.item_code;
                             if (data.item_name && nameInput) nameInput.value = data.item_name;
+                            if (data.unit && unitInput) unitInput.value = data.unit;
                             if (mrspInput) mrspInput.value = data.mrsp ?? '';
                             if (priceInput) priceInput.value = data.sale_rate ?? '';
                           

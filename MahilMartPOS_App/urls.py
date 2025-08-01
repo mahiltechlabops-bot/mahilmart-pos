@@ -36,6 +36,7 @@ urlpatterns = [
     path('stock_adjustments/', views.stock_adjustment_list, name='stock_adjustment_list'),
     path('split-stock/', views.split_stock_page, name='split_stock'),
     path('inventory/edit/<int:item_id>/', views.edit_bulk_item, name='edit_bulk_item'),
+    path('ajax/fetch-item-info/', views.fetch_item_info, name='fetch_item_info'),
     path('inventory/', views.inventory_view, name='inventory'),
     path('product/<int:pk>/', views.product_detail, name='product_detail'), 
     path('suppliers/', views.suppliers_view, name='suppliers'),

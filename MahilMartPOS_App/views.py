@@ -139,26 +139,45 @@ def create_invoice_view(request):
                 for inv_item in inventory_items:
                     if remaining_qty <= 0:
                         break
-                    
-                    available_qty = inv_item.quantity
-                    deduct_qty = min(available_qty, remaining_qty)
-                    
-                    # Record inventory details before updating
-                    item_inventory_details.append({
-                        'inventory_id': inv_item.id,
-                        'batch_no': inv_item.batch_no,
-                        'purchased_at': str(inv_item.purchased_at),
-                        'original_qty': available_qty,
-                        'deducted_qty': deduct_qty,
-                        'remaining_qty': available_qty - deduct_qty
-                    })
-                    
-                    # Update inventory quantity
-                    inv_item.quantity -= deduct_qty
-                    inv_item.save()
-                    
+
+                    if inv_item.unit == "Bulk":
+                        # Reduce from split_unit
+                        available_qty = inv_item.split_unit or 0
+                        deduct_qty = min(available_qty, remaining_qty)
+
+                        item_inventory_details.append({
+                            'inventory_id': inv_item.id,
+                            'batch_no': inv_item.batch_no,
+                            'purchased_at': str(inv_item.purchased_at),
+                            'original_qty': available_qty,
+                            'deducted_qty': deduct_qty,
+                            'remaining_qty': available_qty - deduct_qty,
+                            'deducted_from': 'split_unit'
+                        })
+
+                        inv_item.split_unit -= deduct_qty
+                        inv_item.save()
+
+                    else:
+                        # Reduce from quantity
+                        available_qty = inv_item.quantity
+                        deduct_qty = min(available_qty, remaining_qty)
+
+                        item_inventory_details.append({
+                            'inventory_id': inv_item.id,
+                            'batch_no': inv_item.batch_no,
+                            'purchased_at': str(inv_item.purchased_at),
+                            'original_qty': available_qty,
+                            'deducted_qty': deduct_qty,
+                            'remaining_qty': available_qty - deduct_qty,
+                            'deducted_from': 'quantity'
+                        })
+
+                        inv_item.quantity -= deduct_qty
+                        inv_item.save()
+
                     remaining_qty -= deduct_qty
-                
+                                                  
                 if remaining_qty > 0:
                     # Rollback any already deducted quantities
                     for inv_detail in item_inventory_details:
@@ -241,13 +260,14 @@ def get_item_info(request):
         return JsonResponse({
             'item_name': item.item_name,
             'item_code': item.code,
+            'unit': item.unit,
             'mrsp': item.MRSP,
             'sale_rate': item.sale_rate,
             'available_qty': total_available,
         })
     else:
         return JsonResponse({'error': 'Item not found'}, status=404)
-    
+   
 def order_view(request):
     return render(request, 'order.html')
 
@@ -536,6 +556,10 @@ def item_creation(request):
         status = request.POST.get('status')
         item_name = request.POST.get('item_name')
         print_name = request.POST.get('print_name')
+
+        if Item.objects.filter(code=code).exists():
+            messages.error(request, f"Item with code '{code}' already exists.")
+            return redirect('items')
 
         # Get tax percent from Tax object
         tax_id = request.POST.get('tax')
@@ -1004,8 +1028,7 @@ def create_purchase(request):
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
                     sale_price=item['sale_price'],        
-                    supplier_id=supplier.supplier_id,
-                    # purchased_at=parse_date(item.get('purchased_at')),
+                    supplier_id=supplier.supplier_id,                    
                     purchased_at = now().date(),              
                     batch_no=new_batch_no,
                     expiry_date=parse_date(item.get('expiry_date')),
@@ -1035,8 +1058,7 @@ def create_purchase(request):
                     mrp_price=item['mrp'],
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
-                    sale_price=item['sale_price'],
-                    # purchased_at=parse_date(item.get('purchased_at')),
+                    sale_price=item['sale_price'],                   
                     purchased_at = now().date(),
                     expiry_date=parse_date(item.get('expiry_date')),
                     purchase=purchase
@@ -1263,33 +1285,39 @@ def stock_adjustment_list(request):
 def edit_bulk_item(request, item_id):
     bulk_item = get_object_or_404(Inventory, id=item_id)
 
+    print("Original bulk_item:", bulk_item.id)
+    supplier_id = bulk_item.supplier_id
+    purchase_id = bulk_item.purchase_id  
+
     if request.method == 'POST':
         print("POST request received:", request.POST)
 
+        original_split_unit = float(bulk_item.split_unit or 0)       
+        posted_split_qty = float(request.POST.get('split_quantity') or 0)
+        updated_split_unit = original_split_unit - posted_split_qty
+        bulk_item.split_unit = updated_split_unit
+        bulk_item.save(update_fields=['split_unit'])
+
+            #   works on the qunaity, previous quantity, total quantity, total price adjustment need
+
         try:
-            purchased_at = request.POST.get('purchased_at')
-            expiry_date = request.POST.get('expiry_date')
-
-            purchased_at_date = datetime.strptime(purchased_at, '%Y-%m-%d').date() if purchased_at else None
-            expiry_date_date = datetime.strptime(expiry_date, '%Y-%m-%d').date() if expiry_date else None
-
-            # Get supplier by code if needed
+            item_code = request.POST.get('code')
             try:
-                supplier_obj = Supplier.objects.get(code=bulk_item.supplier_id)
-            except Supplier.DoesNotExist:
-                messages.error(request, "Supplier not found")
-                return render(request, 'edit_bulk_item.html', {'item': bulk_item})
+                item_obj = Item.objects.get(code=item_code)
+            except Item.DoesNotExist:
+                messages.error(request, f"No item found with code '{item_code}'")
+                return redirect(request.path)
 
             inventory = Inventory(
-                item=bulk_item.item,
+                item=item_obj,
                 item_name=request.POST.get('item_name'),
-                code=request.POST.get('code'),
+                code=item_code,
                 group=request.POST.get('group'),
                 brand=request.POST.get('brand'),
                 unit=request.POST.get('unit'),
                 batch_no=request.POST.get('batch_no'),
-                invoice_no=request.POST.get('invoice_no'),
                 quantity=float(request.POST.get('quantity') or 0),
+                split_unit=float(request.POST.get('split_quantity') or 0),
                 previous_qty=float(request.POST.get('previous_qty') or 0),
                 total_qty=float(request.POST.get('total_qty') or 0),
                 unit_price=float(request.POST.get('unit_price') or 0),
@@ -1301,10 +1329,12 @@ def edit_bulk_item(request, item_id):
                 whole_price=float(request.POST.get('whole_price') or 0),
                 whole_price_2=float(request.POST.get('whole_price_2') or 0),
                 sale_price=float(request.POST.get('sale_price') or 0),
-                purchased_at=purchased_at_date,
-                expiry_date=expiry_date_date,
-                supplier=supplier_obj,
-                purchase=bulk_item.purchase
+                purchased_at=now(),  # timezone-aware
+                expiry_date=request.POST.get('expiry_date'),
+                supplier_id=supplier_id,
+                purchase_id=purchase_id,
+                created_at=now(),
+                remarks=request.POST.get('remarks'),
             )
             inventory.save()
             print("Inventory saved with ID:", inventory.id)
@@ -1317,6 +1347,33 @@ def edit_bulk_item(request, item_id):
             messages.error(request, f"Error saving to inventory: {e}")
 
     return render(request, 'edit_bulk_item.html', {'item': bulk_item})
+
+def fetch_item_info(request):
+    code = request.GET.get('code')
+    name = request.GET.get('name')
+    
+    item = None
+    if code:
+        item = Item.objects.filter(code__iexact=code).first()
+    elif name:
+        item = Item.objects.filter(item_name__iexact=name).first()
+
+    if item:
+        return JsonResponse({
+            'item_id': item.id,
+            'item_name': item.item_name,
+            'code': item.code,
+            'group': item.group,
+            'brand': item.brand,
+            'unit': item.unit,
+            'unit_price': float(item.cost_rate),
+            'mrp_price': float(item.MRSP),
+            'whole_price': float(item.whole_rate),
+            'whole_price_2': float(item.whole_rate_2),
+            'sale_price': float(item.sale_rate),
+        })
+    
+    return JsonResponse({'error': 'Item not found'}, status=404)
 
 def inventory_view(request):
     query = request.GET.get('q', '').strip()

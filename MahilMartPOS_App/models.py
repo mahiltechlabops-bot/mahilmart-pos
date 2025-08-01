@@ -526,6 +526,7 @@ class Inventory(models.Model):
     expiry_date = models.DateField(null=True, blank=True)
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, null=True, blank=True)  # Optional
     created_at = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True, default="N/A")
 
     def __str__(self):
         return f"{self.item_name} - {self.code}"        
