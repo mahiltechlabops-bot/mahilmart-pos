@@ -278,7 +278,7 @@
                 </div>
             </div>
             <div class="buttons">
-                <button type="submit">Save</button>
+                <button type="submit" onclick="submitBilling()">Save</button>
                 <a href="{% url 'billing' %}"><button type="button">Exit</button></a>
             </div>
         </div>
@@ -362,6 +362,44 @@
             }
         }
         return true;
+    }
+
+    function validateAllRows() {
+        const rows = document.querySelectorAll('#itemTableBody tr');
+        let isValid = true;
+
+        rows.forEach((row, index) => {
+            const requiredFields = [
+                { name: "sno", label: "S.No" },
+                { name: "code", label: "Code" },
+                { name: "item_name", label: "Item Name" },
+                { name: "unit", label: "Unit" },
+                { name: "qty", label: "Qty" },
+                { name: "mrsp", label: "MRP" },
+                { name: "sellingprice", label: "Sell Price" },
+                { name: "amount", label: "Amount", selector: ".amount-output" }
+            ];
+
+            for (const field of requiredFields) {
+                const input = field.selector
+                    ? row.querySelector(field.selector)
+                    : row.querySelector(`input[name="${field.name}"]`);
+
+                const value = input?.value?.trim();
+
+                if (!value || (["qty", "mrsp", "sellingprice", "amount"].includes(field.name) && parseFloat(value) <= 0)) {
+                    alert(`Row ${index + 1}: "${field.label}" is required and must be greater than 0`);
+                    input?.focus();
+                    input?.classList.add("input-error");
+                    isValid = false;
+                    return false; // Exit inner loop
+                } else {
+                    input?.classList.remove("input-error");
+                }
+            }
+        });
+
+        return isValid;
     }
 
     // Collect item data from table
@@ -559,19 +597,55 @@
                             if (mrspInput) mrspInput.value = data.mrsp ?? '';
                             if (priceInput) priceInput.value = data.sale_rate ?? '';
                           
-                                    const availableQty = parseFloat(data.available_qty || 0);
-                                    const availableInput = row.querySelector('input[name="available"]');
-                                    if (availableInput) availableInput.value = availableQty;
-                                    
-                                    if (availableQty < 1) {
-                                        alert(`⚠️ Warning: No stock available for "${data.item_name}" (Code: ${data.item_code})`);
-                                         row.querySelectorAll('input').forEach(input => {
-                                            if (input.name !== 'available') input.value = '';
-                                        });
+                        const availableQty = parseFloat(data.available_qty || 0);
+                        const availableInput = row.querySelector('input[name="available"]');
+                        if (availableInput) availableInput.value = availableQty;
 
-                                        if (codeInput) codeInput.focus();
-                                        updateSerialNumbers();
-                                    }
+                        if (availableQty < 1) {
+                            alert(`⚠️ Warning: No stock available for "${data.item_name}" (Code: ${data.item_code})`);
+                            row.querySelectorAll('input').forEach(input => {
+                                if (input.name !== 'available') input.value = '';
+                            });
+                            if (codeInput) codeInput.focus();
+                            updateSerialNumbers();
+                        }
+
+                        if (data.low_stock_warning) {
+                            alert(data.warning_message);
+                        }
+
+                        // Quantity check without moving cursor
+                        const quantityInput = row.querySelector('input[name="qty"]');
+                        if (quantityInput) {
+                            quantityInput.addEventListener('keydown', function (e) {
+                                const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                                if (allowedKeys.includes(e.key)) return;
+
+                                const futureValue = quantityInput.value + e.key;
+                                const enteredQty = parseFloat(futureValue);
+
+                                if (!isNaN(enteredQty) && enteredQty > availableQty) {
+                                    e.preventDefault();
+
+                                    // Use setTimeout to ensure alert and DOM update work together
+                                    setTimeout(() => {
+                                        alert(`❌ Enter only available stock is (${availableQty}).`);
+                                        quantityInput.value = '';
+                                        quantityInput.focus();
+                                    }, 10);
+                                }
+                            });
+
+                            // Also handle paste or mobile input
+                            quantityInput.addEventListener('input', function () {
+                                const enteredQty = parseFloat(quantityInput.value || 0);
+                                if (enteredQty > availableQty) {
+                                    alert(`❌ Enter only available stock is (${availableQty}).`);
+                                    quantityInput.value = '';
+                                    quantityInput.focus();
+                                }
+                            });
+                        }
 
                             updateCalculations();
                         } else {
@@ -615,7 +689,7 @@
     }
     
     function submitAsQuotation() {
-    if (!validateForm()) return;
+    if (!validateForm() || !validateAllRows()) return;
 
     const form = document.querySelector('form');
     const formData = new FormData(form);

@@ -89,6 +89,9 @@
     <label for="quantity">Quantity</label>
     <input type="number" name="quantity" id="quantity" min="1" class="form-control" required>
 
+    <label for="split_quantity">Split Quantity</label>
+    <input type="number" name="split_quantity" id="split_quantity" min="1" class="form-control" required>
+
     <label for="reason">Reason</label>
     <select name="reason" id="reason" class="form-control" required>
       <option value="">-- Select Reason --</option>
@@ -119,18 +122,36 @@
   document.addEventListener('DOMContentLoaded', function () {
 
     const form = document.getElementById('stockAdjustmentForm');
+    const productUnique = document.getElementById("product_unique");
+    const productCombined = document.getElementById("product_combined");
+    const allOptions = Array.from(productCombined.options);
 
     form.addEventListener('submit', function (e) {
       const qty = document.getElementById('quantity').value;
       if (qty <= 0) {
         e.preventDefault();
         alert('Quantity must be greater than 0');
+        return;
+      }
+
+      const selectedUnique = productUnique.options[productUnique.selectedIndex];
+      const selectedCombined = productCombined.options[productCombined.selectedIndex];
+
+      if (!selectedUnique || !selectedCombined || !selectedCombined.dataset.code) {
+        e.preventDefault();
+        alert('Please select both products correctly.');
+        return;
+      }
+
+      const uniqueCode = selectedUnique.textContent.trim().split(' - ')[0];
+      const combinedCode = selectedCombined.dataset.code;
+
+      if (uniqueCode !== combinedCode) {
+        e.preventDefault();
+        alert('Product code mismatch between "Product (Unique)" and "Product (Batch + Purchased At)". Please select matching products.');
+        return;
       }
     });
-
-    const productUnique = document.getElementById("product_unique");
-    const productCombined = document.getElementById("product_combined");
-    const allOptions = Array.from(productCombined.options);
 
     productUnique.addEventListener("change", () => {
       const selectedOption = productUnique.options[productUnique.selectedIndex];

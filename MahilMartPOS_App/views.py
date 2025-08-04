@@ -140,7 +140,7 @@ def create_invoice_view(request):
                     if remaining_qty <= 0:
                         break
 
-                    if inv_item.unit == "Bulk":
+                    if "bulk" in inv_item.unit.lower():
                         # Reduce from split_unit
                         available_qty = inv_item.split_unit or 0
                         deduct_qty = min(available_qty, remaining_qty)
@@ -250,12 +250,26 @@ def get_item_info(request):
         item = Item.objects.filter(item_name__iexact=name).first()
 
     if item:
-        # Calculate total available quantity from Inventory
-        total_available = (
-            Inventory.objects
-            .filter(item=item)
-            .aggregate(total=Sum('quantity'))['total'] or 0
-        )
+        # Check if unit is bulk (case insensitive, partial match)
+        is_bulk = 'bulk' in item.unit.lower()
+
+        if is_bulk:
+            # Sum split_unit from Inventory
+            total_available = (
+                Inventory.objects
+                .filter(item=item)
+                .aggregate(total=Sum('split_unit'))['total'] or 0
+            )
+        else:
+            # Sum quantity from Inventory
+            total_available = (
+                Inventory.objects
+                .filter(item=item)
+                .aggregate(total=Sum('quantity'))['total'] or 0
+            )
+
+        # Check for low stock
+        low_stock_warning = total_available <= 10            
 
         return JsonResponse({
             'item_name': item.item_name,
@@ -264,6 +278,8 @@ def get_item_info(request):
             'mrsp': item.MRSP,
             'sale_rate': item.sale_rate,
             'available_qty': total_available,
+            'low_stock_warning': low_stock_warning,
+            'warning_message': f"⚠️ Stock is low ({total_available} available, Its less than 10)!" if low_stock_warning else ""
         })
     else:
         return JsonResponse({'error': 'Item not found'}, status=404)
@@ -1007,6 +1023,33 @@ def create_purchase(request):
                 else:
                     new_batch_no = raw_batch_no
 
+                print("Saving PurchaseItem with values:")
+                print({                   
+                    "unit": item_obj.unit,
+                    "code": item.get('item_code', ''),
+                    "item_name": item.get('item_name', ''),
+                    "hsn": item.get('hsn', None),
+                    "quantity": qty_purchased,
+                    "unit_price": item['price'],
+                    "split_unit": item['split_unit'],
+                    "split_unit_price": item['split_unit_price'],
+                    "total_price": item['total_price'],
+                    "discount": item['discount'],
+                    "tax": item['tax'],
+                    "net_price": item['net_price'],
+                    "mrp_price": item['mrp'],
+                    "whole_price": item['whole_price'],
+                    "whole_price_2": item['whole_price_2'],
+                    "sale_price": item['sale_price'],
+                    "supplier_id": supplier.supplier_id,
+                    "purchased_at": now().date(),
+                    "batch_no": new_batch_no,
+                    "expiry_date": parse_date(item.get('expiry_date')),
+                    "previous_qty": previous_qty,
+                    "total_qty": total_qty
+                })
+
+
                 # Save purchase item with correct qtys
                 PurchaseItem.objects.create(
                     purchase=purchase,
@@ -1020,6 +1063,7 @@ def create_purchase(request):
                     quantity=qty_purchased,
                     unit_price=item['price'],
                     split_unit=item['split_unit'],
+                    split_unit_price=item['split_unit_price'],
                     total_price=item['total_price'],
                     discount=item['discount'],
                     tax=item['tax'],
@@ -1051,6 +1095,7 @@ def create_purchase(request):
                     total_qty=total_qty,
                     unit_price=item['price'],
                     split_unit=item['split_unit'],
+                    split_unit_price=item['split_unit_price'],
                     total_price=item['total_price'],
                     discount=item['discount'],
                     tax=item['tax'],
@@ -1396,8 +1441,40 @@ def inventory_view(request):
     })
 
 def split_stock_page(request):
-    bulk_items = Inventory.objects.filter(unit__icontains='bulk')
-    return render(request, 'split_stock.html', {'bulk_items': bulk_items})   
+    queryset = Inventory.objects.filter(unit__icontains='bulk')
+
+    batch_no = request.GET.get('batch_no', '').strip()
+    purchased_at = request.GET.get('purchased_at', '').strip()
+    item_name = request.GET.get('item_name', '').strip()
+    code = request.GET.get('code', '').strip()
+    brand = request.GET.get('brand', '').strip()
+
+    if batch_no:
+        queryset = queryset.filter(batch_no__icontains=batch_no)
+    if purchased_at:
+        queryset = queryset.filter(purchased_at=purchased_at)
+    if item_name:
+        queryset = queryset.filter(item_name__icontains=item_name)
+    if code:
+        queryset = queryset.filter(code__icontains=code)
+    if brand:
+        queryset = queryset.filter(brand__icontains=brand)
+
+    bulk_items = queryset.order_by('-id')  # Ensure this comes after filters
+
+    filters = {
+        'batch_no': batch_no,
+        'purchased_at': purchased_at,
+        'item_name': item_name,
+        'code': code,
+        'brand': brand,
+    }
+
+    return render(request, 'split_stock.html', {
+        'bulk_items': bulk_items,
+        'filters': filters,
+    })
+
 
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)

@@ -481,6 +481,7 @@ class PurchaseItem(models.Model):
     item_name = models.CharField(max_length=50, blank=True, null=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     split_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0) #kg/ltr/pcs
+    split_unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) #kg/ltr/pcs price
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -511,6 +512,7 @@ class Inventory(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True)
     quantity = models.FloatField(default=0)
     split_unit = models.FloatField(default=0) #kg/ltr/pcs
+    split_unit_price = models.FloatField(default=0) #kg/ltr/pcs price
     previous_qty = models.FloatField(default=0)
     total_qty = models.FloatField(default=0)
     unit_price = models.FloatField(default=0)
@@ -530,27 +532,3 @@ class Inventory(models.Model):
 
     def __str__(self):
         return f"{self.item_name} - {self.code}"        
-
-class PurchaseBulk(models.Model):
-    item_name = models.CharField(max_length=255)
-    code = models.CharField(max_length=100)
-    group = models.CharField(max_length=100)
-    brand = models.CharField(max_length=100)
-    unit = models.CharField(max_length=50)
-    batch_no = models.CharField(max_length=100, null=True, blank=True)
-    invoice_no = models.CharField(max_length=100, null=True, blank=True)
-    quantity = models.FloatField()
-    unit_price = models.FloatField()
-    total_price = models.FloatField()
-    discount = models.FloatField(default=0)
-    tax = models.FloatField(default=0)
-    net_price = models.FloatField()
-    mrp_price = models.FloatField(null=True, blank=True)
-    whole_price = models.FloatField(null=True, blank=True)
-    whole_price_2 = models.FloatField(null=True, blank=True)
-    sale_price = models.FloatField(null=True, blank=True)
-    purchased_at = models.DateField(null=True, blank=True)
-    expiry_date = models.DateField(null=True, blank=True)
-    purchase_id = models.IntegerField(null=True, blank=True)
-    supplier_id = models.IntegerField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
