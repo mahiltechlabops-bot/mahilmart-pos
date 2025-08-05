@@ -116,11 +116,11 @@ def create_invoice_view(request):
                 if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
                     continue
 
-                qty = int(qtys[i]) if qtys[i] else 0
-                mrsp = float(mrsps[i]) if mrsps[i] else 0.0
-                selling_price = float(selling_prices[i]) if selling_prices[i] else 0.0
-                amount = qty * selling_price
-                points_earned = amount / 200
+                qty = round(float(qtys[i]), 2) if qtys[i] else 0.0
+                mrsp = round(float(mrsps[i]), 2) if mrsps[i] else 0.0
+                selling_price = round(float(selling_prices[i]), 2) if selling_prices[i] else 0.0
+                amount = round(qty * selling_price, 2)
+                points_earned = round(amount / 200, 2)
                 points_earned_total += points_earned
 
 
@@ -145,6 +145,12 @@ def create_invoice_view(request):
                         available_qty = inv_item.split_unit or 0
                         deduct_qty = min(available_qty, remaining_qty)
 
+                        bulk_quantity = float(inv_item.quantity) or 0
+                        unit_quantity = inv_item.unit_qty or 0
+
+                        # Proportional quantity reduction
+                        quantity_to_deduct = deduct_qty / unit_quantity 
+
                         item_inventory_details.append({
                             'inventory_id': inv_item.id,
                             'batch_no': inv_item.batch_no,
@@ -156,6 +162,7 @@ def create_invoice_view(request):
                         })
 
                         inv_item.split_unit -= deduct_qty
+                        inv_item.quantity = round(bulk_quantity - quantity_to_deduct, 1)
                         inv_item.save()
 
                     else:
@@ -189,7 +196,7 @@ def create_invoice_view(request):
 
 
                 item_details.append({
-                    'sno': int(snos[i]) if snos[i] else i + 1,
+                    'sno': int(float(snos[i])) if snos[i] else i + 1,
                     'code': codes[i],
                     'item_name': item_names[i],
                     'qty': qty,
@@ -239,7 +246,58 @@ def create_invoice_view(request):
         'bill_no': next_bill_no
     })
 
+# def get_item_info(request):
+#     code = request.GET.get('code', '').strip()
+#     name = request.GET.get('name', '').strip()
+
+#     item = None
+#     if code:
+#         item = Item.objects.filter(code__iexact=code).first()
+#     elif name:
+#         item = Item.objects.filter(item_name__iexact=name).first()
+
+#     if item:
+#         # Check if unit is bulk (case insensitive, partial match)
+#         is_bulk = 'bulk' in item.unit.lower()
+
+#         if is_bulk:
+#             # Sum split_unit from Inventory
+#             total_available = (
+#                 Inventory.objects
+#                 .filter(item=item)
+#                 .aggregate(total=Sum('split_unit'))['total'] or 0
+#             )
+#         else:
+#             # Sum quantity from Inventory
+#             total_available = (
+#                 Inventory.objects
+#                 .filter(item=item)
+#                 .aggregate(total=Sum('quantity'))['total'] or 0
+#             )
+
+#         # Check for low stock
+#         low_stock_warning = total_available <= 10            
+
+#         return JsonResponse({
+#             'item_name': item.item_name,
+#             'item_code': item.code,
+#             'unit': item.unit,
+#             'mrsp': item.MRSP,
+#             'sale_rate': item.sale_rate,
+#             'available_qty': total_available,
+#             'low_stock_warning': low_stock_warning,
+#             'warning_message': f"⚠️ Stock is low ({total_available} available, Its less than 10)!" if low_stock_warning else ""
+#         })
+#     else:
+#         return JsonResponse({'error': 'Item not found'}, status=404)
+
+
 def get_item_info(request):
+    from collections import defaultdict
+    from django.db.models import Sum
+    from django.http import JsonResponse
+    from .models import Inventory, Item
+
     code = request.GET.get('code', '').strip()
     name = request.GET.get('name', '').strip()
 
@@ -249,41 +307,62 @@ def get_item_info(request):
     elif name:
         item = Item.objects.filter(item_name__iexact=name).first()
 
-    if item:
-        # Check if unit is bulk (case insensitive, partial match)
-        is_bulk = 'bulk' in item.unit.lower()
-
-        if is_bulk:
-            # Sum split_unit from Inventory
-            total_available = (
-                Inventory.objects
-                .filter(item=item)
-                .aggregate(total=Sum('split_unit'))['total'] or 0
-            )
-        else:
-            # Sum quantity from Inventory
-            total_available = (
-                Inventory.objects
-                .filter(item=item)
-                .aggregate(total=Sum('quantity'))['total'] or 0
-            )
-
-        # Check for low stock
-        low_stock_warning = total_available <= 10            
-
-        return JsonResponse({
-            'item_name': item.item_name,
-            'item_code': item.code,
-            'unit': item.unit,
-            'mrsp': item.MRSP,
-            'sale_rate': item.sale_rate,
-            'available_qty': total_available,
-            'low_stock_warning': low_stock_warning,
-            'warning_message': f"⚠️ Stock is low ({total_available} available, Its less than 10)!" if low_stock_warning else ""
-        })
-    else:
+    if not item:
         return JsonResponse({'error': 'Item not found'}, status=404)
-   
+
+    is_bulk = 'bulk' in item.unit.lower()
+
+    inventory_qs = Inventory.objects.filter(code=item.code).order_by('purchased_at', 'id')
+
+    total_available = 0
+    low_stock_batches = []
+    merged_batches = []
+
+    for inv in inventory_qs:
+        if is_bulk:
+            available = inv.split_unit or 0
+        else:
+            available = inv.quantity or 0
+
+        total_available += available
+
+        current_mrp = round(inv.mrp_price or 0, 2)
+        current_row = {
+            'batch_no': inv.batch_no,
+            'available_qty': round(available, 2),
+            'mrp': current_mrp,
+            'split_sale_price': round(inv.sale_price or 0, 2),
+            'purchased_at': inv.purchased_at.strftime('%Y-%m-%d'),
+        }
+
+        # Check if it can be merged with the previous batch
+        if merged_batches:
+            last = merged_batches[-1]
+            if last['mrp'] == current_mrp and last['available_qty'] == 0:
+                # Merge: update batch_no and add qty
+                last['available_qty'] = current_row['available_qty']
+                last['batch_no'] += f", {current_row['batch_no']}"
+            else:
+                merged_batches.append(current_row)
+        else:
+            merged_batches.append(current_row)
+
+        if available < 10:
+            low_stock_batches.append(inv.batch_no)
+
+    low_stock_warning = len(low_stock_batches) > 0
+
+    return JsonResponse({
+        'item_name': item.item_name,
+        'item_code': item.code,
+        'unit': item.unit,
+        'is_bulk': is_bulk,
+        'total_available': round(total_available, 2),
+        'low_stock_warning': low_stock_warning,
+        'warning_message': f"⚠️ Low stock in batch(es): {', '.join(low_stock_batches)}" if low_stock_warning else "",
+        'batch_details': merged_batches
+    })
+       
 def order_view(request):
     return render(request, 'order.html')
 
@@ -1061,6 +1140,7 @@ def create_purchase(request):
                     item_name=item.get('item_name', ''),    
                     hsn=item.get('hsn', None),               
                     quantity=qty_purchased,
+                    unit_qty=item['unit_qty'],
                     unit_price=item['price'],
                     split_unit=item['split_unit'],
                     split_unit_price=item['split_unit_price'],
@@ -1093,6 +1173,7 @@ def create_purchase(request):
                     quantity=qty_purchased,
                     previous_qty=previous_qty,
                     total_qty=total_qty,
+                    unit_qty=item['unit_qty'],
                     unit_price=item['price'],
                     split_unit=item['split_unit'],
                     split_unit_price=item['split_unit_price'],

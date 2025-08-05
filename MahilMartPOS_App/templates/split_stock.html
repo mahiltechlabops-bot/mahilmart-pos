@@ -132,7 +132,7 @@
         
         <div class="table-responsive">
             <table class="table table-striped table-bordered table-hover">
-                <thead class="thead-dark" style="background-color: #343a40; color: #ffffff; white-space: nowrap;">
+                <thead class="thead-dark" style="background-color: #343a40; color: #ffffff; white-space: wrap;">
                     <tr>
                         <th>S No</th>
                         <th>Inventory ID</th>
@@ -144,11 +144,12 @@
                         <th>Unit</th>                       
                         <th>HSN Code</th>
                         <th>Qty</th>
+                        <th>Unit_Qty (Bag)</th>
                         <th>Cost Price</th> 
-                        <th>Split Qty</th>
-                        <th>Split Cost Price</th>                       
+                        <th>Split Qty (Kg/Ltr/Pcs)</th>
+                        <th>Split_Cost Price</th>                       
                         <th>MRP</th>               
-                        <th>Split Sale Price</th>
+                        <th>Split_Sale Price</th>
                         <th>Discount</th>
                         <th>Batch No</th>
                         <th>Purchased At</th>
@@ -170,6 +171,7 @@
                         <td>{{ item.unit }}</td>                        
                         <td>{{ item.hsn }}</td>
                         <td>{{ item.quantity }}</td>
+                        <td>{{ item.unit_qty }}</td>
                         <td>₹ {{ item.unit_price }}</td>
                         <td>{{ item.split_unit }}</td>
                         <td>₹ {{ item.split_unit_price }}</td>                       

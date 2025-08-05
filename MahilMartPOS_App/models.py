@@ -480,6 +480,7 @@ class PurchaseItem(models.Model):
     code = models.CharField(max_length=30, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0) #unit quantity
     split_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0) #kg/ltr/pcs
     split_unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) #kg/ltr/pcs price
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -511,6 +512,7 @@ class Inventory(models.Model):
     batch_no = models.CharField(max_length=100, blank=True, null=True)   
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True)
     quantity = models.FloatField(default=0)
+    unit_qty = models.FloatField(default=0) #unit quantity
     split_unit = models.FloatField(default=0) #kg/ltr/pcs
     split_unit_price = models.FloatField(default=0) #kg/ltr/pcs price
     previous_qty = models.FloatField(default=0)
