@@ -28,8 +28,8 @@ class Supplier(models.Model):
     notes = models.TextField(blank=True, default="")
 
     def __str__(self):
-        return self.name    
-
+        return self.name        
+    
 class Customer(models.Model):
     name = models.CharField(max_length=100)
     cell = models.CharField(max_length=20, blank=True, null=True)
@@ -38,31 +38,42 @@ class Customer(models.Model):
     date_joined = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.name} ({self.cell})"        
+        return f"{self.name} ({self.cell})"     
 
 class Billing(models.Model):
+    customer = models.ForeignKey('Customer', on_delete=models.SET_NULL, null=True, blank=True)
     to = models.CharField(max_length=100, blank=True, null=True)
-    name = models.TextField(blank=True, null=True)
-    cell = models.CharField(max_length=10, blank=True, null=True)
-    bill_no = models.CharField(max_length=20)
+    bill_no = models.CharField(max_length=20, unique=True)
     date = models.DateTimeField(auto_now_add=True)
     bill_type = models.CharField(max_length=20, blank=True, null=True)  
-    counter = models.CharField(max_length=50,  blank=True, null=True)
+    counter = models.CharField(max_length=50, blank=True, null=True)
     order_no = models.CharField(max_length=50, blank=True, null=True)
-    sale_type = models.CharField(max_length=20,  blank=True, null=True)
-    item_details = models.JSONField(default=list)
+    sale_type = models.CharField(max_length=20, blank=True, null=True)
     received = models.DecimalField(max_digits=10, decimal_places=2)
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     points = models.FloatField(default=0.0)  
     points_earned = models.FloatField(default=0.0)
-    email = models.EmailField(blank=True, null=True)  
-    address = models.TextField(blank=True, null=True)  
-    date_joined = models.DateField(blank=True, null=True)
     remarks = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"Invoice {self.bill_no} - {self.item_name}"    
+        return f"Invoice {self.bill_no}"
+    
+class BillingItem(models.Model):
+    billing = models.ForeignKey(Billing, on_delete=models.CASCADE, related_name='items')
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    code = models.CharField(max_length=100)
+    item_name = models.CharField(max_length=255)
+    unit = models.CharField(max_length=50)
+    qty = models.FloatField()
+    mrp = models.DecimalField(max_digits=10, decimal_places=2)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)   
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.item_name} (x{self.qty})"
 
 class Order(models.Model):
     DELIVERY_CHOICES = [
@@ -300,7 +311,8 @@ class StockAdjustment(models.Model):
     supplier_code = models.CharField(max_length=20, default='UNKNOWN')
     purchase_item = models.ForeignKey('MahilMartPOS_App.PurchaseItem', on_delete=models.CASCADE)
     adjustment_type = models.CharField(max_length=10, choices=ADJUSTMENT_TYPES)
-    quantity = models.DecimalField(max_digits=10, decimal_places=2)    
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)  
+    split_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0)    
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     adjusted_net_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     reason = models.CharField(max_length=30, choices=REASONS, default='manual_adjustment')
@@ -530,7 +542,7 @@ class Inventory(models.Model):
     expiry_date = models.DateField(null=True, blank=True)
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, null=True, blank=True)  # Optional
     created_at = models.DateTimeField(auto_now_add=True)
-    remarks = models.TextField(blank=True, default="N/A")
+    status = models.TextField(blank=True, default="N/A")
 
     def __str__(self):
         return f"{self.item_name} - {self.code}"        

@@ -36,6 +36,7 @@ from .models import (
     Supplier,
     Customer,
     Billing,
+    BillingItem,
     User,
     Item,
     ItemBarcode,
@@ -79,154 +80,141 @@ def dashboard_view(request):
 def create_invoice_view(request):
     if request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         phone = request.GET.get('phone')
-        latest_bill = Billing.objects.filter(cell=phone).order_by('-id').first()
+        customer = Customer.objects.filter(cell=phone).first()
+
         return JsonResponse({
-            'name': latest_bill.name if latest_bill else '',
-            'points': latest_bill.points if latest_bill else 0,
-            'email': latest_bill.email if latest_bill else '',
-            'address': latest_bill.address if latest_bill else '',
-            'date_joined': str(latest_bill.date_joined) if latest_bill and latest_bill.date_joined else '',
-            'remarks': latest_bill.remarks if latest_bill else '',
+            'name': customer.name if customer else '',
+            'points': Billing.objects.filter(customer=customer).last().points if customer and Billing.objects.filter(customer=customer).exists() else 0,
+            'email': customer.email if customer else '',
+            'address': customer.address if customer else '',
+            'date_joined': str(customer.date_joined.date()) if customer and customer.date_joined else '',
+            'remarks': '',
         })
 
     if request.method == 'POST':
         try:
-            cell = request.POST.get('cell')
+            cell = request.POST.get('cell').strip()
+            name = request.POST.get('name').strip()
+            email = request.POST.get('email', '').strip()
+            address = request.POST.get('address', '').strip()
+
+            # Get or create Customer
+            customer, _ = Customer.objects.get_or_create(cell=cell, defaults={
+                'name': name,
+                'email': email,
+                'address': address,
+            })
+
+            if not customer.name and name:
+                customer.name = name
+            if email and not customer.email:
+                customer.email = email
+            if address and not customer.address:
+                customer.address = address
+            customer.save()
 
             # Generate next bill number
             latest = Billing.objects.order_by('-id').first()
             base_bill_no = int(latest.bill_no) + 1 if latest and str(latest.bill_no).isdigit() else 1
             bill_no = str(base_bill_no)
 
-            # Get all rows of items
-            snos = request.POST.getlist('sno')
-            codes = request.POST.getlist('code')
-            item_names = request.POST.getlist('item_name')
-            qtys = request.POST.getlist('qty')
-            mrsps = request.POST.getlist('mrsp')
-            selling_prices = request.POST.getlist('sellingprice')
-
             # Optional: for points accumulation
-            previous_bill = Billing.objects.filter(cell=cell).order_by('-id').first()
+            previous_bill = Billing.objects.filter(customer=customer).order_by('-id').first()
             total_points = previous_bill.points if previous_bill else 0.0
             points_earned_total = 0.0
-            item_details = []
 
-            for i in range(len(item_names)):
-                if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
-                    continue
-
-                qty = round(float(qtys[i]), 2) if qtys[i] else 0.0
-                mrsp = round(float(mrsps[i]), 2) if mrsps[i] else 0.0
-                selling_price = round(float(selling_prices[i]), 2) if selling_prices[i] else 0.0
-                amount = round(qty * selling_price, 2)
-                points_earned = round(amount / 200, 2)
-                points_earned_total += points_earned
-
-
-                item_code = codes[i]
-                remaining_qty = qty
-                
-               
-                # Ordered by purchased_at (oldest first) and then by id (as tiebreaker)
-                inventory_items = Inventory.objects.filter(
-                    code=item_code,
-                    quantity__gt=0
-                ).order_by('purchased_at', 'id')
-                
-                item_inventory_details = []
-                
-                for inv_item in inventory_items:
-                    if remaining_qty <= 0:
-                        break
-
-                    if "bulk" in inv_item.unit.lower():
-                        # Reduce from split_unit
-                        available_qty = inv_item.split_unit or 0
-                        deduct_qty = min(available_qty, remaining_qty)
-
-                        bulk_quantity = float(inv_item.quantity) or 0
-                        unit_quantity = inv_item.unit_qty or 0
-
-                        # Proportional quantity reduction
-                        quantity_to_deduct = deduct_qty / unit_quantity 
-
-                        item_inventory_details.append({
-                            'inventory_id': inv_item.id,
-                            'batch_no': inv_item.batch_no,
-                            'purchased_at': str(inv_item.purchased_at),
-                            'original_qty': available_qty,
-                            'deducted_qty': deduct_qty,
-                            'remaining_qty': available_qty - deduct_qty,
-                            'deducted_from': 'split_unit'
-                        })
-
-                        inv_item.split_unit -= deduct_qty
-                        inv_item.quantity = round(bulk_quantity - quantity_to_deduct, 1)
-                        inv_item.save()
-
-                    else:
-                        # Reduce from quantity
-                        available_qty = inv_item.quantity
-                        deduct_qty = min(available_qty, remaining_qty)
-
-                        item_inventory_details.append({
-                            'inventory_id': inv_item.id,
-                            'batch_no': inv_item.batch_no,
-                            'purchased_at': str(inv_item.purchased_at),
-                            'original_qty': available_qty,
-                            'deducted_qty': deduct_qty,
-                            'remaining_qty': available_qty - deduct_qty,
-                            'deducted_from': 'quantity'
-                        })
-
-                        inv_item.quantity -= deduct_qty
-                        inv_item.save()
-
-                    remaining_qty -= deduct_qty
-                                                  
-                if remaining_qty > 0:
-                    # Rollback any already deducted quantities
-                    for inv_detail in item_inventory_details:
-                        inv_item = Inventory.objects.get(id=inv_detail['inventory_id'])  # Changed to id
-                        inv_item.quantity += inv_detail['deducted_qty']
-                        inv_item.save()
-                    
-                    raise ValueError(f"Insufficient stock for item {item_names[i]} (Code: {item_code}). Needed {qty}, only {qty - remaining_qty} available")
-
-
-                item_details.append({
-                    'sno': int(float(snos[i])) if snos[i] else i + 1,
-                    'code': codes[i],
-                    'item_name': item_names[i],
-                    'qty': qty,
-                    'mrsp': mrsp,
-                    'selling_price': selling_price,
-                    'amount': amount
-                })                
-
-            # Save as one Billing row
-            Billing.objects.create(
+            # Create Billing object first
+            billing = Billing.objects.create(
+                customer=customer,
                 to=request.POST.get('to'),
-                name=request.POST.get('name'),
-                cell=cell,
                 bill_no=bill_no,
                 date=timezone.now(),
                 bill_type=request.POST.get('bill_type'),
                 counter=request.POST.get('counter'),
                 order_no=request.POST.get('order_no'),
                 sale_type=request.POST.get('sale_type'),
-                item_details=item_details,
                 received=request.POST.get('received') or 0,
                 balance=request.POST.get('balance') or 0,
                 discount=request.POST.get('discount') or 0,
-                points=total_points + points_earned_total,
-                points_earned=points_earned_total,
-                email=request.POST.get('email'),
-                address = request.POST.get('address', '').strip(),
-                date_joined=request.POST.get('date_joined') or timezone.now().date(),
-                remarks=request.POST.get('remarks')
+                points=total_points,
+                points_earned=0,
+                remarks=request.POST.get('remarks', '')
             )
+
+            # Process items
+            snos = request.POST.getlist('sno')
+            codes = request.POST.getlist('code')
+            item_names = request.POST.getlist('item_name')
+            units = request.POST.getlist('unit')
+            qtys = request.POST.getlist('qty')
+            mrsps = request.POST.getlist('mrsp')
+            selling_prices = request.POST.getlist('sellingprice')
+
+            for i in range(len(item_names)):
+                if not any([codes[i].strip(), item_names[i].strip(), qtys[i].strip(), selling_prices[i].strip()]):
+                    continue
+
+                qty = round(float(qtys[i]), 2)
+                mrp = round(float(mrsps[i]), 2)
+                selling_price = round(float(selling_prices[i]), 2)
+                amount = round(qty * selling_price, 2)
+                points_earned = round(amount / 200, 2)
+                points_earned_total += points_earned
+
+                item_code = codes[i]
+                remaining_qty = qty
+
+                inventory_items = Inventory.objects.filter(
+                    code=item_code,
+                    quantity__gt=0
+                ).order_by('purchased_at', 'id')
+
+                item_inventory_details = []
+
+                for inv_item in inventory_items:
+                    if remaining_qty <= 0:
+                        break
+
+                    if "bulk" in inv_item.unit.lower():
+                        available_qty = inv_item.split_unit or 0
+                        deduct_qty = min(available_qty, remaining_qty)
+
+                        unit_quantity = inv_item.unit_qty or 1
+                        quantity_to_deduct = deduct_qty / unit_quantity
+
+                        inv_item.split_unit -= deduct_qty
+                        inv_item.quantity = round(inv_item.quantity - quantity_to_deduct, 1)
+                        inv_item.save()
+
+                    else:
+                        available_qty = inv_item.quantity
+                        deduct_qty = min(available_qty, remaining_qty)
+
+                        inv_item.quantity -= deduct_qty
+                        inv_item.save()
+
+                    remaining_qty -= deduct_qty
+
+                if remaining_qty > 0:
+                    raise ValueError(f"Insufficient stock for item {item_names[i]} (Code: {item_code})")
+
+                # Save item to BillingItem table
+                BillingItem.objects.create(
+                    billing=billing,
+                    customer=billing.customer,
+                    code=codes[i],
+                    item_name=item_names[i],
+                    unit=units[i],
+                    qty=qty,
+                    mrp=mrp,
+                    selling_price=selling_price,
+                    amount=amount
+                )
+
+            # Update points after item processing
+            billing.points = total_points + points_earned_total
+            billing.points_earned = points_earned_total
+            billing.save()
 
             return redirect('billing')
 
@@ -236,7 +224,7 @@ def create_invoice_view(request):
                 'error': 'Something went wrong while saving the invoice.'
             })
 
-    # GET request
+    # GET request for normal page
     latest_bill = Billing.objects.order_by('-id').first()
     next_bill_no = str(int(latest_bill.bill_no) + 1) if latest_bill and str(latest_bill.bill_no).isdigit() else '1'
     today_date = timezone.now().strftime('%Y-%m-%d')
@@ -1224,19 +1212,31 @@ def stock_adjustment_view(request):
 
     # Then fetch those rows
     unique_products = PurchaseItem.objects.filter(id__in=[entry['latest_id'] for entry in latest_by_code])
-
+    
     # All products with batch info
     products = PurchaseItem.objects.filter(item_name__isnull=False)
 
     if request.method == "POST":
         product_id = request.POST.get("product")
         adjustment_type = request.POST.get("adjustmentType")
-        quantity = request.POST.get("quantity")
+        quantity = request.POST.get("quantity")        
+        split_quantity = request.POST.get("split_quantity")
         reason = request.POST.get("reason")
         remarks = request.POST.get("remarks")
 
+        print("DEBUG: Received POST Data")
+        print("Product ID:", product_id)
+        print("Adjustment Type:", adjustment_type)
+        print("Quantity:", quantity)
+        print("Split Quantity:", split_quantity)
+        print("Reason:", reason)
+        print("Remarks:", remarks)
+
+
+        split_quantity = Decimal(split_quantity or "0")
+
         # Validate required fields
-        if not all([product_id, adjustment_type, quantity]):
+        if not all([product_id, adjustment_type, quantity, split_quantity]):
             messages.error(request, "All required fields must be filled.")
             return redirect('stock_adjustment')
 
@@ -1311,7 +1311,8 @@ def stock_adjustment_view(request):
             unit_price=selected_batch.unit_price,         
             supplier_code=selected_batch.purchase.supplier.supplier_id,          
             adjustment_type=adjustment_type,
-            quantity=quantity,            
+            quantity=quantity,     
+            split_unit=split_quantity,       
             adjusted_net_price=quantity * selected_batch.unit_price,
             reason=reason,
             remarks=remarks,                    
@@ -1343,19 +1344,31 @@ def stock_adjustment_view(request):
             inventory_record.save()
             inventory_record.total_price = batch_qty * selected_batch.unit_price
             inventory_record.net_price = inventory_record.total_price - (selected_batch.discount or 0)
-            inventory_record.save()
+
+            # Adjust split_unit
+            if adjustment_type == "add":
+                inventory_record.split_unit += float(split_quantity)
+            elif adjustment_type == "subtract":
+                inventory_record.split_unit = max(0.0, inventory_record.split_unit - float(split_quantity))
+
+            inventory_record.save()      
+
+            print("Split quantity before update:", split_quantity)
+            print("Inventory split_unit before update:", inventory_record.split_unit)
 
         except Inventory.DoesNotExist:
             # Create a new inventory record for this batch
             Inventory.objects.create(
-                item_code=selected_batch.code,
+                code=selected_batch.code,
+                item=selected_batch.item,
                 item_name=selected_batch.item_name,
                 quantity=quantity if adjustment_type == 'add' else 0,
+                split_unit=float(split_quantity) if adjustment_type == 'add' else 0,
                 sale_price=selected_batch.sale_price,
                 brand=selected_batch.brand,
                 group=selected_batch.group,
                 unit=selected_batch.unit,
-                hsn_code=selected_batch.hsn_code,
+                hsn=selected_batch.hsn,
                 supplier=selected_batch.purchase.supplier,
                 purchased_at=selected_batch.purchased_at,
                 batch_no=selected_batch.batch_no,
@@ -1642,7 +1655,7 @@ def customers_view(request):
 
         # Customers from Billing table (unique by phone, grouped)
         billing_customers = (
-            Billing.objects
+            Customer.objects
             .values('name', 'cell', 'address', 'email')
             .annotate(date_joined=Min('date_joined'))
             .order_by('-date_joined')

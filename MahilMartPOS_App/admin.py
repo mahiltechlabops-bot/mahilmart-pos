@@ -17,9 +17,3 @@ class SupplierAdmin(admin.ModelAdmin):
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('name', 'cell', 'email', 'date_joined')
     search_fields = ('name', 'cell', 'email')
-
-
-@admin.register(Billing)
-class BillingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'cell', 'email', 'date_joined')
-    search_fields = ('name', 'cell', 'email')
