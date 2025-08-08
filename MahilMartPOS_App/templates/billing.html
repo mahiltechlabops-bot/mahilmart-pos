@@ -728,13 +728,11 @@
     //     }
 
         
-        // Add new row to the table
-      function addNewRow() {
+   function addNewRow() {
     const lastRow = itemTableBody.querySelector('tr:last-child');
     const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
     let isValid = true;
 
-    // Validate required fields
     requiredFields.forEach(field => {
         const input = lastRow.querySelector(`input[name="${field}"]`);
         if (!input || !input.value.trim()) {
@@ -751,45 +749,64 @@
         return;
     }
 
-    // Get current item values
     const code = lastRow.querySelector('input[name="code"]').value.trim();
+    const itemName = lastRow.querySelector('input[name="item_name"]').value.trim();
     const unit = lastRow.querySelector('input[name="unit"]').value.trim();
     const qty = parseFloat(lastRow.querySelector('input[name="qty"]').value || 0);
     const sellPrice = parseFloat(lastRow.querySelector('input[name="sellingprice"]').value || 0);
     const currentMrp = lastRow.querySelector('input[name="mrsp"]')?.value.trim();
+    const currentBatch = lastRow.querySelector('input[name="batch_no"]')?.value.trim();
+    const availableQty = parseFloat(lastRow.querySelector('input[name="available_qty"]')?.value || 0);
 
-    // Check for duplicates
     const rows = itemTableBody.querySelectorAll('tr');
+    let merged = false;
+
     for (let row of rows) {
         if (row === lastRow) continue;
 
         const rowCode = row.querySelector('input[name="code"]')?.value.trim();
-        const rowUnit = row.querySelector('input[name="unit"]')?.value.trim();
-        const rowMrp = row.querySelector('input[name="mrsp"]')?.value.trim();
+        const rowBatch = row.querySelector('input[name="batch_no"]')?.value.trim();
 
-        if (rowCode === code && rowUnit === unit && rowMrp === currentMrp) {
-            // Merge: update quantity and amount in existing row
+        const isSameItem = (rowCode === code && rowBatch === currentBatch);
+
+        if (isSameItem) {
             const existingQtyInput = row.querySelector('input[name="qty"]');
-            const newQty = parseFloat(existingQtyInput.value || 0) + qty;
-            existingQtyInput.value = newQty;
+            const existingQty = parseFloat(existingQtyInput.value || 0);
+            const newQty = existingQty + qty;
 
-            const existingAmountOutput = row.querySelector('.amount-output');
-            existingAmountOutput.value = (newQty * sellPrice).toFixed(2);
+            if (newQty <= availableQty) {
+                // Merge into existing row
+                existingQtyInput.value = newQty;
+                row.querySelector('.amount-output').value = (newQty * sellPrice).toFixed(2);
 
-            // Clear the last row instead of adding a new one
-            ['code', 'item_name', 'unit', 'qty', 'mrsp', 'sellingprice'].forEach(name => {
-                const input = lastRow.querySelector(`input[name="${name}"]`);
-                if (input) input.value = '';
-            });
-
-            lastRow.querySelector('.amount-output').value = '0.00';
-            updateCalculations();
-            return;
+                // Clear last row inputs
+                ['code', 'item_name', 'unit', 'qty', 'mrsp', 'sellingprice', 'batch_no'].forEach(name => {
+                    const input = lastRow.querySelector(`input[name="${name}"]`);
+                    if (input) input.value = '';
+                });
+                lastRow.querySelector('.amount-output').value = '0.00';
+                updateCalculations();
+                merged = true;
+                break;
+            }
         }
     }
 
-    // If no duplicate found, create a new row
+    if (merged) {
+    console.log("Merged row. Current table data:");
+    itemTableBody.querySelectorAll('tr').forEach((row, index) => {
+        const debugCode = row.querySelector('input[name="code"]')?.value || '';
+        const debugName = row.querySelector('input[name="item_name"]')?.value || '';
+        const debugBatch = row.querySelector('input[name="batch_no"]')?.value || '';
+        const debugMrp = row.querySelector('input[name="mrsp"]')?.value || '';
+        console.log(`Row ${index + 1}: Code=${debugCode}, Name=${debugName}, Batch=${debugBatch}, MRP=${debugMrp}`);
+    });
+    return;
+}
+
+    // No merge or stock exceeded → add new row
     const newRow = document.createElement('tr');
+    newRow.classList.add('item-row');
     newRow.innerHTML = `
         <td><input type="number" name="sno" class="table-input" readonly></td>
         <td><input type="text" name="code" class="table-input"></td>
@@ -800,18 +817,19 @@
         <td><input type="number" name="sellingprice" class="table-input" readonly></td>
         <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
         <td><button type="button" class="delete-row-btn">Delete</button></td>
+        <input type="hidden" name="available_qty" class="table-input">
+        <input type="hidden" name="batch_no" class="table-input">
     `;
 
     itemTableBody.appendChild(newRow);
     attachInputListeners(newRow);
     attachDeleteListener(newRow);
-    attachAutoFill(newRow);
+    attachAutoFill(newRow);  // This will fetch next MRP/batch
     updateSerialNumbers();
     updateCalculations();
-
-    // Focus on code input of new row
     newRow.querySelector('input[name="code"]')?.focus();
 }
+
         // Update serial numbers in the table
         function updateSerialNumbers() {
             const rows = itemTableBody.querySelectorAll('tr');
@@ -823,7 +841,7 @@
             });
         }
 
-    function attachAutoFill(row) {
+  function attachAutoFill(row) {
     const codeInput = row.querySelector('input[name="code"]');
     const nameInput = row.querySelector('input[name="item_name"]');
     const unitInput = row.querySelector('input[name="unit"]');
@@ -831,10 +849,10 @@
     const priceInput = row.querySelector('input[name="sellingprice"]');
     const quantityInput = row.querySelector('input[name="qty"]');
     const availableInput = row.querySelector('input[name="available"]');
+    const batchNoInput = row.querySelector('input[name="batch_no"]');
 
     function fetchItemInfo(field, value) {
         if (!value.trim()) return;
-
         const url = `/ajax/get-item-info/?${field}=${encodeURIComponent(value.trim())}`;
 
         fetch(url)
@@ -847,27 +865,24 @@
                     return;
                 }
 
-                // Autofill static fields
                 if (data.item_code) codeInput.value = data.item_code;
                 if (data.item_name) nameInput.value = data.item_name;
                 if (data.unit) unitInput.value = data.unit;
 
                 const batchList = data.batch_details || [];
                 const firstBatch = batchList[0] || {};
+
+                const batchQty = parseFloat(firstBatch.available_qty || 0);
+                const batchNo = firstBatch.batch_no || '';
+
                 if (mrspInput) mrspInput.value = firstBatch.mrp ?? '';
                 if (priceInput) priceInput.value = firstBatch.split_sale_price ?? '';
+                if (availableInput) availableInput.value = parseFloat(data.total_available || 0).toFixed(2);
+                if (batchNoInput) batchNoInput.value = batchNo;
 
-                const totalAvailable = parseFloat(data.total_available || 0);
-                if (availableInput) availableInput.value = totalAvailable.toFixed(2);
-
-                if (totalAvailable <= 0) {
-                    alert(`⚠️ Warning: No stock available for "${data.item_name}" (Code: ${data.item_code})`);
-                    row.querySelectorAll('input').forEach(input => {
-                        if (input.name !== 'available') input.value = '';
-                    });
-                    row.querySelector('.amount-output').value = '0.00';
-                    codeInput.focus();
-                    updateSerialNumbers();
+                if (batchQty <= 0) {
+                    alert(`❌ Batch ${batchNo} has no stock available.`);
+                    quantityInput.value = '';
                     return;
                 }
 
@@ -875,156 +890,39 @@
                     alert(data.warning_message);
                 }
 
-                if (!quantityInput) return;
-
-                // Remove previously attached change listener if any
-                quantityInput.removeEventListener('_autoQtyChange', quantityInput._autoQtyChangeListener);
-
-                const onQtyChange = function () {
-                    let enteredQty = parseFloat(quantityInput.value || 0);
-                    if (isNaN(enteredQty) || enteredQty <= 0) {
+                // Enforce strict batch-wise limit
+                const validateQty = () => {
+                    const enteredQty = parseFloat(quantityInput.value || 0);
+                    if (enteredQty > batchQty) {
+                        alert(`❌ Only ${batchQty} units available in batch ${batchNo}. Please enter a lower quantity.`);
                         quantityInput.value = '';
-                        return;
+                        quantityInput.focus();
+                        return false;
                     }
+                    return true;
+                };
 
-                    let firstMrp = null;
-                    let allowedQtyAtFirstMrp = 0;
+                quantityInput.removeEventListener('_strictQtyCheck', quantityInput._strictQtyCheckListener);
 
-                    for (let i = 0; i < batchList.length; i++) {
-                        const batch = batchList[i];
-                        const mrp = parseFloat(batch.mrp);
-                        if (i === 0) firstMrp = mrp;
-                        if (mrp !== firstMrp) break;
-                        allowedQtyAtFirstMrp += parseFloat(batch.available_qty || 0);
-                    }
-
-                    const allRows = document.querySelectorAll('.item-row');
-                    let totalUsedQtyAtFirstMrp = 0;
-
-                    allRows.forEach(r => {
-                        const rowMrp = parseFloat(r.querySelector('input[name="mrsp"]')?.value || 0);
-                        const rowQty = parseFloat(r.querySelector('input[name="qty"]')?.value || 0);
-                        if (rowMrp === firstMrp) {
-                            const isSameRow = r === row;
-                            totalUsedQtyAtFirstMrp += isSameRow ? enteredQty : rowQty;
-                        }
-                    });
-
-                    const remainingQty = allowedQtyAtFirstMrp - totalUsedQtyAtFirstMrp;
-
-                    if (remainingQty <= 0) {
-                        alert(`❌ MRP ₹${firstMrp} stock exhausted. Switching to next MRP.`);
-
-                        quantityInput.value = '';
-
-                        const nextBatch = batchList.find(b => parseFloat(b.mrp) !== firstMrp && parseFloat(b.available_qty) > 0);
-                        if (!nextBatch) {
-                            alert("❌ No more stock available.");
-                            return;
-                        }
-
-                        document.getElementById('addRowBtn').click();
-
-                        setTimeout(() => {
-                            const newRow = document.querySelectorAll('.item-row:last-child')[0];
-                            if (!newRow) return;
-
-                            newRow.querySelector('input[name="code"]').value = data.item_code;
-                            newRow.querySelector('input[name="item_name"]').value = data.item_name;
-                            newRow.querySelector('input[name="unit"]').value = data.unit;
-                            newRow.querySelector('input[name="mrsp"]').value = nextBatch.mrp;
-                            newRow.querySelector('input[name="sellingprice"]').value = nextBatch.split_sale_price;
-                            newRow.querySelector('input[name="available"]').value = nextBatch.available_qty;
-
-                            const qtyInput = newRow.querySelector('input[name="qty"]');
-                            const allowedQty = Math.min(parseFloat(nextBatch.available_qty), overflowQty);
-                            qtyInput.value = allowedQty;
-                            qtyInput.focus();
-
-                            attachAutoFill(newRow); // Attach validation & autofill listeners
-                            updateSerialNumbers();
-                            updateCalculations();
-                        }, 150);
-
-                        return;
-                    }
-
-                    if (enteredQty > remainingQty) {
-                        const overflowQty = enteredQty - remainingQty;
-                        quantityInput.value = remainingQty;
-
-                        alert(`⚠️ Only ${remainingQty} units allowed at MRP ₹${firstMrp}. Remaining ${overflowQty} will be added at next MRP.`);
-
-                        const nextBatch = batchList.find(b => parseFloat(b.mrp) !== firstMrp && parseFloat(b.available_qty) > 0);
-                        if (!nextBatch) {
-                            alert("❌ No more stock available for remaining quantity.");
-                            return;
-                        }
-
-                        document.getElementById('addRowBtn').click();
-
-                        setTimeout(() => {
-                            const newRow = document.querySelectorAll('.item-row:last-child')[0];
-                            newRow.querySelector('input[name="code"]').value = data.item_code;
-                            newRow.querySelector('input[name="item_name"]').value = data.item_name;
-                            newRow.querySelector('input[name="unit"]').value = data.unit;
-                            newRow.querySelector('input[name="mrsp"]').value = nextBatch.mrp;
-                            newRow.querySelector('input[name="sellingprice"]').value = nextBatch.split_sale_price;
-                            newRow.querySelector('input[name="available"]').value = nextBatch.available_qty;
-
-                            const qtyInput = newRow.querySelector('input[name="qty"]');
-                            qtyInput.value = Math.min(nextBatch.available_qty, overflowQty);
-                            qtyInput.focus();
-
-                            attachAutoFill(newRow);
-                            updateSerialNumbers();
-                            updateCalculations();
-                        }, 150);
-                    }
-
+                const onQtyChange = () => {
+                    validateQty();
                     updateCalculations();
                 };
 
-                quantityInput._autoQtyChangeListener = onQtyChange;
+                quantityInput._strictQtyCheckListener = onQtyChange;
                 quantityInput.addEventListener('change', onQtyChange);
+                quantityInput.addEventListener('blur', onQtyChange);
 
-                // Optional keydown block for safety (prevents typing over limit)
                 quantityInput.addEventListener('keydown', function (e) {
                     const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
                     if (allowedKeys.includes(e.key)) return;
 
-                    const previewQty = e.key.match(/[0-9.]/) ? quantityInput.value + e.key : quantityInput.value;
-                    const enteredQty = parseFloat(previewQty);
-
-                    let firstMrp = null;
-                    let allowedQty = 0;
-
-                    for (let i = 0; i < batchList.length; i++) {
-                        const batch = batchList[i];
-                        if (i === 0) firstMrp = parseFloat(batch.mrp);
-                        if (parseFloat(batch.mrp) !== firstMrp) break;
-                        allowedQty += parseFloat(batch.available_qty || 0);
-                    }
-
-                    const allRows = document.querySelectorAll('.item-row');
-                    let usedQty = 0;
-
-                    allRows.forEach(r => {
-                        const isSameRow = r === row;
-                        const rowMrp = parseFloat(r.querySelector('input[name="mrsp"]')?.value || 0);
-                        const rowQty = parseFloat(r.querySelector('input[name="qty"]')?.value || 0);
-
-                        if (rowMrp === firstMrp) {
-                            usedQty += isSameRow ? enteredQty : rowQty;
-                        }                                              
-                    });
-
-                    const remainingQty = allowedQty - usedQty;
-
-                    if (!isNaN(enteredQty) && enteredQty > remainingQty) {
+                    const preview = quantityInput.value + e.key;
+                    const enteredQty = parseFloat(preview);
+                    if (!isNaN(enteredQty) && enteredQty > batchQty) {
                         e.preventDefault();
                         setTimeout(() => {
-                            alert(`❌ Only ${remainingQty} units available at MRP ₹${firstMrp}. Please add a new row.`);
+                            alert(`❌ Only ${batchQty} units available in batch ${batchNo}.`);
                             quantityInput.value = '';
                             quantityInput.focus();
                         }, 10);

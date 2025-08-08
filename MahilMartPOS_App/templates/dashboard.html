@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <main class="app-content" id="appContent">
   <div class="content-header d-flex justify-content-between align-items-center mb-4">
     <h2 id="contentTitle">Dashboard Overview</h2>
@@ -12,13 +13,17 @@
 
   <div class="dashboard-widgets d-flex flex-wrap gap-3 mb-4">
     <div class="card flex-fill">
-      <div class="card-header">
-        <h3>Today's Sales</h3>
-      </div>
-      <div class="card-body">
-        <h2 id="todaySales">$2,435.00</h2>
-        <p class="text-success">+12.5% from yesterday</p>
-      </div>
+        <div class="card-header">
+            <h3>Today's Sales</h3>
+        </div>
+        <div class="card-body">
+            <h2 id="todaySales">₹{{ today_sales|floatformat:2 }}</h2>
+            {% if change_percentage >= 0 %}
+                <p class="text-success">+{{ change_percentage|floatformat:1 }}% from yesterday</p>
+            {% else %}
+                <p class="text-danger">{{ change_percentage|floatformat:1 }}% from yesterday</p>
+            {% endif %}
+        </div>
     </div>
 
     <div class="card flex-fill">
@@ -26,19 +31,37 @@
         <h3>Transactions</h3>
       </div>
       <div class="card-body">
-        <h2 id="transactionCount">128</h2>
+        <h2 id="transactionCount">{{ transaction_count }}</h2>
         <p class="text-info">Active bills processed</p>
       </div>
     </div>
 
+    <!-- No Stock Card -->
     <div class="card flex-fill">
-      <div class="card-header">
-        <h3>Low Stock</h3>
-      </div>
-      <div class="card-body">
-        <h2 id="lowStockCount">6 Items</h2>
-        <p class="text-warning">Check inventory</p>
-      </div>
+        <div class="card-header">
+            <h3>No Stock</h3>
+        </div>
+        <div class="card-body">
+            <h2 id="noStockCount">{{ no_stock_count }} Items</h2>
+            <p class="text-warning">Check inventory</p>
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#noStockModal">
+                View Details
+            </button>
+        </div>
+    </div>
+
+    <!-- Low Stock Card -->
+    <div class="card flex-fill">
+        <div class="card-header">
+            <h3>Low Stock</h3>
+        </div>
+        <div class="card-body">
+            <h2 id="lowStockCount">{{ low_stock_count }} Items</h2>
+            <p class="text-warning">Check inventory</p>
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#lowStockModal">
+                View Details
+            </button>
+        </div>
     </div>
   </div>
 
@@ -66,41 +89,149 @@
           <tr>
             <th>Bill ID</th>
             <th>Customer</th>
-            <th>Total</th>
-            <th>Status</th>
+            <th>Phone Number</th>
+            <th>Sale Amount</th>
+            <th>Received Amount</th>
+            <th>Pending Amount</th>   
             <th>Date</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>#1024</td>
-            <td>Jane Smith</td>
-            <td>$54.20</td>
-            <td><span class="badge bg-success">Completed</span></td>
-            <td>June 26, 2025</td>
-            <td><button class="btn btn-sm btn-primary">Details</button></td>
-          </tr>
-          <tr>
-            <td>#1023</td>
-            <td>John Doe</td>
-            <td>$120.00</td>
-            <td><span class="badge bg-warning">Pending</span></td>
-            <td>June 26, 2025</td>
-            <td><button class="btn btn-sm btn-primary">Details</button></td>
-          </tr>
-          <tr>
-            <td>#1022</td>
-            <td>Mary Johnson</td>
-            <td>$89.99</td>
-            <td><span class="badge bg-success">Completed</span></td>
-            <td>June 25, 2025</td>
-            <td><button class="btn btn-sm btn-primary">Details</button></td>
-          </tr>
+          {% for bill in recent_bills %}
+            <tr>
+              <td>{{ bill.bill_no }}</td>
+              <td>{{ bill.customer_name }}</td>
+              <td>{{ bill.customer_phone }}</td>
+              <td>₹{{ bill.sale_amount|floatformat:2 }}</td>
+              <td>₹{{ bill.received|floatformat:2 }}</td>
+              <td>₹{{ bill.pending_amount|floatformat:2 }}</td>
+              <td>{{ bill.date|date:"d M Y H:i" }}</td>
+              <td>
+                {% if bill.pending_amount > 0 %}
+                  <span class="badge bg-warning">Pending</span>
+                {% else %}
+                  <span class="badge bg-success">Completed</span>
+                {% endif %}
+              </td>
+             <td>
+              <button type="button" class="btn btn-sm btn-primary view-bill-btn" data-bill-id="{{ bill.id }}">
+                View
+              </button>
+            </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center">No recent transactions found.</td>
+            </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+
+ <!-- No Stock Modal -->
+<div class="modal fade" id="noStockModal" tabindex="-1" aria-labelledby="noStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="noStockModalLabel">No Stock Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if no_stock_items %}
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Item Name</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in no_stock_items %}
+                                <tr>
+                                    <td>{{ item.code }}</td>
+                                    <td>{{ item.item_name }}</td>
+                                    <td>{{ item.total_qty }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-success">No items are completely out of stock!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Modal -->
+<div class="modal fade" id="lowStockModal" tabindex="-1" aria-labelledby="lowStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lowStockModalLabel">Low Stock Items (Less than 10)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if low_stock_items %}
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Item Name</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                                <tr>
+                                    <td>{{ item.code }}</td>
+                                    <td>{{ item.item_name }}</td>
+                                    <td>{{ item.total_qty }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-success">No items are in low stock right now!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bill Details Modal -->
+<div class="modal fade" id="billDetailsModal" tabindex="-1" aria-labelledby="billDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="billDetailsModalLabel">Bill Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Item Name</th>
+              <th>Unit</th>
+              <th>Qty</th>
+              <th>MRP</th>
+              <th>Selling Price</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="billItemsTableBody">
+            <!-- Bill items will be inserted here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
   <!-- Report Modal -->
   <div id="reportModal" class="modal">
@@ -144,4 +275,63 @@
     </div>
   </div>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Bootstrap 5 -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+  const billDetailsModal = new bootstrap.Modal(document.getElementById('billDetailsModal'));
+  const billItemsTableBody = document.getElementById('billItemsTableBody');
+
+  // Attach click handler to all buttons with class view-bill-btn
+  document.querySelectorAll('.view-bill-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const billId = button.getAttribute('data-bill-id');
+      console.log('View button clicked, billId:', billId);
+      if (!billId) return;
+
+      // Clear previous modal content
+      billItemsTableBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+
+      // Show modal
+      billDetailsModal.show();
+
+      // Fetch bill details via AJAX
+      fetch(`/billing/${billId}/items/`)  // URL you will create in Django view
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          // Clear the loading message
+          billItemsTableBody.innerHTML = '';
+
+          if (data.items && data.items.length > 0) {
+            data.items.forEach(item => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${item.code}</td>
+                <td>${item.item_name}</td>
+                <td>${item.unit}</td>
+                <td>${item.qty}</td>
+                <td>₹${item.mrp.toFixed(2)}</td>
+                <td>₹${item.selling_price.toFixed(2)}</td>
+                <td>₹${item.amount.toFixed(2)}</td>
+              `;
+              billItemsTableBody.appendChild(row);
+            });
+          } else {
+            billItemsTableBody.innerHTML = '<tr><td colspan="7" class="text-center">No items found for this bill.</td></tr>';
+          }
+        })
+        .catch(error => {
+          billItemsTableBody.innerHTML = `<tr><td colspan="7" class="text-danger text-center">Error loading data.</td></tr>`;
+          console.error('Error fetching bill details:', error);
+        });
+    });
+  });
+});
+</script>
 {% endblock %}

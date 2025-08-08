@@ -32,6 +32,14 @@ from django.db.models import Q
 from decimal import Decimal
 from django.utils.timezone import now
 from django.db.models import Max
+from django.db.models import Sum, F
+from django.db.models.functions import Abs
+from django.utils.timezone import now, timedelta
+from .models import Billing
+from django.db.models import Sum, F, Case, When
+from django.db.models import DecimalField, F, Sum
+from django.db.models import F, ExpressionWrapper, DecimalField, CharField, Value, Case, When
+from django.shortcuts import render
 from .models import (
     Supplier,
     Customer,
@@ -75,7 +83,78 @@ def login_view(request):
     return render(request, 'home.html')
 
 def dashboard_view(request):
-    return render(request, 'dashboard.html') 
+    today = now().date()
+    transaction_count = Billing.objects.filter(created_at__date=today).count()
+    yesterday = today - timedelta(days=1)
+
+    # Today's total sales (received + abs(balance))
+    today_sales = Billing.objects.filter(date__date=today).annotate(
+        total=F('received') + Abs(F('balance'))
+    ).aggregate(sum_total=Sum('total'))['sum_total'] or 0
+
+    # Yesterday's total sales
+    yesterday_sales = Billing.objects.filter(date__date=yesterday).annotate(
+        total=F('received') + Abs(F('balance'))
+    ).aggregate(sum_total=Sum('total'))['sum_total'] or 0
+
+    # Change percentage
+    if yesterday_sales > 0:
+        change_percentage = ((today_sales - yesterday_sales) / yesterday_sales) * 100
+    else:
+        change_percentage = 0
+
+    # Aggregate stock quantities by code & name
+    stock_qty_expr = Case(
+        When(unit__icontains='bulk', then=F('split_unit')),
+        default=F('quantity'),
+        output_field=DecimalField(max_digits=20, decimal_places=10)
+    )
+
+    stock_aggregates = Inventory.objects.values('code', 'item_name', 'unit').annotate(total_qty=Sum(stock_qty_expr))
+
+    no_stock_items = stock_aggregates.filter(total_qty__lte=0)
+    no_stock_count = no_stock_items.count()
+
+    low_stock_items = stock_aggregates.filter(total_qty__gt=0, total_qty__lt=10)
+    low_stock_count = low_stock_items.count()
+
+    # Transactions for recent display (limit e.g. 10)
+    recent_bills = (
+    Billing.objects
+    .select_related('customer')
+    .order_by('-created_at')[:10]
+    .annotate(
+        sale_amount=F('received') + Abs(F('balance')) + F('discount'),  # use Abs for balance only
+        pending_amount=Abs(F('balance')),  # always positive pending
+        status=Case(
+            When(balance__gt=0, then=Value('Pending')),
+            When(balance__lt=0, then=Value('Pending')),
+            default=Value('Completed'),
+            output_field=CharField()
+        ),
+        customer_name=Case(
+            When(customer__isnull=False, then=F('customer__name')),
+            default=Value('Walk-in'),
+            output_field=CharField()
+        ),
+        customer_phone=Case(
+            When(customer__isnull=False, then=F('customer__cell')),
+            default=Value('N/A'),
+            output_field=CharField()
+        )
+    )
+)
+
+    return render(request, 'dashboard.html', {
+        'transaction_count': transaction_count,
+        'today_sales': today_sales,
+        'change_percentage': change_percentage,
+        'no_stock_count': no_stock_count,
+        'no_stock_items': no_stock_items,
+        'low_stock_count': low_stock_count,
+        'low_stock_items': low_stock_items,
+        'recent_bills': recent_bills,
+    })
 
 def create_invoice_view(request):
     if request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -234,6 +313,27 @@ def create_invoice_view(request):
         'bill_no': next_bill_no
     })
 
+def billing_detail_view(request, id):
+    bill = get_object_or_404(Billing, id=id)
+    return render(request, 'billing_detail.html', {'bill': bill})
+
+def billing_items_api(request, bill_id):
+    bill = get_object_or_404(Billing, id=bill_id)
+    items = bill.items.all()  # use the related_name 'items'
+
+    items_data = []
+    for item in items:
+        items_data.append({
+            "code": item.code,
+            "item_name": item.item_name,
+            "unit": item.unit,
+            "qty": float(item.qty),
+            "mrp": float(item.mrp),
+            "selling_price": float(item.selling_price),
+            "amount": float(item.amount),
+        })
+    return JsonResponse({"items": items_data})
+
 # def get_item_info(request):
 #     code = request.GET.get('code', '').strip()
 #     name = request.GET.get('name', '').strip()
@@ -305,6 +405,7 @@ def get_item_info(request):
     total_available = 0
     low_stock_batches = []
     merged_batches = []
+    all_batch_nos = []  # Collect all batch numbers
 
     for inv in inventory_qs:
         if is_bulk:
@@ -313,6 +414,7 @@ def get_item_info(request):
             available = inv.quantity or 0
 
         total_available += available
+        all_batch_nos.append(inv.batch_no)  # Track batch numbers
 
         current_mrp = round(inv.mrp_price or 0, 2)
         current_row = {
@@ -327,7 +429,6 @@ def get_item_info(request):
         if merged_batches:
             last = merged_batches[-1]
             if last['mrp'] == current_mrp and last['available_qty'] == 0:
-                # Merge: update batch_no and add qty
                 last['available_qty'] = current_row['available_qty']
                 last['batch_no'] += f", {current_row['batch_no']}"
             else:
@@ -348,7 +449,80 @@ def get_item_info(request):
         'total_available': round(total_available, 2),
         'low_stock_warning': low_stock_warning,
         'warning_message': f"⚠️ Low stock in batch(es): {', '.join(low_stock_batches)}" if low_stock_warning else "",
-        'batch_details': merged_batches
+        'batch_details': merged_batches,
+        'all_batch_nos': all_batch_nos  # Newly added list
+    })
+def get_item_info(request):
+    from collections import defaultdict
+    from django.db.models import Sum
+    from django.http import JsonResponse
+    from .models import Inventory, Item
+
+    code = request.GET.get('code', '').strip()
+    name = request.GET.get('name', '').strip()
+
+    item = None
+    if code:
+        item = Item.objects.filter(code__iexact=code).first()
+    elif name:
+        item = Item.objects.filter(item_name__iexact=name).first()
+
+    if not item:
+        return JsonResponse({'error': 'Item not found'}, status=404)
+
+    is_bulk = 'bulk' in item.unit.lower()
+
+    inventory_qs = Inventory.objects.filter(code=item.code).order_by('purchased_at', 'id')
+
+    total_available = 0
+    low_stock_batches = []
+    merged_batches = []
+    all_batch_nos = []  # Collect all batch numbers
+
+    for inv in inventory_qs:
+        if is_bulk:
+            available = inv.split_unit or 0
+        else:
+            available = inv.quantity or 0
+
+        total_available += available
+        all_batch_nos.append(inv.batch_no)  # Track batch numbers
+
+        current_mrp = round(inv.mrp_price or 0, 2)
+        current_row = {
+            'batch_no': inv.batch_no,
+            'available_qty': round(available, 2),
+            'mrp': current_mrp,
+            'split_sale_price': round(inv.sale_price or 0, 2),
+            'purchased_at': inv.purchased_at.strftime('%Y-%m-%d'),
+        }
+
+        # Check if it can be merged with the previous batch
+        if merged_batches:
+            last = merged_batches[-1]
+            if last['mrp'] == current_mrp and last['available_qty'] == 0:
+                last['available_qty'] = current_row['available_qty']
+                last['batch_no'] += f", {current_row['batch_no']}"
+            else:
+                merged_batches.append(current_row)
+        else:
+            merged_batches.append(current_row)
+
+        if available < 10:
+            low_stock_batches.append(inv.batch_no)
+
+    low_stock_warning = len(low_stock_batches) > 0
+
+    return JsonResponse({
+        'item_name': item.item_name,
+        'item_code': item.code,
+        'unit': item.unit,
+        'is_bulk': is_bulk,
+        'total_available': round(total_available, 2),
+        'low_stock_warning': low_stock_warning,
+        'warning_message': f"⚠️ Low stock in batch(es): {', '.join(low_stock_batches)}" if low_stock_warning else "",
+        'batch_details': merged_batches,
+        'all_batch_nos': all_batch_nos
     })
        
 def order_view(request):
@@ -1300,6 +1474,9 @@ def stock_adjustment_view(request):
         
         purchase = selected_batch.purchase
 
+        print("Quantity 1:", quantity)
+        print("Split Quantity 1:", split_quantity)
+
         StockAdjustment.objects.create(
             purchase=purchase,
             invoice_no=purchase.invoice_no,
@@ -1343,18 +1520,24 @@ def stock_adjustment_view(request):
             inventory_record.quantity = batch_qty
             inventory_record.save()
             inventory_record.total_price = batch_qty * selected_batch.unit_price
-            inventory_record.net_price = inventory_record.total_price - (selected_batch.discount or 0)
+            inventory_record.net_price = inventory_record.total_price - (selected_batch.discount or 0)    
 
-            # Adjust split_unit
-            if adjustment_type == "add":
-                inventory_record.split_unit += float(split_quantity)
-            elif adjustment_type == "subtract":
-                inventory_record.split_unit = max(0.0, inventory_record.split_unit - float(split_quantity))
-
-            inventory_record.save()      
+            # Adjust split_unit — but only if unit is NOT bulk
+            if selected_batch.unit.strip().lower() == "bulk":
+                if adjustment_type == "add":
+                    inventory_record.split_unit += float(split_quantity)
+                elif adjustment_type == "subtract":
+                    inventory_record.split_unit = max(0.0, inventory_record.split_unit - float(split_quantity))
+                inventory_record.save()
+            else:
+                # Bulk unit — don't touch split_unit
+                print(f"Skipping split_unit update for BULK unit ({selected_batch.unit})")            
 
             print("Split quantity before update:", split_quantity)
             print("Inventory split_unit before update:", inventory_record.split_unit)
+
+            print("Quantity:", quantity)
+            print("Split Quantity:", split_quantity)
 
         except Inventory.DoesNotExist:
             # Create a new inventory record for this batch
