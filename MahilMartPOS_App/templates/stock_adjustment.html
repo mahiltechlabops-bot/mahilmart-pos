@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Adjustment{% endblock %}
+
+{% block style %}
+<style>
+  .form-container {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 600px;
+    margin: 20px auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+
+  .form-control {
+    margin-bottom: 15px;
+  }
+
+   .button-group {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 25px;
+    }
+
+    .button-group button {
+        padding: 10px 20px;
+        font-size: 15px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .button-group button[type="submit"] {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .button-group button[type="submit"]:hover {
+        background-color: #218838;
+    }
+
+    .button-group .exit-button {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .button-group .exit-button:hover {
+        background-color: #c82333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <h3>Stock Adjustment</h3>
+  <form method="post" id="stockAdjustmentForm">
+    {% csrf_token %}
+
+    <label for="product_unique">Product (Unique)</label>
+    <select name="product" id="product_unique" class="form-control select2" required>
+      <option value="">-- Select Product --</option>
+      {% for product in unique_products %}
+        <option value="{{ product.id }}">{{ product.code }} - {{ product.item_name }}</option>
+      {% endfor %}
+   </select>
+
+  <label for="product_combined">Product (Batch + Purchased At)</label>
+  <select name="product" id="product_combined" class="form-control select2" required>
+    <option value="">-- Select Product --</option>
+    {% for product in products %}
+      <option value="{{ product.id }}"
+              data-code="{{ product.code }}"
+              data-name="{{ product.item_name }}">
+        {{ product.code }} - Batch {{ product.batch_no }} ({{ product.purchased_at|date:"d M Y" }})
+      </option>
+    {% endfor %}
+  </select>
+
+    <label for="adjustmentType">Adjustment Type</label>
+    <select name="adjustmentType" id="adjustmentType" class="form-control" required>
+      <option value="">-- Select Type --</option>
+      <option value="add">Add Stock</option>
+      <option value="subtract">Subtract Stock</option>
+    </select>
+
+    <label for="quantity">Quantity (Bulk means enter bulk quantity, else Original qty)</label>
+    <input type="number" name="quantity" id="quantity" min="0" step="any" class="form-control" required>
+
+    <label for="split_quantity">Split Quantity (Again enter the Original qty here also)</label>
+    <input type="number" name="split_quantity" id="split_quantity" min="0" step="any" class="form-control" required>
+
+    <label for="reason">Reason</label>
+    <select name="reason" id="reason" class="form-control" required>
+      <option value="">-- Select Reason --</option>
+      <option value="damaged">Damaged</option>
+      <option value="lost">Lost</option>
+      <option value="expired">Expired</option>
+      <option value="inventory_correction">Inventory Correction</option>
+      <option value="manual_adjustment">Manual Adjustment</option>
+    </select> 
+    
+    <label for="remarks">Remarks</label>
+    <textarea name="remarks" id="remarks" class="form-control" rows="3"></textarea>
+
+   <div class="button-group">
+            <button type="submit">Save</button>
+            <button type="button" class="exit-button" onclick="window.location.href='{% url 'inventory' %}'">Exit</button>
+   </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <!-- BODY END: jQuery + Select2 JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+
+    const form = document.getElementById('stockAdjustmentForm');
+    const productUnique = document.getElementById("product_unique");
+    const productCombined = document.getElementById("product_combined");
+    const allOptions = Array.from(productCombined.options);
+
+    form.addEventListener('submit', function (e) {
+      const qty = document.getElementById('quantity').value;
+      if (qty < 0) {
+        e.preventDefault();
+        alert('Quantity must be greater than 0');
+        return;
+      }
+
+      const selectedUnique = productUnique.options[productUnique.selectedIndex];
+      const selectedCombined = productCombined.options[productCombined.selectedIndex];
+
+      if (!selectedUnique || !selectedCombined || !selectedCombined.dataset.code) {
+        e.preventDefault();
+        alert('Please select both products correctly.');
+        return;
+      }
+
+      const uniqueCode = selectedUnique.textContent.trim().split(' - ')[0];
+      const combinedCode = selectedCombined.dataset.code;
+
+      if (uniqueCode !== combinedCode) {
+        e.preventDefault();
+        alert('Product code mismatch between "Product (Unique)" and "Product (Batch + Purchased At)". Please select matching products.');
+        return;
+      }
+    });
+
+    productUnique.addEventListener("change", () => {
+      const selectedOption = productUnique.options[productUnique.selectedIndex];
+      const selectedText = selectedOption.textContent.trim();
+      const [selectedCode] = selectedText.split(" - ");
+
+      // Reset and rebuild options in product_combined
+      productCombined.innerHTML = '<option value="">-- Select Product --</option>';
+
+      allOptions.forEach(option => {
+        if (!option.dataset.code) return;
+        if (option.dataset.code === selectedCode) {
+          productCombined.appendChild(option.cloneNode(true));
+        }
+      });
+
+      // Trigger Select2 refresh if used
+      if ($(productCombined).hasClass("select2")) {
+        $(productCombined).val("").trigger("change");
+      }
+    });
+  });
+
+  $(document).ready(function () {
+    $('.select2').select2({
+      width: '100%',
+      placeholder: '-- Select Product --',
+      allowClear: true
+    });
+  });
+
+</script>
+{% endblock %}

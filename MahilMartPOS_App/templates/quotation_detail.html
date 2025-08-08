@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="print-content" style="max-width: 1000px; margin: 30px auto; background: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); font-family: Arial, sans-serif;">
+    
+    {% if not quotation or qtn_no == "undefined" or not qtn_no %}
+        <div style="color: red; text-align: center; padding: 20px; border: 1px solid #ffcccc; background-color: #fff0f0;">
+            <h3>Quotation Not Found</h3>
+            <p>The requested quotation (<strong>{{ qtn_no }}</strong>) could not be found.</p>
+            <a href="{% url 'billing' %}" style="text-decoration: none;">
+                <button type="button" style="padding: 10px 20px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 15px;">
+                    Return to Billing
+                </button>
+            </a>
+        </div>
+    {% else %}
+        <h2 style="text-align: center; margin-bottom: 20px;">Quotation - {{ qtn_no }}</h2>
+
+        <div style="margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 5px;">
+            <p><strong>Name:</strong> {{ customer.name|default:"Not specified" }}</p>
+            <p><strong>Phone:</strong> {{ customer.cell|default:"Not specified" }}</p>
+            <p><strong>Date:</strong> {{ customer.date|date:"Y-m-d" }}</p>
+            <p><strong>Sale Type:</strong> {{ customer.sale_type|default:"Not specified" }}</p>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="border: 1px solid #ccc; padding: 10px;">SNo</th>
+                        <th style="border: 1px solid #ccc; padding: 10px;">Code</th>
+                        <th style="border: 1px solid #ccc; padding: 10px;">Item</th>
+                        <th style="border: 1px solid #ccc; padding: 10px;">Qty</th>
+                        <th style="border: 1px solid #ccc; padding: 10px;">MRSP</th>
+                        <th style="border: 1px solid #ccc; padding: 10px;">Price</th>
+                        <th style="border: 1px solid #ccc; padding: 10px;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 8px;">{{ item.sno }}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">{{ item.code }}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">{{ item.item_name }}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">{{ item.qty }}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">₹{{ item.mrsp }}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">₹{{ item.sellingprice }}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">₹<span class="item-amount">{{ item.amount }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="padding: 15px; text-align: center;">No items found in this quotation</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+              <tfoot>
+                <tr style="background-color: #f8f8f8;">
+                    <td colspan="6" style="border: 1px solid #ddd; padding: 10px; text-align: right;">
+                        <strong>Total:</strong>
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        ₹<span id="calculated-total">{{ quotation.total_amount|floatformat:2 }}</span>
+                    </td>
+                </tr>
+            </tfoot>
+            </table>
+        </div>
+
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+            <a href="#" onclick="window.print()" style="text-decoration: none; display: inline-block; margin: 0 10px;">
+                <button type="button" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </a>
+
+            <a href="{% url 'billing' %}" style="text-decoration: none; display: inline-block; margin: 0 10px;">
+                <button type="button" style="padding: 10px 20px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </a>
+
+            <a href="{% url 'convert_to_order' qtn_no=quotation.qtn_no %}" style="text-decoration: none; display: inline-block; margin: 0 10px;">
+                <button type="button" style="padding: 10px 20px; background: #008CBA; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-exchange-alt"></i> Convert to Order
+                </button>
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-content, .print-content * {
+        visibility: visible;
+    }
+    .print-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all amount cells (look for ₹ symbol)
+    const amounts = Array.from(document.querySelectorAll('td:nth-child(7)'))
+        .map(td => {
+            const text = td.textContent.replace('₹', '').trim();
+            return parseFloat(text) || 0;
+        });
+    
+    // Calculate total
+    const total = amounts.reduce((sum, amount) => sum + amount, 0);
+    
+    // Update total display
+    document.querySelector('tfoot td:last-child').textContent = '₹' + total.toFixed(2);
+});
+</script>
+{% endblock %}

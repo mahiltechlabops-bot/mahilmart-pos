@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+<main class="app-content" id="mainContent">
+  <div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3><i class="fas fa-undo-alt me-2"></i> Sales Returns</h3>
+      <div>
+        <button class="btn btn-outline-secondary me-2" id="viewReturnsBtn">
+          <i class="fas fa-list"></i> View Returns
+        </button>
+        <button class="btn btn-primary" id="newReturnBtn">
+          <i class="fas fa-plus"></i> New Return
+        </button>
+      </div>
+    </div>
+
+    <!-- Returns List -->
+    <div id="returnsListView">
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <input type="text" class="form-control" placeholder="Search returns...">
+        <select class="form-select" style="max-width: 160px;">
+          <option>All Status</option>
+          <option>Pending</option>
+          <option>Completed</option>
+          <option>Rejected</option>
+        </select>
+        <input type="date" class="form-control" style="max-width: 160px;">
+        <button class="btn btn-outline-secondary">
+          <i class="fas fa-filter"></i> Filter
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Return ID</th>
+              <th>Invoice</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Items</th>
+              <th>Amount</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Sample Return Rows -->
+            {% comment %} Replace with dynamic loop {% endcomment %}
+            <tr>
+              <td>RET-1001</td>
+              <td>INV-2056</td>
+              <td>John Smith</td>
+              <td>2025-06-10</td>
+              <td>2</td>
+              <td>$25.98</td>
+              <td><span class="badge bg-danger">Damaged</span></td>
+              <td><span class="badge bg-success">Completed</span></td>
+              <td>
+                <button class="btn btn-sm btn-info"><i class="fas fa-eye"></i></button>
+                <button class="btn btn-sm btn-danger" disabled><i class="fas fa-trash"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-end">
+          <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+          <li class="page-item active"><a class="page-link" href="#">1</a></li>
+          <li class="page-item"><a class="page-link" href="#">2</a></li>
+          <li class="page-item"><a class="page-link" href="#">3</a></li>
+          <li class="page-item"><a class="page-link" href="#">&raquo;</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <!-- New Return Form -->
+    <div id="newReturnForm" style="display: none;">
+      <h4><i class="fas fa-undo-alt me-2"></i> Process New Sales Return</h4>
+
+      <div class="my-3">
+        <h5>1. Find Original Sale</h5>
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <input type="text" class="form-control" placeholder="Search by invoice or customer">
+          <button class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>Select</th>
+                <th>Invoice</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Total</th>
+                <th>Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="radio" name="selectInvoice" checked></td>
+                <td>INV-2065</td>
+                <td>2025-06-18</td>
+                <td>Robert Wilson</td>
+                <td>$145.80</td>
+                <td>6</td>
+              </tr>
+              <tr>
+                <td><input type="radio" name="selectInvoice"></td>
+                <td>INV-2064</td>
+                <td>2025-06-17</td>
+                <td>Robert Wilson</td>
+                <td>$89.50</td>
+                <td>4</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="my-3">
+        <h5>2. Select Items to Return</h5>
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Item</th>
+                <th>Price</th>
+                <th>Qty Sold</th>
+                <th>Return Qty</th>
+                <th>Reason</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Premium Coffee (500g)</td>
+                <td>$12.99</td>
+                <td>2</td>
+                <td>
+                  <select class="form-select form-select-sm w-auto">
+                    <option>0</option>
+                    <option selected>1</option>
+                    <option>2</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="form-select form-select-sm">
+                    <option selected>Damaged</option>
+                    <option>Wrong Item</option>
+                    <option>Expired</option>
+                    <option>Other</option>
+                  </select>
+                </td>
+                <td>$12.99</td>
+              </tr>
+              <tr>
+                <td>Organic Tea Pack</td>
+                <td>$8.50</td>
+                <td>3</td>
+                <td>
+                  <select class="form-select form-select-sm w-auto">
+                    <option selected>0</option>
+                    <option>1</option>
+                    <option>2</option>
+                    <option>3</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="form-select form-select-sm">
+                    <option>Damaged</option>
+                    <option>Wrong Item</option>
+                    <option>Expired</option>
+                    <option selected>Other</option>
+                  </select>
+                </td>
+                <td>$0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="text-end fw-bold mt-3">
+          Total Refund: <span id="totalRefund" class="text-success">$12.99</span>
+        </div>
+      </div>
+
+      <div class="text-end mt-4">
+        <button class="btn btn-secondary" id="cancelReturnBtn">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <button class="btn btn-success" id="submitReturnBtn">
+          <i class="fas fa-check"></i> Submit Return
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const viewReturnsBtn = document.getElementById("viewReturnsBtn");
+  const newReturnBtn = document.getElementById("newReturnBtn");
+  const returnsListView = document.getElementById("returnsListView");
+  const newReturnForm = document.getElementById("newReturnForm");
+  const cancelReturnBtn = document.getElementById("cancelReturnBtn");
+
+  newReturnBtn.addEventListener("click", () => {
+    returnsListView.style.display = "none";
+    newReturnForm.style.display = "block";
+  });
+
+  viewReturnsBtn.addEventListener("click", () => {
+    returnsListView.style.display = "block";
+    newReturnForm.style.display = "none";
+  });
+
+  cancelReturnBtn.addEventListener("click", () => {
+    returnsListView.style.display = "block";
+    newReturnForm.style.display = "none";
+  });
+
+  document.getElementById("submitReturnBtn").addEventListener("click", () => {
+    if (confirm("Are you sure you want to process this return?")) {
+      alert("Sales return submitted successfully.");
+      returnsListView.style.display = "block";
+      newReturnForm.style.display = "none";
+    }
+  });
+</script>
+{% endblock %}
