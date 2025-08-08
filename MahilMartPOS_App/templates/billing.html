@@ -881,8 +881,20 @@
                 if (batchNoInput) batchNoInput.value = batchNo;
 
                 if (batchQty <= 0) {
-                    alert(`❌ Batch ${batchNo} has no stock available.`);
-                    quantityInput.value = '';
+                    alert(`⚠️ Batch ${batchNo} has no stock available.`);
+
+                    // Assuming quantityInput is the quantity input element in the current row
+                    const row = quantityInput.closest('tr');  // get the row containing the input
+
+                    // Clear all inputs in this row (optional: or clear just the ones you want)
+                    row.querySelectorAll('input').forEach(input => input.value = '');
+
+                    // Focus the "code" input in this row
+                    const codeInput = row.querySelector('input[name="code"]');
+                    if (codeInput) {
+                        codeInput.focus();
+                    }
+                    updateSerialNumbers();
                     return;
                 }
 
@@ -894,7 +906,7 @@
                 const validateQty = () => {
                     const enteredQty = parseFloat(quantityInput.value || 0);
                     if (enteredQty > batchQty) {
-                        alert(`❌ Only ${batchQty} units available in batch ${batchNo}. Please enter a lower quantity.`);
+                        alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}. Please enter a lower quantity.`);
                         quantityInput.value = '';
                         quantityInput.focus();
                         return false;

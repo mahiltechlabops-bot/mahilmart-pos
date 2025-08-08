@@ -508,7 +508,8 @@ class PurchaseItem(models.Model):
     total_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     purchased_at = models.DateField(default=timezone.now)
     batch_no = models.CharField(max_length=100, blank=True, null=True)
-    expiry_date = models.DateField(blank=True, null=True)        
+    expiry_date = models.DateField(blank=True, null=True) 
+    status = models.CharField(max_length=20, default="in_stock")       
   
     def __str__(self):
         return f"{self.purchase.supplier.name} - {self.code} - {self.item_name}"
@@ -542,7 +543,7 @@ class Inventory(models.Model):
     expiry_date = models.DateField(null=True, blank=True)
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, null=True, blank=True)  # Optional
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.TextField(blank=True, default="N/A")
+    status = models.CharField(max_length=20, default="in_stock")
 
     def __str__(self):
         return f"{self.item_name} - {self.code}"        
