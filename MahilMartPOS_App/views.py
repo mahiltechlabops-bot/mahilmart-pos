@@ -40,6 +40,9 @@ from django.db.models import Sum, F, Case, When
 from django.db.models import DecimalField, F, Sum
 from django.db.models import F, ExpressionWrapper, DecimalField, CharField, Value, Case, When
 from django.shortcuts import render
+from django.http import JsonResponse
+from django.utils import timezone
+from datetime import timedelta
 from .models import (
     Supplier,
     Customer,
@@ -118,32 +121,46 @@ def dashboard_view(request):
     low_stock_items = stock_aggregates.filter(total_qty__gt=0, total_qty__lt=10)
     low_stock_count = low_stock_items.count()
 
-    # Transactions for recent display (limit e.g. 10)
+    # Date filter parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    bills_qs = Billing.objects.select_related('customer')
+
+    if start_date and end_date:
+        start = parse_date(start_date)
+        end = parse_date(end_date)
+        
+        if start and end:
+            if start == end:
+                bills_qs = bills_qs.filter(created_at__date=start)
+            else:
+                bills_qs = bills_qs.filter(created_at__date__gte=start, created_at__date__lte=end)
+
     recent_bills = (
-    Billing.objects
-    .select_related('customer')
-    .order_by('-created_at')[:10]
-    .annotate(
-        sale_amount=F('received') + Abs(F('balance')) + F('discount'),  # use Abs for balance only
-        pending_amount=Abs(F('balance')),  # always positive pending
-        status=Case(
-            When(balance__gt=0, then=Value('Pending')),
-            When(balance__lt=0, then=Value('Pending')),
-            default=Value('Completed'),
-            output_field=CharField()
-        ),
-        customer_name=Case(
-            When(customer__isnull=False, then=F('customer__name')),
-            default=Value('Walk-in'),
-            output_field=CharField()
-        ),
-        customer_phone=Case(
-            When(customer__isnull=False, then=F('customer__cell')),
-            default=Value('N/A'),
-            output_field=CharField()
+        bills_qs
+        .order_by('-created_at')
+        .annotate(
+            sale_amount=F('received') + Abs(F('balance')) + F('discount'),
+            pending_amount=Abs(F('balance')),
+            status=Case(
+                When(balance__gt=0, then=Value('Pending')),
+                When(balance__lt=0, then=Value('Pending')),
+                default=Value('Completed'),
+                output_field=CharField()
+            ),
+            customer_name=Case(
+                When(customer__isnull=False, then=F('customer__name')),
+                default=Value('Walk-in'),
+                output_field=CharField()
+            ),
+            customer_phone=Case(
+                When(customer__isnull=False, then=F('customer__cell')),
+                default=Value('N/A'),
+                output_field=CharField()
+            )
         )
     )
-)
 
     return render(request, 'dashboard.html', {
         'transaction_count': transaction_count,
@@ -154,6 +171,79 @@ def dashboard_view(request):
         'low_stock_count': low_stock_count,
         'low_stock_items': low_stock_items,
         'recent_bills': recent_bills,
+        'start_date': start_date,
+        'end_date': end_date,
+    })
+
+def billing_detail_view(request, id):
+    bill = get_object_or_404(Billing, id=id)
+    return render(request, 'billing_detail.html', {'bill': bill})
+
+def billing_items_api(request, bill_id):
+    bill = get_object_or_404(Billing, id=bill_id)
+    items = bill.items.all()  # use the related_name 'items'
+
+    items_data = []
+    for item in items:
+        items_data.append({
+            "code": item.code,
+            "item_name": item.item_name,
+            "unit": item.unit,
+            "qty": float(item.qty),
+            "mrp": float(item.mrp),
+            "selling_price": float(item.selling_price),
+            "amount": float(item.amount),
+        })
+    return JsonResponse({"items": items_data})
+
+def sales_chart_data(request):
+    today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())  # Monday
+    month_start = today.replace(day=1)
+
+    def get_sales(start_date, end_date):
+        # Annotate amount = received + (-balance)
+        raw_data = (
+            Billing.objects
+            .filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
+            .annotate(
+                amount=ExpressionWrapper(
+                    F('received') + (-F('balance')),
+                    output_field=DecimalField()
+                )
+            )
+            .values('created_at__date')
+            .annotate(total=Sum('amount'))
+            .order_by('created_at__date')
+        )
+
+        # Convert to dict {date: total}
+        data_dict = {str(row['created_at__date']): float(row['total']) for row in raw_data}
+
+        # Fill missing days with 0
+        result = []
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = str(current_date)
+            result.append({
+                'date': date_str,
+                'total': data_dict.get(date_str, 0.0)
+            })
+            current_date += timedelta(days=1)
+        return result
+
+    # Weekly & monthly ranges
+    week_data = get_sales(week_start, today)
+    month_data = get_sales(month_start, today)
+
+    weekly_total = sum(d['total'] for d in week_data)
+    monthly_total = sum(d['total'] for d in month_data)
+
+    return JsonResponse({
+        'week': week_data,
+        'month': month_data,
+        'weekly_total': weekly_total,
+        'monthly_total': monthly_total
     })
 
 def create_invoice_view(request):
@@ -323,27 +413,6 @@ def create_invoice_view(request):
         'today_date': today_date,
         'bill_no': next_bill_no
     })
-
-def billing_detail_view(request, id):
-    bill = get_object_or_404(Billing, id=id)
-    return render(request, 'billing_detail.html', {'bill': bill})
-
-def billing_items_api(request, bill_id):
-    bill = get_object_or_404(Billing, id=bill_id)
-    items = bill.items.all()  # use the related_name 'items'
-
-    items_data = []
-    for item in items:
-        items_data.append({
-            "code": item.code,
-            "item_name": item.item_name,
-            "unit": item.unit,
-            "qty": float(item.qty),
-            "mrp": float(item.mrp),
-            "selling_price": float(item.selling_price),
-            "amount": float(item.amount),
-        })
-    return JsonResponse({"items": items_data})
 
 def get_item_info(request):
     from django.http import JsonResponse
