@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Product Detail{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Product Detail</h2>
+    <table class="table table-bordered">
+        <tr><th>Name</th><td>{{ product.name }}</td></tr>
+        <tr><th>Category</th><td>{{ product.category.name }}</td></tr>
+        <tr><th>Supplier</th><td>{{ product.supplier.name }}</td></tr>
+        <tr><th>Stock</th><td>{{ product.stock }}</td></tr>
+        <tr><th>Reorder Level</th><td>{{ product.reorder_level }}</td></tr>
+    </table>
+    <a href="{% url 'inventory' %}" class="btn btn-secondary">Back to Inventory</a>
+</div>
+{% endblock %}

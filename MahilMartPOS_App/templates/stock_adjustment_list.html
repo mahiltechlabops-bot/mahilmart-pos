@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Adjustment Records{% endblock %}
+
+{% block content %}
+<div class="stock-adjustment-container">
+    <h1>Stock Adjustment Records</h1>
+
+   <div class="filter-row">
+    <form method="get" class="filter-form">
+        <input type="text" name="code" placeholder="Item Code" value="{{ request.GET.code }}">
+        <input type="text" name="invoice_no" placeholder="Invoice No" value="{{ request.GET.invoice_no }}">
+        <input type="text" name="item_name" placeholder="Item Name" value="{{ request.GET.item_name }}">
+        <input type="text" name="supplier_code" placeholder="Supplier Code" value="{{ request.GET.supplier_code }}">
+        <input type="text" name="batch_no" placeholder="Batch No" value="{{ request.GET.batch_no }}">
+        <button type="submit">Filter</button>
+    </form>
+
+    <div>
+        <button type="button" class="exit-button" onclick="window.location.href='{% url 'inventory' %}'">Back</button>
+    </div>
+    </div>
+
+    <table>
+         <thead class="thead-dark" style="background-color: #343a40; color: #ffffff; white-space: nowrap;">
+            <tr>
+                <th>ID</th>
+                <th>Adjustment Type</th>
+                <th>Quantity</th>
+                <th>Cost Price</th>
+                <th>Adjusted Net Price</th>
+                <th>Reason</th>
+                <th>Adjusted At</th>
+                <th>Purchase Item ID</th>
+                <th>Code</th>
+                <th>Invoice No</th>
+                <th>Item Name</th>
+                <th>Unit</th>
+                <th>Supplier Code</th>
+                <th>Batch No</th>
+                <th>Remarks</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for adj in adjustments %}
+            <tr>
+                <td>{{ adj.id }}</td>
+                <td>{{ adj.get_adjustment_type_display }}</td>
+                <td>{{ adj.quantity }}</td>
+                <td>{{ adj.unit_price }}</td>
+                <td>{{ adj.adjusted_net_price }}</td>
+                <td>{{ adj.get_reason_display }}</td>
+                <td>{{ adj.adjusted_at }}</td>
+                <td>{{ adj.purchase_item.id }}</td>
+                <td>{{ adj.code }}</td>
+                <td>{{ adj.invoice_no }}</td>
+                <td>{{ adj.item_name }}</td>
+                <td>{{ adj.unit }}</td>
+                <td>{{ adj.supplier_code }}</td>
+                <td>{{ adj.batch_no }}</td>
+                <td>{{ adj.remarks }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="13">No stock adjustments found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.stock-adjustment-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    background-color: #f5f7fa;
+    padding: 20px;
+}
+
+.stock-adjustment-container h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 25px;
+    color: #2c3e50;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 8px;
+}
+
+.stock-adjustment-container table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+}
+
+.stock-adjustment-container th,
+.stock-adjustment-container td {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 15px;
+    color: #333;
+}
+
+.stock-adjustment-container th {
+    background-color: #f4f6f8;
+    font-weight: 600;
+    border-bottom: 2px solid #ddd;
+}
+
+.stock-adjustment-container td {
+    border-top: 1px solid #eee;
+}
+
+.stock-adjustment-container tr:hover td {
+    background-color: #fafafa;
+    transition: background-color 0.3s ease;
+}
+
+.stock-adjustment-container .filter-form input {
+    margin-right: 10px;
+    padding: 8px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.stock-adjustment-container .filter-form button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.stock-adjustment-container .filter-form button:hover {
+    background-color: #0056b3;
+}
+
+.stock-adjustment-container .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.stock-adjustment-container .button-group button {
+    padding: 10px 20px;
+    font-size: 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.stock-adjustment-container .filter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* responsive support */
+    gap: 10px;
+  }
+
+ .stock-adjustment-container .filter-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-grow: 1;
+  }
+
+ .stock-adjustment-container .exit-button {
+    padding: 6px 12px;
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+.stock-adjustment-container  .exit-button:hover {
+    background-color: #c9302c;
+  }
+</style>
+{% endblock %}
