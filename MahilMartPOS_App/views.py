@@ -65,7 +65,9 @@ from .models import (
     Order,
     Billing,
     Expense,
-    Quotation
+    Quotation,
+    SaleReturn,
+    SaleReturnItem
 )
 
 def home(request):
@@ -445,33 +447,34 @@ def get_item_info(request):
 
     for inv in inventory_qs:
         if is_bulk:
-            available = inv.split_unit or 0
+            available = inv.split_unit or Decimal('0')
         else:
-            available = inv.quantity or 0
+            available = inv.quantity or Decimal('0')
 
         total_available += available
         all_batch_nos.append(inv.batch_no)
 
-        current_mrp = round(inv.mrp_price or 0, 2)
+        current_mrp = round(float(inv.mrp_price or 0), 2)
         current_row = {
             'batch_no': inv.batch_no,
-            'available_qty': round(available, 2),
+            'available_qty': float(available),  # keep float for summing
             'mrp': current_mrp,
-            'split_sale_price': round(inv.sale_price or 0, 2),
+            'split_sale_price': round(float(inv.sale_price or 0), 2),
             'purchased_at': inv.purchased_at.strftime('%Y-%m-%d'),
             'status': inv.status,
         }
 
-        if merged_batches:
+        if merged_batches and merged_batches[-1]['mrp'] == current_mrp:
             last = merged_batches[-1]
-            if last['mrp'] == current_mrp and last['available_qty'] == 0:
-                last['available_qty'] = current_row['available_qty']
-                last['batch_no'] += f", {current_row['batch_no']}"
-                last['status'] = current_row['status']
-            else:
-                merged_batches.append(current_row)
+            last['available_qty'] += current_row['available_qty']  # sum quantities
+            last['batch_no'] += f", {current_row['batch_no']}"
+            # Optionally update status or other fields if needed
         else:
             merged_batches.append(current_row)
+
+    # After the loop, round the available_qty for each merged batch
+    for batch in merged_batches:
+        batch['available_qty'] = round(batch['available_qty'], 2)
 
         if available < 10:
             low_stock_batches.append(inv.batch_no)
@@ -1031,14 +1034,264 @@ def Tax_creation(request):
         return redirect('tax_creation')
     return render(request,'tax.html')
 
+from datetime import datetime, time
+from django.utils.dateparse import parse_date
+
+from datetime import datetime, time
+from django.shortcuts import render
+from django.utils.dateparse import parse_date
+from django.urls import reverse
+
+
+from decimal import Decimal
+from django.db.models import Q
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from .models import Billing, BillingItem, SaleReturn, SaleReturnItem
+
+def sale_return_view(request):
+    billing = None
+    billing_items = []
+    error = None
+
+    # Initialize form fields variables to pass to template
+    bill_no = ''
+    customer_name = ''
+    customer_phone = ''
+
+    if request.method == "POST":
+        if "fetch_bill" in request.POST:
+            bill_no = request.POST.get("bill_no", "").strip()
+            customer_name = request.POST.get("customer_name", "").strip()
+            customer_phone = request.POST.get("customer_phone", "").strip()
+
+            if not bill_no:
+                error = "Please enter the Bill Number."
+            else:
+                billings = Billing.objects.filter(bill_no=bill_no)
+                if customer_name or customer_phone:
+                    billings = billings.filter(
+                        Q(customer__name__icontains=customer_name) if customer_name else Q(),
+                        Q(customer__cell__icontains=customer_phone) if customer_phone else Q()
+                    )
+                if billings.exists():
+                    # Redirect to GET with params to avoid resubmission on refresh
+                    params = f"?bill_no={bill_no}&customer_name={customer_name}&customer_phone={customer_phone}"
+                    url = reverse('sale_return')
+                    return redirect(url + params)
+                else:
+                    error = "No billing found matching the given criteria."
+
+        elif "process_return" in request.POST:
+            billing_id = request.POST.get("billing_id")
+            return_reason = request.POST.get("return_reason", "").strip()
+            billing = Billing.objects.get(id=billing_id)
+            billing_items = BillingItem.objects.filter(billing_id=billing.id)
+
+            # Create SaleReturn with temporary 0 values
+            sale_return = SaleReturn.objects.create(
+                billing=billing,
+                customer=billing.customer,
+                return_reason=return_reason,
+                total_return_qty=Decimal('0.00'),
+                total_refund_amount=Decimal('0.00')
+            )
+
+            total_qty = Decimal('0.00')
+            total_amount = Decimal('0.00')
+
+            for item in billing_items:
+                ret_qty_str = request.POST.get(f"return_qty_{item.id}", "0")
+                try:
+                    ret_qty = Decimal(ret_qty_str)
+                except:
+                    ret_qty = Decimal('0.00')
+
+                if ret_qty > 0:
+                    ret_amount = ret_qty * Decimal(str(item.selling_price))
+
+                    SaleReturnItem.objects.create(
+                        sale_return=sale_return,
+                        billing_item=item,
+                        code=item.code,
+                        item_name=item.item_name,
+                        unit=item.unit,
+                        qty=item.qty,
+                        mrp=item.mrp,
+                        price=item.selling_price,
+                        return_qty=ret_qty,
+                        return_amount=ret_amount,
+                    )
+                 
+                    try:
+                        # First: Try exact match (MRP + in_stock)
+                        print(f"Debug: Searching Inventory with code={item.code}, mrp={item.mrp}, status='in_stock'")
+                        inventory_item = Inventory.objects.filter(
+                            code=item.code,
+                            mrp_price=item.mrp,
+                            status__iexact="in_stock"
+                        ).order_by('-id').first()
+                        print("Debug: Inventory found:", inventory_item)
+
+                        if inventory_item:
+                            # Update in_stock batch
+                            if "bulk" in item.unit.lower():
+                                bag_size = Decimal(str(inventory_item.unit_qty)) if inventory_item.unit_qty else Decimal('1.00')
+                                qty_fraction = ret_qty / bag_size
+                                inventory_item.quantity += float(qty_fraction)                               
+                                inventory_item.split_unit += float(ret_qty)                                                                                          
+                            else:
+                                inventory_item.quantity += float(ret_qty)
+                            inventory_item.save()
+
+                        else:
+                            # Second: Try MRP match + completed
+                            completed_item = Inventory.objects.filter(
+                                code=item.code,
+                                mrp_price=item.mrp,
+                                status__iexact="completed"
+                            ).order_by('-id').first()
+
+                            if completed_item:
+                                if "bulk" in item.unit.lower():
+                                    bag_size = Decimal(str(completed_item.unit_qty)) if completed_item.unit_qty else Decimal('1.00')
+                                    qty_fraction = ret_qty / bag_size
+                                    completed_item.quantity += float(qty_fraction)                                   
+                                    completed_item.split_unit += float(ret_qty)                                                                  
+                                else:
+                                    completed_item.quantity += float(ret_qty)
+                                completed_item.status = "in_stock"
+                                completed_item.save()
+
+                            else:
+                                # Third: If no match by status, try any batch with same MRP regardless of status
+                                any_mrp_match = Inventory.objects.filter(
+                                    code=item.code,
+                                    mrp=item.mrp
+                                ).order_by('-id').first()
+
+                                if any_mrp_match:
+                                    if "bulk" in item.unit.lower():
+                                        bag_size = Decimal(str(inventory_item.unit_qty)) if inventory_item.unit_qty else Decimal('1.00')
+                                        qty_fraction = ret_qty / bag_size
+                                        any_mrp_match.quantity += float(qty_fraction)
+                                        any_mrp_match.split_unit += float(ret_qty)
+                                    else:
+                                        any_mrp_match.quantity += float(ret_qty)
+                                    any_mrp_match.status = "in_stock"  # Force restock
+                                    any_mrp_match.save()
+
+                                else:
+                                    # Create new batch
+                                    Inventory.objects.create(
+                                        code=item.code,
+                                        item_name=item.item_name,
+                                        unit=item.unit,
+                                        mrp_price=item.mrp,
+                                        quantity=float(ret_qty) if item.unit.lower() != "bulk" else (float(ret_qty) / (item.unit_qty or Decimal('1.00'))),
+                                        split_unit=float(ret_qty) if item.unit.lower() == "bulk" else None,
+                                        unit_qty=item.unit_qty,
+                                        status="in_stock"
+                                    )
+
+                    except Exception as e:
+                        print(f"Error while processing inventory return: {e}")
+
+                    total_qty += ret_qty
+                    total_amount += ret_amount
+
+            sale_return.total_return_qty = total_qty
+            sale_return.total_refund_amount = total_amount
+            sale_return.save()
+
+            return redirect(reverse('sale_return'))
+
+    else:
+        # GET request: populate billing data if query params are present
+        bill_no = request.GET.get("bill_no", "").strip()
+        customer_name = request.GET.get("customer_name", "").strip()
+        customer_phone = request.GET.get("customer_phone", "").strip()
+
+        if bill_no:
+            billings = Billing.objects.filter(bill_no=bill_no)
+            if customer_name or customer_phone:
+                billings = billings.filter(
+                    Q(customer__name__icontains=customer_name) if customer_name else Q(),
+                    Q(customer__cell__icontains=customer_phone) if customer_phone else Q()
+                )
+            if billings.exists():
+                billing = billings.first()
+                billing_items = BillingItem.objects.filter(billing_id=billing.id)
+            else:
+                error = "No billing found matching the given criteria."
+
+    # Fetch all sale returns to show list on same page or elsewhere
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    sale_returns = SaleReturn.objects.select_related('billing', 'customer')
+
+    # Apply date filter if both dates are provided
+    if start_date and end_date:
+        start_date = parse_date(start_date)
+        end_date = parse_date(end_date)
+        if start_date and end_date:
+            sale_returns = sale_returns.filter(created_at__date__range=(start_date, end_date))
+
+    sale_returns = sale_returns.order_by('-created_at')
+    # sale_returns = SaleReturn.objects.select_related('billing', 'customer').order_by('-created_at')
+
+    context = {
+        "billing": billing,
+        "billing_items": billing_items,
+        "error": error,
+        "bill_no": bill_no,
+        "customer_name": customer_name,
+        "customer_phone": customer_phone,
+        "sale_returns": sale_returns,
+    }
+    return render(request, "sale_return.html", context)
+
+from django.contrib import messages
+
+def sale_return_success_view(request):
+    messages.success(request, "Sale return processed successfully.")    
+    return redirect('sale_return')
+
+def sale_return_detail(request, pk):
+    sale_return = get_object_or_404(SaleReturn, pk=pk)   
+    return render(request, 'sale_return_detail.html', {'sale_return': sale_return})
+
+def sale_return_items_api(request):
+    sale_return_id = request.GET.get('sale_return_id')
+    items_qs = SaleReturnItem.objects.filter(sale_return_id=sale_return_id)
+    items = []
+    for item in items_qs:
+        items.append({
+            'code': item.code,
+            'item_name': item.item_name,
+            'unit': item.unit,
+            'qty': item.qty,
+            'mrp': float(item.mrp),
+            'price': float(item.price),
+            'return_qty': item.return_qty,
+            'return_amount': float(item.return_amount),
+        })
+    return JsonResponse({'items': items})
+    
 def products_view(request):
     query = request.GET.get('q', '').strip()
+    selected_group = request.GET.get('group', '').strip()
 
-    # Get unique product IDs by item code
     base_queryset = Product.objects.all()
+
     if query:
         base_queryset = base_queryset.filter(item__item_name__icontains=query)
 
+    if selected_group:
+        base_queryset = base_queryset.filter(item__group=selected_group)
+
+    # Get unique product IDs by item code after filtering
     unique_ids = (
         base_queryset
         .values('item__code')
@@ -1048,13 +1301,19 @@ def products_view(request):
 
     items = Product.objects.filter(id__in=unique_ids).select_related('item', 'supplier')
 
+    # Count the products for current filter
+    product_count = items.count()
+
+    # Get distinct groups for the dropdown
+    groups = Product.objects.values_list('item__group', flat=True).distinct().order_by('item__group')
+
     return render(request, 'products.html', {
         'items': items,
-        'query': query
+        'query': query,
+        'groups': groups,
+        'selected_group': selected_group,
+        'product_count': product_count,
     })
-
-def sale_return_view(request):
-    return render(request, 'sale_return.html')
 
 def purchase_view(request):
     if request.method == 'POST':
@@ -1262,7 +1521,6 @@ def create_purchase(request):
                     "previous_qty": previous_qty,
                     "total_qty": total_qty
                 })
-
 
                 # Save purchase item with correct qtys
                 PurchaseItem.objects.create(

@@ -154,7 +154,27 @@ class OrderItem(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return self.item_name          
+        return self.item_name       
+
+class SaleReturn(models.Model):
+    billing = models.ForeignKey(Billing, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    return_reason = models.TextField()
+    total_return_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_refund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class SaleReturnItem(models.Model):
+    sale_return = models.ForeignKey(SaleReturn, on_delete=models.CASCADE)
+    billing_item = models.ForeignKey(BillingItem, on_delete=models.SET_NULL, null=True)
+    code = models.CharField(max_length=100)
+    item_name = models.CharField(max_length=255)
+    unit = models.CharField(max_length=100)
+    qty = models.DecimalField(max_digits=10, decimal_places=2)
+    mrp = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    return_qty = models.DecimalField(max_digits=10, decimal_places=2)
+    return_amount = models.DecimalField(max_digits=10, decimal_places=2)       
     
 class Item(models.Model):
     code = models.CharField(max_length=30)

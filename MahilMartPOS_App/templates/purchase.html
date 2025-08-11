@@ -29,20 +29,17 @@
   }
 
   #purchaseTable td:nth-child(3) input,
-  #purchaseTable td:nth-child(4) input,
-  #purchaseTable td:nth-child(7) input,  /* Qty */
-  #purchaseTable td:nth-child(8) input,  /* Price */
-  #purchaseTable td:nth-child(9) input,  /* Total */
-  #purchaseTable td:nth-child(10) input, /* Discount */
-  #purchaseTable td:nth-child(11) input, /* Tax */
-  #purchaseTable td:nth-child(12) input, /* Net */
-  #purchaseTable td:nth-child(13) input, /* MRP */
-  #purchaseTable td:nth-child(14) input, /* Wh */
-  #purchaseTable td:nth-child(15) input, /* Wh 1 */
-  #purchaseTable td:nth-child(16) input,  /* Sale Price */ 
-  #purchaseTable td:nth-child(17) input,
-  #purchaseTable td:nth-child(18) input,
-  #purchaseTable td:nth-child(19) input{
+  #purchaseTable td:nth-child(6) input,
+  #purchaseTable td:nth-child(7) input,
+  #purchaseTable td:nth-child(8) input,
+  #purchaseTable td:nth-child(9) input,
+  #purchaseTable td:nth-child(10) input,
+  #purchaseTable td:nth-child(12) input,
+  #purchaseTable td:nth-child(13) input,
+  #purchaseTable td:nth-child(14) input,
+  #purchaseTable td:nth-child(15) input,
+  #purchaseTable td:nth-child(16) input, 
+  #purchaseTable td:nth-child(17) input{
     width: 50px !important;
     padding: 3px 4px;
     font-size: 12px;
@@ -50,8 +47,11 @@
   }
 
   #purchaseTable td:nth-child(2) input,
-  #purchaseTable td:nth-child(21) input {
-    width: 85px !important;
+  #purchaseTable td:nth-child(4) input,
+  #purchaseTable td:nth-child(11) input,
+  #purchaseTable td:nth-child(18) input,
+  #purchaseTable td:nth-child(19) input {
+    width: 90px !important;
     padding: 3px 4px;
     font-size: 12px;
     box-sizing: border-box;
@@ -120,7 +120,7 @@
           <table class="table table-sm table-bordered mt-3" id="purchaseTable" style="min-width: 1500px; font-size: 0.85rem;">
             <thead class="table-light">
               <tr>
-                <th>S.no</th><th>Item</th><th>Code</th><th>HSN</th><th>Group</th><th>Brand</th><th>Unit</th>
+                <th>S.no</th><th>Item</th><th>Code</th><th>HSN</th><th>Unit</th>
                 <th>Qty</th><th>Unit Qty</th><th>Total Unit Qty</th><th>Split Cost Price</th><th>Cost Price</th><th>Total</th><th>Discount</th><th>Tax</th><th>MRP</th><th>Wh</th><th>Wh 1</th>
                 <th>Sale Price</th><th>Net</th><th>Expiry Date</th><th>Action</th>
               </tr>
@@ -175,9 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <td class="sno"></td>
       <td><input class="form-control item-name" onblur="fetchItemDetails(this)"></td>
       <td><input class="form-control item-code" onblur="fetchItemDetails(this)"></td>
-      <td><input class="form-control hsn" readonly></td>
-      <td><input class="form-control group" readonly></td>
-      <td><input class="form-control brand" readonly></td>
+      <td><input class="form-control hsn" readonly></td>    
       <td><input class="form-control unit" readonly></td>
       <td><input type="number" class="form-control qty" value="1" min="1" oninput="calculateRow(this.closest('tr'))"></td>
       <td><input type="number" class="form-control unit_qty" value="0"" readonly></td>
@@ -315,9 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         row.querySelector('.item-name').value = data.item_name;
         row.querySelector('.item-code').value = data.code;
-        row.querySelector('.hsn').value = data.hsn;
-        row.querySelector('.group').value = data.group;
-        row.querySelector('.brand').value = data.brand;
+        row.querySelector('.hsn').value = data.hsn;       
         row.querySelector('.unit').value = data.unit;    
         row.querySelector('.price').value = data.price; 
         row.querySelector('.tax').value = data.tax;
