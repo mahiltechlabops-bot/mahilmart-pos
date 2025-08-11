@@ -478,7 +478,8 @@
             qtyTotal.textContent = totalQty;
 
             const todayPoints = totalAmount / 200;
-            totalEarnedInput.value = parseFloat(todayPoints).toFixed(2);           
+            totalEarnedInput.value = parseFloat(todayPoints).toFixed(2);  
+            // pointsInput.value = parseFloat(pointsInput.value || 0).toFixed(2);         
         }
 
         // Add input listeners to a row
@@ -514,321 +515,119 @@
             }
         }
 
-    //     // Add new row to the table
-    //     function addNewRow() {
-    //     const lastRow = itemTableBody.querySelector('tr:last-child');
-    //     const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
-    //     let isValid = true;
+        // Add new row to the table
+        async function addNewRow() {
+            const lastRow = itemTableBody.querySelector('tr:last-child');
+            const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
+            let isValid = true;
 
-    //     // Validate required fields
-    //     requiredFields.forEach(field => {
-    //         const input = lastRow.querySelector(`input[name="${field}"]`);
-    //         if (!input || !input.value.trim()) {
-    //             input?.classList.add('input-error');
-    //             isValid = false;
-    //         } else {
-    //             input.classList.remove('input-error');
-    //         }
-    //     });
+            // Validate required fields
+            requiredFields.forEach(field => {
+                const input = lastRow.querySelector(`input[name="${field}"]`);
+                if (!input || !input.value.trim()) {
+                    input?.classList.add('input-error');
+                    isValid = false;
+                } else {
+                    input.classList.remove('input-error');
+                }
+            });
 
-    //     if (!isValid) {
-    //         alert("Please fill all required fields (Code, Item Name, Qty, Selling Price) before adding a new item.");
-    //         lastRow.querySelector('.input-error')?.focus();
-    //         return;
-    //     }
-
-    //     // Get current item values
-    //     const code = lastRow.querySelector('input[name="code"]').value.trim();
-    //     const unit = lastRow.querySelector('input[name="unit"]').value.trim();
-    //     const qty = parseFloat(lastRow.querySelector('input[name="qty"]').value || 0);
-    //     const sellPrice = parseFloat(lastRow.querySelector('input[name="sellingprice"]').value || 0);
-    //     const amount = qty * sellPrice;
-
-    //     // Check for duplicates
-    //     const rows = itemTableBody.querySelectorAll('tr');
-    //     for (let row of rows) {
-    //         if (row === lastRow) continue; // skip the last row (new entry)
-
-    //         const rowCode = row.querySelector('input[name="code"]')?.value.trim();
-    //         const rowUnit = row.querySelector('input[name="unit"]')?.value.trim();
-
-    //         if (rowCode === code && rowUnit === unit) {
-    //             // Merge: update quantity and amount in existing row
-    //             const existingQtyInput = row.querySelector('input[name="qty"]');
-    //             const newQty = parseFloat(existingQtyInput.value || 0) + qty;
-    //             existingQtyInput.value = newQty;
-
-    //             const existingAmountOutput = row.querySelector('.amount-output');
-    //             existingAmountOutput.value = (newQty * sellPrice).toFixed(2);
-
-    //             // Clear the last row instead of adding a new one
-    //             lastRow.querySelector('input[name="qty"]').value = '';
-    //             lastRow.querySelector('input[name="code"]').value = '';
-    //             lastRow.querySelector('input[name="item_name"]').value = '';
-    //             lastRow.querySelector('input[name="unit"]').value = '';
-    //             lastRow.querySelector('input[name="mrsp"]').value = '';
-    //             lastRow.querySelector('input[name="sellingprice"]').value = '';
-    //             lastRow.querySelector('.amount-output').value = '0.00';
-
-    //             updateCalculations();
-    //             return;
-    //         }
-    //     }
-
-    //     // If no duplicate found, create a new row
-    //     const newRow = document.createElement('tr');
-    //     newRow.innerHTML = `
-    //         <td><input type="number" name="sno" class="table-input" readonly></td>
-    //         <td><input type="text" name="code" class="table-input"></td>
-    //         <td><input type="text" name="item_name" class="table-input"></td>
-    //         <td><input type="text" name="unit" class="table-input"></td>
-    //         <td><input type="number" name="qty" class="table-input" value="1"></td>
-    //         <td><input type="number" name="mrsp" class="table-input" readonly></td>
-    //         <td><input type="number" name="sellingprice" class="table-input" readonly></td>
-    //         <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
-    //         <td><button type="button" class="delete-row-btn">Delete</button></td>
-    //     `;
-
-    //     itemTableBody.appendChild(newRow);
-    //     attachInputListeners(newRow);
-    //     attachDeleteListener(newRow);
-    //     attachAutoFill(newRow);
-    //     updateSerialNumbers();
-    //     updateCalculations();
-
-    //     // Focus on code input of new row
-    //     const newCodeInput = newRow.querySelector('input[name="code"]');
-    //     if (newCodeInput) newCodeInput.focus();
-    // }
-
-    //     // Update serial numbers in the table
-    //     function updateSerialNumbers() {
-    //         const rows = itemTableBody.querySelectorAll('tr');
-    //         rows.forEach((row, index) => {
-    //             const snoInput = row.querySelector('input[name="sno"]');
-    //             if (snoInput) {
-    //                 snoInput.value = index + 1;
-    //             }
-    //         });
-    //     }
-
-    //     Auto-fill item information
-    //     function attachAutoFill(row) {
-    //         const codeInput = row.querySelector('input[name="code"]');
-    //         const nameInput = row.querySelector('input[name="item_name"]');
-    //         const unitInput = row.querySelector('input[name="unit"]');
-    //         const mrspInput = row.querySelector('input[name="mrsp"]');
-    //         const priceInput = row.querySelector('input[name="sellingprice"]');
-
-    //         function fetchItemInfo(field, value) {
-    //             if (!value.trim()) return;
-
-    //             const url = `/ajax/get-item-info/?${field}=${encodeURIComponent(value.trim())}`;
-
-    //             fetch(url)
-    //                 .then(response => response.json())
-    //                 .then(data => {
-    //                     if (!data.error) {
-    //                         if (data.item_code && codeInput) codeInput.value = data.item_code;
-    //                         if (data.item_name && nameInput) nameInput.value = data.item_name;
-    //                         if (data.unit && unitInput) unitInput.value = data.unit;
-    //                         if (mrspInput) mrspInput.value = data.mrsp ?? '';
-    //                         if (priceInput) priceInput.value = data.sale_rate ?? '';
-                          
-    //                     const availableQty = parseFloat(data.available_qty || 0);
-    //                     const availableInput = row.querySelector('input[name="available"]');
-    //                     if (availableInput) availableInput.value = availableQty;
-
-    //                     if (availableQty < 1) {
-    //                         alert(`⚠️ Warning: No stock available for "${data.item_name}" (Code: ${data.item_code})`);
-    //                         // Clear all inputs except the 'available' hidden input
-    //                         row.querySelectorAll('input').forEach(input => {
-    //                             if (input.name !== 'available') {
-    //                                 input.value = '';
-    //                             }
-    //                         });
-
-    //                         // Also reset amount display if exists
-    //                         const amountOutput = row.querySelector('.amount-output');
-    //                         if (amountOutput) amountOutput.value = '0.00';
-
-    //                         // Clear available input too (reset stock to 0)
-    //                         const availableInput = row.querySelector('input[name="available"]');
-    //                         if (availableInput) availableInput.value = '0';
-
-    //                         // Refocus on code input
-    //                         const codeInput = row.querySelector('input[name="code"]');
-    //                         if (codeInput) codeInput.focus();
-                        
-    //                         updateSerialNumbers();
-    //                         return;
-    //                     }
-
-    //                     if (data.low_stock_warning) {
-    //                         alert(data.warning_message);
-    //                     }
-
-    //                     // Quantity check without moving cursor
-    //                     const quantityInput = row.querySelector('input[name="qty"]');
-    //                     if (quantityInput) {
-    //                         quantityInput.addEventListener('keydown', function (e) {
-    //                             const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
-    //                             if (allowedKeys.includes(e.key)) return;
-
-    //                             const futureValue = quantityInput.value + e.key;
-    //                             const enteredQty = parseFloat(futureValue);
-
-    //                             if (!isNaN(enteredQty) && enteredQty > availableQty) {
-    //                                 e.preventDefault();
-
-    //                                 // Use setTimeout to ensure alert and DOM update work together
-    //                                 setTimeout(() => {
-    //                                     alert(`❌ Enter only available stock is (${availableQty}).`);
-    //                                     quantityInput.value = '';
-    //                                     quantityInput.focus();
-    //                                 }, 10);
-    //                             }
-    //                         });
-
-    //                         // Also handle paste or mobile input
-    //                         quantityInput.addEventListener('input', function () {
-    //                             const enteredQty = parseFloat(quantityInput.value || 0);
-    //                             if (enteredQty > availableQty) {
-    //                                 alert(`❌ Enter only available stock is (${availableQty}).`);
-    //                                 quantityInput.value = '';
-    //                                 quantityInput.focus();
-    //                             }
-    //                         });
-    //                     }
-
-    //                         updateCalculations();
-    //                     } else {
-    //                         alert("Item not found!");
-    //                         if (codeInput) codeInput.value = '';
-    //                         if (nameInput) nameInput.value = '';
-    //                     }
-    //                 })
-    //                 .catch(err => {
-    //                     console.error('Item fetch error:', err);
-    //                 });
-    //         }
-
-    //         if (codeInput) {
-    //             codeInput.addEventListener('blur', () => {
-    //                 fetchItemInfo('code', codeInput.value);
-    //             });
-    //         }
-
-    //         if (nameInput) {
-    //             nameInput.addEventListener('blur', () => {
-    //                 if (codeInput && codeInput.value.trim() !== '') return;
-    //                 fetchItemInfo('name', nameInput.value);
-    //             });
-    //         }
-    //     }
-
-        
-   function addNewRow() {
-    const lastRow = itemTableBody.querySelector('tr:last-child');
-    const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
-    let isValid = true;
-
-    requiredFields.forEach(field => {
-        const input = lastRow.querySelector(`input[name="${field}"]`);
-        if (!input || !input.value.trim()) {
-            input?.classList.add('input-error');
-            isValid = false;
-        } else {
-            input.classList.remove('input-error');
-        }
-    });
-
-    if (!isValid) {
-        alert("Please fill all required fields (Code, Item Name, Qty, Selling Price) before adding a new item.");
-        lastRow.querySelector('.input-error')?.focus();
-        return;
-    }
-
-    const code = lastRow.querySelector('input[name="code"]').value.trim();
-    const itemName = lastRow.querySelector('input[name="item_name"]').value.trim();
-    const unit = lastRow.querySelector('input[name="unit"]').value.trim();
-    const qty = parseFloat(lastRow.querySelector('input[name="qty"]').value || 0);
-    const sellPrice = parseFloat(lastRow.querySelector('input[name="sellingprice"]').value || 0);
-    const currentMrp = lastRow.querySelector('input[name="mrsp"]')?.value.trim();
-    const currentBatch = lastRow.querySelector('input[name="batch_no"]')?.value.trim();
-    const availableQty = parseFloat(lastRow.querySelector('input[name="available_qty"]')?.value || 0);
-
-    const rows = itemTableBody.querySelectorAll('tr');
-    let merged = false;
-
-    for (let row of rows) {
-        if (row === lastRow) continue;
-
-        const rowCode = row.querySelector('input[name="code"]')?.value.trim();
-        const rowBatch = row.querySelector('input[name="batch_no"]')?.value.trim();
-
-        const isSameItem = (rowCode === code && rowBatch === currentBatch);
-
-        if (isSameItem) {
-            const existingQtyInput = row.querySelector('input[name="qty"]');
-            const existingQty = parseFloat(existingQtyInput.value || 0);
-            const newQty = existingQty + qty;
-
-            if (newQty <= availableQty) {
-                // Merge into existing row
-                existingQtyInput.value = newQty;
-                row.querySelector('.amount-output').value = (newQty * sellPrice).toFixed(2);
-
-                // Clear last row inputs
-                ['code', 'item_name', 'unit', 'qty', 'mrsp', 'sellingprice', 'batch_no'].forEach(name => {
-                    const input = lastRow.querySelector(`input[name="${name}"]`);
-                    if (input) input.value = '';
-                });
-                lastRow.querySelector('.amount-output').value = '0.00';
-                updateCalculations();
-                merged = true;
-                break;
+            if (!isValid) {
+                alert("Please fill all required fields (Code, Item Name, Qty, Selling Price) before adding a new item.");
+                lastRow.querySelector('.input-error')?.focus();
+                return;
             }
+
+            // Get current item values
+            const code = lastRow.querySelector('input[name="code"]').value.trim();
+            const itemName = lastRow.querySelector('input[name="item_name"]').value.trim();
+            const unit = lastRow.querySelector('input[name="unit"]').value.trim();
+            const qty = parseFloat(lastRow.querySelector('input[name="qty"]').value || 0);
+            const sellPrice = parseFloat(lastRow.querySelector('input[name="sellingprice"]').value || 0);
+            const amount = qty * sellPrice;
+
+            // Check for duplicates
+            const rows = itemTableBody.querySelectorAll('tr');
+            for (let row of rows) {
+                if (row === lastRow) continue; // skip the last row (new entry)
+
+                const rowCode = row.querySelector('input[name="code"]')?.value.trim();
+                const rowItemName = row.querySelector('input[name="item_name"]')?.value.trim();
+                const rowUnit = row.querySelector('input[name="unit"]')?.value.trim();
+
+                if (rowCode === code && rowItemName === itemName && rowUnit === unit) {
+                    // Merge: update quantity and amount in existing row
+                    const existingQtyInput = row.querySelector('input[name="qty"]');
+                    const newQty = parseFloat(existingQtyInput.value || 0) + qty;
+                    
+                    // Fetch available quantity from server
+                    try {
+                        const response = await fetch(`/ajax/get-item-info/?code=${encodeURIComponent(code)}&name=${encodeURIComponent(itemName)}`);
+                        if (!response.ok) {
+                            throw new Error("Failed to fetch available quantity");
+                        }
+                        const data = await response.json();
+                        const availableQty = parseFloat(data.total_available) || 0;
+                        
+                        if (newQty > availableQty) {
+                            alert(`⚠️ Only ${availableQty} units available. Please enter a lower quantity.`);
+                            existingQtyInput.value = availableQty;
+                            existingQtyInput.focus();
+                            lastRow.remove();
+                        
+                            updateSerialNumbers();
+                            updateCalculations();
+                            return;
+                        }
+                        
+                        existingQtyInput.value = newQty;
+                        const existingAmountOutput = row.querySelector('.amount-output');
+                        existingAmountOutput.value = (newQty * sellPrice).toFixed(2);
+
+                        // Clear the last row
+                        lastRow.querySelector('input[name="qty"]').value = '';
+                        lastRow.querySelector('input[name="code"]').value = '';
+                        lastRow.querySelector('input[name="item_name"]').value = '';
+                        lastRow.querySelector('input[name="unit"]').value = '';
+                        lastRow.querySelector('input[name="mrsp"]').value = '';
+                        lastRow.querySelector('input[name="sellingprice"]').value = '';
+                        lastRow.querySelector('.amount-output').value = '0.00';
+
+                        updateCalculations();
+                        return;
+                    } catch (error) {
+                        console.error("Error fetching available quantity:", error);
+                        alert("Error checking available quantity. Please try again.");
+                        return;
+                    }
+                }
+            }
+
+            // If no duplicate found, create a new row
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><input type="number" name="sno" class="table-input" readonly></td>
+                <td><input type="text" name="code" class="table-input"></td>
+                <td><input type="text" name="item_name" class="table-input"></td>
+                <td><input type="text" name="unit" class="table-input"></td>
+                <td><input type="number" name="qty" class="table-input" value="1"></td>
+                <td><input type="number" name="mrsp" class="table-input" readonly></td>
+                <td><input type="number" name="sellingprice" class="table-input" readonly></td>
+                <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
+                <td><button type="button" class="delete-row-btn">Delete</button></td>
+            `;
+
+            itemTableBody.appendChild(newRow);
+            attachInputListeners(newRow);
+            attachDeleteListener(newRow);
+            attachAutoFill(newRow);
+            updateSerialNumbers();
+            updateCalculations();
+
+            // Focus on code input of new row
+            const newCodeInput = newRow.querySelector('input[name="code"]');
+            if (newCodeInput) newCodeInput.focus();
         }
-    }
-
-    if (merged) {
-    console.log("Merged row. Current table data:");
-    itemTableBody.querySelectorAll('tr').forEach((row, index) => {
-        const debugCode = row.querySelector('input[name="code"]')?.value || '';
-        const debugName = row.querySelector('input[name="item_name"]')?.value || '';
-        const debugBatch = row.querySelector('input[name="batch_no"]')?.value || '';
-        const debugMrp = row.querySelector('input[name="mrsp"]')?.value || '';
-        console.log(`Row ${index + 1}: Code=${debugCode}, Name=${debugName}, Batch=${debugBatch}, MRP=${debugMrp}`);
-    });
-    return;
-}
-
-    // No merge or stock exceeded → add new row
-    const newRow = document.createElement('tr');
-    newRow.classList.add('item-row');
-    newRow.innerHTML = `
-        <td><input type="number" name="sno" class="table-input" readonly></td>
-        <td><input type="text" name="code" class="table-input"></td>
-        <td><input type="text" name="item_name" class="table-input"></td>
-        <td><input type="text" name="unit" class="table-input"></td>
-        <td><input type="number" name="qty" class="table-input" value="1"></td>
-        <td><input type="number" name="mrsp" class="table-input" readonly></td>
-        <td><input type="number" name="sellingprice" class="table-input" readonly></td>
-        <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
-        <td><button type="button" class="delete-row-btn">Delete</button></td>
-        <input type="hidden" name="available_qty" class="table-input">
-        <input type="hidden" name="batch_no" class="table-input">
-    `;
-
-    itemTableBody.appendChild(newRow);
-    attachInputListeners(newRow);
-    attachDeleteListener(newRow);
-    attachAutoFill(newRow);  // This will fetch next MRP/batch
-    updateSerialNumbers();
-    updateCalculations();
-    newRow.querySelector('input[name="code"]')?.focus();
-}
 
         // Update serial numbers in the table
         function updateSerialNumbers() {
@@ -927,14 +726,19 @@
 
                 quantityInput.addEventListener('keydown', function (e) {
                     const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
-                    if (allowedKeys.includes(e.key)) return;
+                     if (
+                            (e.key >= '0' && e.key <= '9') || 
+                            allowedKeys.includes(e.key)
+                        ) {
+                            return;
+                        }
 
                     const preview = quantityInput.value + e.key;
                     const enteredQty = parseFloat(preview);
                     if (!isNaN(enteredQty) && enteredQty > batchQty) {
                         e.preventDefault();
                         setTimeout(() => {
-                            alert(`❌ Only ${batchQty} units available in batch ${batchNo}.`);
+                            alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}.`);
                             quantityInput.value = '';
                             quantityInput.focus();
                         }, 10);
