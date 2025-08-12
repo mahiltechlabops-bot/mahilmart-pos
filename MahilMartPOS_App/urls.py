@@ -38,6 +38,7 @@ urlpatterns = [
     path('purchase_list/', views.purchase_list, name='purchase_list'),
     path('api/item/fetch/', views.fetch_item, name='fetch_item'),
     path('api/purchase/create/', views.create_purchase, name='create_purchase'),
+    path('api/purchase/items/', views.fetch_purchase_items, name='fetch_purchase_items'),
     path('purchase_return/', views.purchase_return_view, name='purchase_return'),
     path('stock_adjustment/', views.stock_adjustment_view, name='stock_adjustment'),   
     path('stock_adjustments/', views.stock_adjustment_list, name='stock_adjustment_list'),

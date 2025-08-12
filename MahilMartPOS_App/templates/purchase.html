@@ -77,7 +77,9 @@
                   data-contact="{{supplier.contact_person}}"
                   data-email="{{supplier.email}}"
                   data-address="{{supplier.address}}"
+                  data-supplier="{{supplier.supplier_id}}"
                   data-account="{{supplier.account_number}}"
+                  data-pan="{{supplier.pan_number}}"
                   data-bank="{{supplier.bank_name}}"
                   data-credit="{{supplier.credit_terms}}"
                   data-gst="{{supplier.gst_number}}"
@@ -101,11 +103,13 @@
             <div><b>Phone:</b> <span id="supplierPhone"></span></div>
             <div><b>Email:</b> <span id="supplierEmail"></span></div>
             <div><b>Address:</b> <span id="supplierAddress"></span></div>
+            <div><b>Supplier Id:</b> <span id="supplierSupplierId"></span></div>
             
           </div>
           <div class="col-md-6">
             <div><b>Bank:</b> <span id="supplierBank"></span></div>
             <div><b>Account #:</b> <span id="supplierAccount"></span></div>
+            <div><b>Pan #:</b> <span id="supplierPan"></span></div>
             <div><b>IFSC:</b> <span id="supplierIFSC"></span></div>
             <div><b>GST No:</b> <span id="supplierGST"></span></div>
             <div><b>Credit Terms:</b> <span id="supplierCredit"></span></div>
@@ -121,8 +125,8 @@
             <thead class="table-light">
               <tr>
                 <th>S.no</th><th>Item</th><th>Code</th><th>HSN</th><th>Unit</th>
-                <th>Qty</th><th>Unit Qty</th><th>Total Unit Qty</th><th>Split Cost Price</th><th>Cost Price</th><th>Total</th><th>Discount</th><th>Tax</th><th>MRP</th><th>Wh</th><th>Wh 1</th>
-                <th>Sale Price</th><th>Net</th><th>Expiry Date</th><th>Action</th>
+                <th>Qty</th><th>Unit Qty</th><th>Total Unit Qty</th><th>Split Cost Price</th><th>Unit Price</th><th>Amount</th><th>Discount</th><th>Tax</th><th>Cost Price</th><th>MRP</th><th>Wh</th><th>Wh 1</th>
+                <th>Sale Price</th><th>Total Net</th><th>Expiry Date</th><th>Action</th>
               </tr>
             </thead>
             <tbody id="productTableBody"></tbody>
@@ -182,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <td><input type="number" class="form-control split_unit" value="0"" readonly></td>
       <td><input type="number" class="form-control split_unit_price" value="0"" readonly></td>
       <td><input type="number" class="form-control price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
-      <td><input class="form-control total" readonly></td>
+      <td><input class="form-control total"></td>
       <td><input type="number" class="form-control discount" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
       <td><input type="number" class="form-control tax" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>      
       <td><input type="number" class="form-control mrp" value="0" step="0.01"></td>
@@ -193,6 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <td><input type="date" class="form-control expiry_date"></td>
       <td><button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button></td>`;
     productTableBody.appendChild(row);
+    attachRecalcListeners(row);
     updateSerials();
     calculateRow(row);
 
@@ -210,8 +215,10 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("supplierPhone").textContent = dealerInput.value.match(/\((.+)\)/)?.[1]||"";
       document.getElementById("supplierEmail").textContent = opt.dataset.email;
       document.getElementById("supplierAddress").textContent = opt.dataset.address;
+      document.getElementById("supplierSupplierId").textContent = opt.dataset.supplier;
       document.getElementById("supplierBank").textContent = opt.dataset.bank;
       document.getElementById("supplierAccount").textContent = opt.dataset.account;
+      document.getElementById("supplierPan").textContent = opt.dataset.pan;
       document.getElementById("supplierIFSC").textContent = opt.dataset.ifsc;
       document.getElementById("supplierGST").textContent = opt.dataset.gst;
       document.getElementById("supplierCredit").textContent = opt.dataset.credit;
@@ -293,6 +300,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+function attachRecalcListeners(row) {
+  ['.qty', '.price', '.discount', '.tax'].forEach(selector => {
+    const input = row.querySelector(selector);
+    if (input) {
+      input.removeEventListener('input', input._recalcHandler || (()=>{})); // prevent duplicates
+      input._recalcHandler = () => calculateRow(row);
+      input.addEventListener('input', input._recalcHandler);
+    }
+  });
+}
+
   function fetchItemDetails(inputEl) {
     const row = inputEl.closest('tr');
     const itemNameInput = row.querySelector('.item-name');
@@ -345,6 +363,14 @@ document.addEventListener("DOMContentLoaded", () => {
           splitUnitInput.value = 0;
           splitUnitPriceInput.value = 0;
         }
+
+        //  Attach live recalculation for qty, price, discount, and tax
+        ['.qty', '.price', '.discount', '.tax'].forEach(selector => {
+          const input = row.querySelector(selector);
+          if (input) {
+            input.addEventListener('input', () => calculateRow(row));
+          }
+        });
 
         calculateRow(row);
       })
@@ -413,5 +439,62 @@ function deleteRow(btn) {
     if (input) input.focus();
   }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const invoiceInput = document.getElementById("invoiceNumber");
+  const productTableBody = document.getElementById("productTableBody");
+
+  invoiceInput.addEventListener("change", () => {
+    const invoiceNumber = invoiceInput.value.trim();
+    if (!invoiceNumber) return;
+
+    fetch(`/api/purchase/items/?invoice_number=${encodeURIComponent(invoiceNumber)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+        // Clear any existing rows
+        productTableBody.innerHTML = "";
+
+        // For each item, add a row to the table
+        data.items.forEach((item, i) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="sno">${i + 1}</td>
+            <td><input class="form-control item-name" value="${item.item_name || ""}"></td>
+            <td><input class="form-control item-code" value="${item.item_code || ""}"></td>
+            <td><input class="form-control hsn" value="${item.hsn || ""}" readonly></td>
+            <td><input class="form-control unit" value="${item.unit || ""}" readonly></td>
+            <td><input type="number" class="form-control qty" value="${item.quantity || 1}" min="1"></td>
+            <td><input type="number" class="form-control unit_qty" value="${item.unit_qty || 0}" readonly></td>
+            <td><input type="number" class="form-control split_unit" value="${item.split_unit || 0}" readonly></td>
+            <td><input type="number" class="form-control split_unit_price" value="${item.split_unit_price || 0}" readonly></td>
+            <td><input type="number" class="form-control price" value="${item.price || 0}" step="0.01"></td>
+            <td><input class="form-control total" value="${item.total_price || 0}" readonly></td>
+            <td><input type="number" class="form-control discount" value="${item.discount || 0}" step="0.01"></td>
+            <td><input type="number" class="form-control tax" value="${item.tax || 0}" step="0.01"></td>
+            <td><input type="number" class="form-control mrp" value="${item.mrp || 0}" step="0.01"></td>
+            <td><input type="number" class="form-control whole_price" value="${item.whole_price || 0}" step="0.01"></td>
+            <td><input type="number" class="form-control whole_price_2" value="${item.whole_price_2 || 0}" step="0.01"></td>
+            <td><input type="number" class="form-control sale_price" value="${item.sale_price || 0}" step="0.01"></td>
+            <td><input class="form-control net_price" value="${item.net_price || 0}" readonly></td>
+            <td><input type="date" class="form-control expiry_date" value="${item.expiry_date || ""}"></td>
+            <td><button class="btn btn-sm btn-danger" onclick="deleteRow(this)">Delete</button></td>
+          `;
+          productTableBody.appendChild(row);
+          attachRecalcListeners(row);
+                    
+          calculateRow(row);
+        });
+        updateTotals();
+      })
+      .catch(e => {
+        console.error("Fetch purchase items failed:", e);
+        alert("Could not fetch purchase items.");
+      });
+  });
+});
 </script>
 {% endblock %}

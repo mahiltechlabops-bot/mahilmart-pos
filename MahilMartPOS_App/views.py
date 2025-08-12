@@ -1437,101 +1437,119 @@ def purchase_return_view(request):
 
 @csrf_exempt
 def create_purchase(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            supplier_id = data.get("supplier_id")          
-            items_data = data.get("items", [])
+    if request.method != "POST":
+        return JsonResponse({'error': 'Invalid method'}, status=405)
 
-            supplier = Supplier.objects.get(id=supplier_id)     
-            invoice_no = data.get("invoice_no", "").strip()
-            total_products = len(items_data)
-            purchase = Purchase.objects.create(supplier=supplier, invoice_no=invoice_no,total_products=total_products)                
+    try:
+        data = json.loads(request.body)
+        supplier_id = data.get("supplier_id")
+        items_data = data.get("items", [])
+        invoice_no = data.get("invoice_no", "").strip()
 
-            # Track quantities during this request
-            latest_qty_cache = {}
+        supplier = Supplier.objects.get(id=supplier_id)
+        total_products = len(items_data)
 
-            for item in items_data:
-                item_code = item.get('item_code')
-                item_obj = Item.objects.filter(code=item_code).first()
-                if not item_obj:
-                    continue
+        #  Check if invoice already exists
+        purchase = Purchase.objects.filter(invoice_no=invoice_no).first()
+        if purchase:
+            # ---- UPDATE EXISTING PURCHASE ----
+            purchase.supplier = supplier
+            purchase.total_products = total_products
+            purchase.save()
 
-                item_id = item_obj.id
-                qty_purchased = float(item['quantity'])
+            # Track incoming (item_id, purchase_id) combos
+            incoming_pairs = [
+                (Item.objects.filter(code=i.get("item_code")).first().id, purchase.id)
+                for i in items_data if i.get("item_code")
+            ]
 
-                # Fetch previous quantity
-                if item_id in latest_qty_cache:
-                    previous_qty = latest_qty_cache[item_id]
-                else:
-                    last = PurchaseItem.objects.filter(item=item_obj).order_by('-id').first()
-                    previous_qty = float(last.total_qty) if last else 0
+            # Remove deleted purchase items
+            incoming_purchaseitem_ids = [i.get("id") for i in items_data if i.get("id")]
+            PurchaseItem.objects.filter(purchase=purchase).exclude(id__in=incoming_purchaseitem_ids).delete()
 
-                total_qty = previous_qty + qty_purchased
+            # Remove deleted inventory items
+            Inventory.objects.filter(purchase=purchase).exclude(
+                item_id__in=[p[0] for p in incoming_pairs]
+            ).delete()
 
-                # Update in-memory cache
-                latest_qty_cache[item_id] = total_qty
+        else:
+            # ---- CREATE NEW PURCHASE ----
+            purchase = Purchase.objects.create(
+                supplier=supplier,
+                invoice_no=invoice_no,
+                total_products=total_products
+            )
 
+        latest_qty_cache = {}       
 
-                # Generate batch number if not provided
-                raw_batch_no = item.get('batch_no', '').strip()
-                if not raw_batch_no:
-                    # Try to get latest batch for this item
-                    last_batch = (
-                        PurchaseItem.objects
-                        .filter(code=item_code)
-                        .exclude(batch_no__isnull=True)
-                        .exclude(batch_no__exact='')
-                        .order_by('-id')
-                        .first()
-                    )
-                    if last_batch and last_batch.batch_no.startswith('B'):
-                        try:
-                            last_num = int(last_batch.batch_no[1:])
-                            new_batch_no = f'B{last_num + 1:03d}'
-                        except ValueError:
-                            new_batch_no = 'B001'
-                    else:
+        for item in items_data:
+            item_code = item.get('item_code')
+            item_obj = Item.objects.filter(code=item_code).first()
+            if not item_obj:
+                continue
+
+            qty_purchased = float(item['quantity'])
+            item_id = item_obj.id
+
+            # Previous qty for FIFO tracking
+            if item_id in latest_qty_cache:
+                previous_qty = latest_qty_cache[item_id]
+            else:
+                last = PurchaseItem.objects.filter(item=item_obj).order_by('-id').first()
+                previous_qty = float(last.total_qty) if last else 0
+            total_qty = previous_qty + qty_purchased
+            latest_qty_cache[item_id] = total_qty
+
+            # Batch number logic
+            raw_batch_no = item.get('batch_no', '').strip()
+            if not raw_batch_no:
+                last_batch = PurchaseItem.objects.filter(code=item_code).exclude(
+                    batch_no__isnull=True
+                ).exclude(batch_no__exact='').order_by('-id').first()
+                if last_batch and last_batch.batch_no.startswith('B'):
+                    try:
+                        last_num = int(last_batch.batch_no[1:])
+                        new_batch_no = f'B{last_num + 1:03d}'
+                    except ValueError:
                         new_batch_no = 'B001'
                 else:
-                    new_batch_no = raw_batch_no
+                    new_batch_no = 'B001'
+            else:
+                new_batch_no = raw_batch_no
 
-                print("Saving PurchaseItem with values:")
-                print({                   
-                    "unit": item_obj.unit,
-                    "code": item.get('item_code', ''),
-                    "item_name": item.get('item_name', ''),
-                    "hsn": item.get('hsn', None),
-                    "quantity": qty_purchased,
-                    "unit_price": item['price'],
-                    "split_unit": item['split_unit'],
-                    "split_unit_price": item['split_unit_price'],
-                    "total_price": item['total_price'],
-                    "discount": item['discount'],
-                    "tax": item['tax'],
-                    "net_price": item['net_price'],
-                    "mrp_price": item['mrp'],
-                    "whole_price": item['whole_price'],
-                    "whole_price_2": item['whole_price_2'],
-                    "sale_price": item['sale_price'],
-                    "supplier_id": supplier.supplier_id,
-                    "purchased_at": now().date(),
-                    "batch_no": new_batch_no,
-                    "expiry_date": parse_date(item.get('expiry_date')),
-                    "previous_qty": previous_qty,
-                    "total_qty": total_qty
-                })
+            if item.get("id"):
+                # ---- UPDATE EXISTING ROW ----
+                purchase_item = PurchaseItem.objects.get(id=item["id"], purchase=purchase)
+                purchase_item.quantity = qty_purchased
+                purchase_item.unit_qty = item['unit_qty']
+                purchase_item.unit_price = item['price']
+                purchase_item.split_unit = item['split_unit']
+                purchase_item.split_unit_price = item['split_unit_price']
+                purchase_item.total_price = item['total_price']
+                purchase_item.discount = item['discount']
+                purchase_item.tax = item['tax']
+                purchase_item.net_price = item['net_price']
+                purchase_item.mrp_price = item['mrp']
+                purchase_item.whole_price = item['whole_price']
+                purchase_item.whole_price_2 = item['whole_price_2']
+                purchase_item.sale_price = item['sale_price']
+                purchase_item.expiry_date = parse_date(item.get('expiry_date'))
+                purchase_item.previous_qty = previous_qty
+                purchase_item.total_qty = total_qty
+                purchase_item.batch_no = new_batch_no
+                purchase_item.save()               
 
-                # Save purchase item with correct qtys
-                PurchaseItem.objects.create(
+            else:
+                # ---- ADD NEW ROW ----
+                purchase_item = PurchaseItem.objects.create(
                     purchase=purchase,
-                    item=item_obj,                                  
+                    item=item_obj,
                     group=item_obj.group,
                     brand=item_obj.brand,
                     unit=item_obj.unit,
                     code=item.get('item_code', ''),
-                    item_name=item.get('item_name', ''),    
-                    hsn=item.get('hsn', None),               
+                    item_name=item.get('item_name', ''),
+                    hsn=item.get('hsn'),
                     quantity=qty_purchased,
                     unit_qty=item['unit_qty'],
                     unit_price=item['price'],
@@ -1544,24 +1562,47 @@ def create_purchase(request):
                     mrp_price=item['mrp'],
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
-                    sale_price=item['sale_price'],        
-                    supplier_id=supplier.supplier_id,                    
-                    purchased_at = now().date(),              
+                    sale_price=item['sale_price'],
+                    supplier_id=supplier.supplier_id,
+                    purchased_at=now().date(),
                     batch_no=new_batch_no,
                     expiry_date=parse_date(item.get('expiry_date')),
                     previous_qty=previous_qty,
-                    total_qty=total_qty,                             
+                    total_qty=total_qty
                 )
 
+            inv = Inventory.objects.filter(purchase=purchase, item=item_obj).first()
+            if inv:
+                #  Update existing inventory
+                inv.quantity = qty_purchased
+                inv.unit_qty = item['unit_qty']
+                inv.unit_price = item['price']
+                inv.split_unit = item['split_unit']
+                inv.split_unit_price = item['split_unit_price']
+                inv.total_price = item['total_price']
+                inv.discount = item['discount']
+                inv.tax = item['tax']
+                inv.net_price = item['net_price']
+                inv.mrp_price = item['mrp']
+                inv.whole_price = item['whole_price']
+                inv.whole_price_2 = item['whole_price_2']
+                inv.sale_price = item['sale_price']
+                inv.expiry_date = parse_date(item.get('expiry_date'))
+                inv.previous_qty = previous_qty
+                inv.total_qty = total_qty
+                inv.batch_no = new_batch_no
+                inv.save()
+            else:
+                #  Create new inventory if missing
                 Inventory.objects.create(
                     item=item_obj,
                     item_name=item.get('item_name', ''),
                     code=item.get('item_code', ''),
-                    hsn=item.get('hsn', None),
+                    hsn=item.get('hsn'),
                     group=item_obj.group,
                     brand=item_obj.brand,
-                    unit=item_obj.unit,                 
-                    batch_no=new_batch_no,                                     
+                    unit=item_obj.unit,
+                    batch_no=new_batch_no,
                     supplier=supplier,
                     quantity=qty_purchased,
                     previous_qty=previous_qty,
@@ -1577,33 +1618,56 @@ def create_purchase(request):
                     mrp_price=item['mrp'],
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
-                    sale_price=item['sale_price'],                   
-                    purchased_at = now().date(),
-                    expiry_date=parse_date(item.get('expiry_date')),                    
+                    sale_price=item['sale_price'],
+                    purchased_at=now().date(),
+                    expiry_date=parse_date(item.get('expiry_date')),
                     purchase=purchase
                 )
 
-                # Optional product snapshot
-                Product.objects.create(
-                    supplier=supplier,
-                    item=item_obj,
-                    item_name=item_obj.item_name,
-                    code=item_obj.code,
-                    group=item_obj.group,
-                    brand=item_obj.brand,
-                    unit=item_obj.unit,
-                    mrp=item_obj.MRSP,
-                    whole_rate=item_obj.whole_rate,
-                    whole_rate_2=item_obj.whole_rate_2,
-                    sale_rate=item_obj.sale_rate
-                )
+        return JsonResponse({'success': True, 'purchase_id': purchase.id})
 
-            return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-
-    return JsonResponse({'error': 'Invalid method'}, status=405)
+def fetch_purchase_items(request):
+    invoice_number = request.GET.get('invoice_number')
+    print("Invoice number received:", invoice_number)
+    if not invoice_number:
+        print("No invoice number provided in request.")
+        return JsonResponse({'error': 'Invoice number is required'}, status=400)
+    try:
+        purchase = Purchase.objects.get(invoice_no=invoice_number)
+        print("Purchase found:", purchase.id, purchase.invoice_no)
+    except Purchase.DoesNotExist:
+        print("No purchase found for invoice:", invoice_number)
+        return JsonResponse({'error': 'Purchase not found'}, status=404)
+    items = PurchaseItem.objects.filter(purchase_id=purchase.id)
+    print("Number of items found:", items.count())
+    items_data = []
+    for item in items:
+        print("Serializing item:", item.id, item.item_name, "Qty:", item.quantity)
+        items_data.append({
+            'item_name': item.item_name,
+            'item_code': item.code,
+            'hsn': item.hsn,
+            'unit': item.unit,
+            'quantity': item.quantity,
+            'unit_qty': item.unit_qty,
+            'split_unit': item.split_unit,
+            'split_unit_price': item.split_unit_price,
+            'price': item.unit_price,
+            'total_price': item.total_price,
+            'discount': item.discount,
+            'tax': item.tax,
+            'net_price': item.net_price,
+            'mrp': item.mrp_price,
+            'whole_price': item.whole_price,
+            'whole_price_2': item.whole_price_2,
+            'sale_price': item.sale_price,
+            'expiry_date': item.expiry_date,
+        })
+    print("Returning", len(items_data), "items for invoice:", invoice_number)
+    return JsonResponse({'items': items_data})
 
 @csrf_exempt
 def stock_adjustment_view(request):
