@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
+from django.conf.urls import handler403
 
 urlpatterns = [
     path('', views.login_view, name='home'),
@@ -32,8 +33,7 @@ urlpatterns = [
     path('unit', views.Unit_creation, name='unit_creation'),
     path('group', views.Group_creation, name='group_creation'),
     path('brand', views.Brand_creation, name='brand_creation'),
-    path('tax', views.Tax_creation, name='tax_creation'),
-    path('sale_return/', views.sale_return_view, name='sale_return'),
+    path('tax', views.Tax_creation, name='tax_creation'),    
     path('purchase/', views.purchase_view, name='purchase'),
     path('purchase_list/', views.purchase_list, name='purchase_list'),
     path('api/item/fetch/', views.fetch_item, name='fetch_item'),
@@ -63,3 +63,5 @@ urlpatterns = [
     path('company-details/view/', views.view_company_details, name='view_company_details'),
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
 ]
+
+handler403 = 'MahilMartPOS_App.views.custom_permission_denied_view'
