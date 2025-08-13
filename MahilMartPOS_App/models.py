@@ -225,7 +225,7 @@ class ItemBarcode(models.Model):
 class Unit(models.Model):
     unit_name = models.CharField(max_length=50)
     print_name = models.CharField(max_length=50)
-    decimals = models.DecimalField(max_digits=10,decimal_places=2)
+    decimals = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     UQC = models.CharField(max_length=10)
 
     def __str__(self):
@@ -332,8 +332,9 @@ class StockAdjustment(models.Model):
     purchase_item = models.ForeignKey('MahilMartPOS_App.PurchaseItem', on_delete=models.CASCADE)
     adjustment_type = models.CharField(max_length=10, choices=ADJUSTMENT_TYPES)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)  
-    split_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0)    
-    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    split_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0)   
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00')) 
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     adjusted_net_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     reason = models.CharField(max_length=30, choices=REASONS, default='manual_adjustment')
     remarks = models.TextField(blank=True, null=True)
@@ -520,6 +521,7 @@ class PurchaseItem(models.Model):
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tax = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     net_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     mrp_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     whole_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     whole_price_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -554,6 +556,7 @@ class Inventory(models.Model):
     total_price = models.FloatField(default=0)
     discount = models.FloatField(default=0)
     tax = models.FloatField(default=0)
+    cost_price = models.FloatField(default=0)
     net_price = models.FloatField(default=0)
     mrp_price = models.FloatField(default=0)
     whole_price = models.FloatField(default=0)
