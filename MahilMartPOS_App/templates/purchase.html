@@ -30,29 +30,31 @@
 
   #purchaseTable td:nth-child(1) input,
   #purchaseTable td:nth-child(3) input,
+  #purchaseTable td:nth-child(4) input,
   #purchaseTable td:nth-child(5) input,
   #purchaseTable td:nth-child(6) input,
   #purchaseTable td:nth-child(7) input,
   #purchaseTable td:nth-child(8) input,
   #purchaseTable td:nth-child(9) input,
   #purchaseTable td:nth-child(10) input,
+  #purchaseTable td:nth-child(11) input,
   #purchaseTable td:nth-child(12) input,
   #purchaseTable td:nth-child(13) input,
   #purchaseTable td:nth-child(14) input,
   #purchaseTable td:nth-child(15) input,
-  #purchaseTable td:nth-child(16) input, 
-  #purchaseTable td:nth-child(17) input{
+  #purchaseTable td:nth-child(16) input,
+  #purchaseTable td:nth-child(18) input, 
+  #purchaseTable td:nth-child(19) input, 
+  #purchaseTable td:nth-child(20) input{
     width: 50px !important;
     padding: 3px 4px;
     font-size: 12px;
     box-sizing: border-box;
   }
 
-  #purchaseTable td:nth-child(2) input,
-  #purchaseTable td:nth-child(4) input,
-  #purchaseTable td:nth-child(11) input,
+  #purchaseTable td:nth-child(2) input,  
   #purchaseTable td:nth-child(19) input,
-  #purchaseTable td:nth-child(20) input {
+  #purchaseTable td:nth-child(21) input {
     width: 90px !important;
     padding: 3px 4px;
     font-size: 12px;
@@ -70,6 +72,12 @@
 }
 
 /* Remove up/down arrows for all targeted number inputs */
+.unit_qty::-webkit-inner-spin-button,
+.unit_qty::-webkit-outer-spin-button,
+.split_unit::-webkit-inner-spin-button,
+.split_unit::-webkit-outer-spin-button,
+.split_unit_price::-webkit-inner-spin-button,
+.split_unit_price::-webkit-outer-spin-button,
 .discount::-webkit-inner-spin-button,
 .discount::-webkit-outer-spin-button,
 .price::-webkit-inner-spin-button,
@@ -92,6 +100,9 @@
     margin: 0;
 }
 
+.unit_qty,
+.split_unit,
+.split_unit_price,
 .discount,
 .price,
 .cost_price,
@@ -172,7 +183,7 @@
             <thead class="table-light">
               <tr>
                 <th style="white-space: nowrap;">S.no</th><th>Item</th><th>Code</th><th>HSN</th><th>Unit</th>
-                <th>Qty</th><th>U-Qty</th><th>Total U-Qty</th><th>Split C-Price</th><th>Unit Price</th><th>Amount</th><th>Discount</th><th>Tax</th><th>Cost Price</th><th>MRP</th><th>Wh</th><th>Wh 1</th>
+                <th>Qty</th><th>U-Qty</th><th>Total U-Qty</th><th>Split U-Price</th><th>Unit Price</th><th>Amount</th><th>Discount</th><th>Taxable Amt</th><th>Tax</th><th>Cost Price</th><th>MRP</th><th>Wh</th><th>Wh 1</th>
                 <th>Sale Price</th><th>Total Net</th><th>Expiry Date</th><th>Action</th>
               </tr>
             </thead>
@@ -228,14 +239,15 @@ document.addEventListener("DOMContentLoaded", () => {
       <td><input class="form-control item-code" onblur="fetchItemDetails(this)"></td>
       <td><input class="form-control hsn" readonly></td>    
       <td><input class="form-control unit" readonly></td>
-      <td><input type="number" class="form-control qty" value="1" min="1" oninput="calculateRow(this.closest('tr'))"></td>
-      <td><input type="number" class="form-control unit_qty" value="0"" readonly></td>
+      <td><input type="number" class="form-control qty" value="1" min="1" oninput="calculateRow(this.closest('tr'))"></td>   
+      <td><input type="number" class="form-control unit_qty" value="0" readonly oninput="calculateRow(this.closest('tr'))"></td>
       <td><input type="number" class="form-control split_unit" value="0"" readonly></td>
       <td><input type="number" class="form-control split_unit_price" value="0"" readonly></td>
       <td><input type="number" class="form-control price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
       <td><input class="form-control total"></td>
       <td><input type="number" class="form-control discount" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
-      <td><input type="number" class="form-control tax" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>      
+      <td><input type="number" class="form-control taxable_amount" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td> 
+      <td><input type="number" class="form-control tax" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>           
       <td><input type="number" class="form-control cost_price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
       <td><input type="number" class="form-control mrp" value="0" step="0.01"></td>
       <td><input type="number" class="form-control whole_price" value="0" step="0.01"></td>
@@ -338,6 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
       total_price: r.querySelector('.total').value,
       discount: r.querySelector('.discount').value,
       tax: r.querySelector('.tax').value,
+      taxable_amount: r.querySelector('.taxable_amount').value,
       cost_price: r.querySelector('.cost_price').value,
       net_price: r.querySelector('.net_price').value,
       mrp: r.querySelector('.mrp').value,
@@ -369,7 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function attachRecalcListeners(row) {
-  ['.qty', '.total', '.discount', '.tax'].forEach(selector => {
+  ['.qty', '.total', '.discount', '.tax', 'taxable_amount'].forEach(selector => {
     const input = row.querySelector(selector);
     if (input) {
       input.removeEventListener('input', input._recalcHandler || (()=>{}));
@@ -411,6 +424,7 @@ function fetchItemDetails(inputEl) {
         const splitUnitQtyInput = row.querySelector('.unit_qty');
         const splitUnitInput = row.querySelector('.split_unit');
         const splitUnitPriceInput = row.querySelector('.split_unit_price');
+        const taxableAmount = row.querySelector('.taxable_amount');
         const unit = (data.unit || '').toLowerCase();
 
         if (unit.includes('bulk')) {
@@ -432,7 +446,7 @@ function fetchItemDetails(inputEl) {
           splitUnitPriceInput.value = 0;
         }
       
-        ['.qty', '.price', '.discount', '.tax'].forEach(selector => {
+        ['.qty', '.price', '.discount', '.tax', '.taxable_amount'].forEach(selector => {
           const input = row.querySelector(selector);
           if (input) {
             input.addEventListener('input', () => calculateRow(row));
@@ -453,28 +467,43 @@ function fetchItemDetails(inputEl) {
 }
 
 function calculateRow(row) {
-  const qty = parseFloat(row.querySelector('.qty').value) || 0;
-  const amount = parseFloat(row.querySelector('.total').value) || 0;
-  const discount = parseFloat(row.querySelector('.discount').value) || 0;
-  const tax = parseFloat(row.querySelector('.tax').value) || 0;
+    const qty = parseFloat(row.querySelector('.qty').value) || 0;
+    const unit_qty = parseFloat(row.querySelector('.unit_qty').value) || 0;
+    const amount = parseFloat(row.querySelector('.total').value) || 0;
+    const discount = parseFloat(row.querySelector('.discount').value) || 0;
+    const tax = parseFloat(row.querySelector('.tax').value) || 0;
 
-  if (qty > 0) {
-    const unitPrice = amount / qty;
-    row.querySelector('.price').value = unitPrice.toFixed(2);
-  }
+    // Unit Price
+    if (qty > 0) {
+        const unitPrice = amount / qty;
+        row.querySelector('.price').value = unitPrice.toFixed(2);
+    } else {
+        row.querySelector('.price').value = "0.00";
+    }
 
-  // const netPrice = (amount - discount) + ((amount - discount) * (tax / 100));
-  const discountAmount = discount || 0; // safety in case it's null/undefined
-  const taxableAmount = amount - discountAmount; 
-  const taxAmount = taxableAmount * (tax / 100);
-  const netPrice = taxableAmount + taxAmount;
+    // Split Units
+    const splitUnit = qty * unit_qty;
+    row.querySelector('.split_unit').value = splitUnit.toFixed(2);
 
-  row.querySelector('.net_price').value = netPrice.toFixed(2);
+    // Split Unit Price
+    const splitUnitPrice = splitUnit > 0 ? amount / splitUnit : 0;
+    row.querySelector('.split_unit_price').value = splitUnitPrice.toFixed(2);
 
-  const costPrice = qty > 0 ? netPrice / qty : 0;
-  row.querySelector('.cost_price').value = costPrice.toFixed(2);
+    // Taxable Amount
+    const discountAmount = discount || 0;
+    const taxableAmount = amount - discountAmount; 
+    row.querySelector('.taxable_amount').value = taxableAmount.toFixed(2);
 
-  updateTotals();
+    // Tax & Net Price
+    const taxAmount = taxableAmount * (tax / 100);
+    const netPrice = taxableAmount + taxAmount;
+    row.querySelector('.net_price').value = netPrice.toFixed(2);
+
+    // Cost Price
+    const costPrice = qty > 0 ? netPrice / qty : 0;
+    row.querySelector('.cost_price').value = costPrice.toFixed(2);
+
+    updateTotals();
 }
 
 function updateTotals() {
@@ -549,6 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <td><input type="number" class="form-control price" value="${item.price || 0}" step="0.01"></td>
             <td><input class="form-control total" value="${item.total_price || 0}"></td>
             <td><input type="number" class="form-control discount" value="${item.discount || 0}" step="0.01"></td>
+            <td><input class="form-control total" value="${item.taxable_price || 0}"></td>
             <td><input type="number" class="form-control tax" value="${item.tax || 0}" step="0.01"></td>
             <td><input type="number" class="form-control cost_price" value="${item.cost_price || 0}" step="0.01"></td>
             <td><input type="number" class="form-control mrp" value="${item.mrp || 0}" step="0.01"></td>
