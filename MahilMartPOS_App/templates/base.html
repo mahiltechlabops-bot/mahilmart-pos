@@ -3,175 +3,385 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>MahilMart POS</title>
 
     <!-- Bootstrap & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <!-- HEAD: Select2 CSS -->
+    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 
     {% block style %}{% endblock %}
 
     <style>
+        :root {
+            --primary-dark: #1f2a38;
+            --primary: #2e3b4e;
+            --primary-light: #32465a;
+            --accent: #4a6fa5;
+            --text-light: #f8f9fa;
+            --text-muted: #adb5bd;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
         html, body {
-           height: 100%;
-           margin: 0;
-           overflow: hidden;
-         }
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+        }
 
-         .app-container {
-           display: flex;
-           height: calc(100vh - 100px);
-           overflow: hidden;
-         }
+        .app-container {
+            display: flex;
+            height: calc(100vh - 70px);
+            overflow: hidden;
+        }
 
+        /* Premium Header */
+        .app-header {
+            background-color: var(--primary);
+            color: var(--text-light);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .app-header strong {
+            font-weight: 600;
+            font-size: 1.25rem;
+            letter-spacing: 0.5px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            font-size: 0.9rem;
+        }
+
+        .user-info span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Premium Sidebar */
         .app-sidebar {
-          width: 220px;
-          min-width: 220px;
-          background-color: #1f2a38;
-          color: white;
-          padding-top: 20px;
-          flex-shrink: 0;
-          height: 100%;
-          overflow-y: auto;
-          overflow-x: hidden;
+            width: 240px;
+            min-width: 240px;
+            background-color: var(--primary-dark);
+            color: var(--text-light);
+            padding-top: 1rem;
+            flex-shrink: 0;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: var(--transition);
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
 
+        .app-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .app-sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            margin: 0.25rem 0.5rem;
+            border-radius: 6px;
+        }
+
+        .nav-item a {
+            color: var(--text-light);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            margin-right: 0.75rem;
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .nav-item.active, .nav-item:hover {
+            background-color: var(--primary-light);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: var(--accent);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .nav-item.active i {
+            opacity: 1;
+        }
+
+        /* Premium Content Area */
         .app-content {
-          flex-grow: 1;
-          overflow-y: auto;
-          padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background-color: #f5f7fa;
+            background-image: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
         }
 
-         body {
-           margin: 0;
-           font-family: 'Segoe UI', sans-serif;
-           background-color: #f4f6f9;
-           color: #333;
-         }
+        /* Premium Cards */
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
+            border: none;
+            transition: var(--transition);
+        }
 
-         .app-header, .content-footer {
-           background-color: #2e3b4e;
-           color: white;
-           padding: 10px 20px;
-           display: flex;
-           justify-content: space-between;
-           align-items: center;
-         }
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
 
-         .app-container {
-           display: flex;
-           min-height: calc(100vh - 100px);
-         }
+        /* Premium Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(3px);
+        }
 
-         .app-sidebar {
-           width: 220px;
-           background-color: #1f2a38;
-           color: white;
-           padding-top: 20px;
-           flex-shrink: 0;
-         }
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 1.5rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease-out;
+        }
 
-         .nav-menu {
-           list-style: none;
-           padding: 0;
-         }
+        .modal.show .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
 
-         .nav-item {
-           padding: 10px 20px;
-           cursor: pointer;
-         }
+        /* Premium Footer */
+        .content-footer {
+            background-color: var(--primary);
+            color: var(--text-light);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
 
-         .nav-item a {
-           color: white;
-           text-decoration: none;
-           display: flex;
-           align-items: center;
-         }
+        /* Premium Buttons */
+        .btn {
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: var(--transition);
+        }
 
-         .nav-item i {
-           margin-right: 10px;
-         }
+        .btn-primary {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
 
-         .nav-item.active, .nav-item:hover {
-           background-color: #32465a;
-         }
+        .btn-primary:hover {
+            background-color: #3d5d90;
+            border-color: #3d5d90;
+            transform: translateY(-1px);
+        }
 
-         .app-content {
-           flex-grow: 1;
-           padding: 20px;
-         }
+        .btn-light {
+            background-color: rgba(255,255,255,0.9);
+        }
 
-         .card {
-           background: white;
-           padding: 20px;
-           border-radius: 8px;
-           box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-           margin-bottom: 20px;
-         }
+        /* Premium Alerts */
+        .alert {
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1rem;
+            border: none;
+            box-shadow: var(--shadow-sm);
+        }
 
-         .modal {
-           display: none;
-           position: fixed;
-           z-index: 1000;
-           left: 0; top: 0;
-           width: 100%; height: 100%;
-           background: rgba(0,0,0,0.5);
-         }
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .app-sidebar {
+                position: fixed;
+                left: -240px;
+                height: calc(100% - 70px);
+                z-index: 90;
+                box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            }
 
-         .modal-content {
-           background: white;
-           margin: 10% auto;
-           padding: 20px;
-           border-radius: 8px;
-           width: 90%;
-           max-width: 500px;
-         }
+            .app-sidebar.active {
+                left: 0;
+            }
 
-         @media (max-width: 768px) {
-           .app-sidebar {
-             position: fixed;
-             left: -220px;
-             height: 100%;
-             transition: left 0.3s;
-           }
+            .sidebar-toggle {
+                display: block;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.25rem;
+                cursor: pointer;
+                transition: var(--transition);
+            }
 
-           .app-sidebar.active {
-             left: 0;
-           }
+            .sidebar-toggle:hover {
+                transform: scale(1.1);
+            }
 
-           .sidebar-toggle {
-             display: block;
-             background: none;
-             border: none;
-             color: white;
-             font-size: 20px;
-             margin-right: 10px;
-           }
-         }
+            .app-content {
+                padding: 1rem;
+            }
+        }
 
-         .sidebar-toggle {
-           display: none;
-         }
+        /* Animations */
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Premium Welcome Card */
+        .welcome-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border: none;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: rotate(30deg);
+        }
+
+        .welcome-card .btn-light {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .welcome-card .btn-light:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+
+        /* Premium Access Denied Card */
+        .access-denied-card {
+            background: linear-gradient(135deg, #ff6b6b 0%, #eb3d4b 100%);
+            color: white;
+            border: none;
+        }
+
+        .access-denied-card .btn-light {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .access-denied-card .btn-light:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        .mb-4{
+          color: #ffffff;
+        }
+
+        /* Premium Icons */
+        .icon-xl {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
+        }
+
+        /* Premium Typography */
+        h3, h4, h5 {
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+        }
+
+        p {
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
   
-<header class="app-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; color: white;">
-    <div style="display: flex; align-items: center; gap: 15px;">
-        <button class="sidebar-toggle" id="sidebarToggle" style="background: none; border: none; color: white; font-size: 20px;">
+<header class="app-header">
+    <div class="d-flex align-items-center gap-3">
+        <button class="sidebar-toggle" id="sidebarToggle">
             <i class="fas fa-bars"></i>
         </button>
         <strong>MahilMart POS</strong>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 20px;">
-        <span>User: {{ request.user.get_full_name|default:request.user.username }}</span>
-        <span>Role: 
+    <div class="user-info">
+        <span>
+            <i class="fas fa-user-circle"></i>
+            {{ request.user.get_full_name|default:request.user.username }}
+        </span>
+        <span>
+            <i class="fas fa-user-tag"></i>
             {% if request.user.is_superuser %}
-                Store_Admin
+                Store Admin
             {% elif request.user.is_staff %}
                 Cashier
             {% else %}
@@ -179,149 +389,248 @@
             {% endif %}
         </span>
 
-
-        <!-- Logout Button -->
+        <!-- Premium Logout Button -->
         <form method="POST" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button type="submit" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                Logout
+            <button type="submit" class="btn btn-sm btn-danger">
+                <i class="fas fa-sign-out-alt me-1"></i>Logout
             </button>
         </form>
     </div>
 </header>
 
-
 <div class="app-container">
-    <!-- Sidebar -->
+    <!-- Premium Sidebar -->
     <aside class="app-sidebar" id="appSidebar">
         <ul class="nav-menu">
-            <li class="nav-item active" data-page="dashboard"><a href="{% url 'dashboard' %}"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>          
-            <li class="nav-item active" data-page="billing"><a href="{% url 'billing' %}"><i class="fas fa-cash-register"></i>Billing</a></li>       
-            <li class="nav-item active" data-page="sale_return"><a href="{% url 'sale_return' %}"><i class="fas fa-undo-alt"></i>Sales Return</a></li>
-            <li class="nav-item active" data-page="products"><a href="{% url 'products' %}"><i class="fas fa-boxes"></i>Products</a></li>
+            <li class="nav-item active" data-page="dashboard">
+                <a href="{% url 'dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i>Dashboard
+                </a>
+            </li>          
+            <li class="nav-item" data-page="billing">
+                <a href="{% url 'billing' %}">
+                    <i class="fas fa-cash-register"></i>Billing
+                </a>
+            </li>       
+            <li class="nav-item" data-page="sale_return">
+                <a href="{% url 'sale_return' %}">
+                    <i class="fas fa-undo-alt"></i>Sales Return
+                </a>
+            </li>
+            <li class="nav-item" data-page="products">
+                <a href="{% url 'products' %}">
+                    <i class="fas fa-boxes"></i>Products
+                </a>
+            </li>
 
             {% if request.user.is_superuser %} 
-            <li class="nav-item active" data-page="items"><a href="{% url 'items' %}"><i class="fas fa-box"></i>Items</a></li>
-            <li class="nav-item active" data-page="purchase"><a href="{% url 'purchase' %}"><i class="fas fa-truck-loading"></i>Purchase</a></li>
+            <li class="nav-item" data-page="items">
+                <a href="{% url 'items' %}">
+                    <i class="fas fa-box"></i>Items
+                </a>
+            </li>
+            <li class="nav-item" data-page="purchase">
+                <a href="{% url 'purchase' %}">
+                    <i class="fas fa-truck-loading"></i>Purchase
+                </a>
+            </li>
                        
-            <li class="nav-item active" data-page="inventory"><a href="{% url 'inventory' %}"><i class="fas fa-warehouse"></i>Inventory</a></li>
-            <li class="nav-item active" data-page="suppliers"><a href="{% url 'suppliers' %}"><i class="fas fa-truck"></i>Suppliers</a></li>
-            <li class="nav-item active" data-page="customers"><a href="{% url 'customers' %}"><i class="fas fa-users"></i>Customers</a></li>
+            <li class="nav-item" data-page="inventory">
+                <a href="{% url 'inventory' %}">
+                    <i class="fas fa-warehouse"></i>Inventory
+                </a>
+            </li>
+            <li class="nav-item" data-page="suppliers">
+                <a href="{% url 'suppliers' %}">
+                    <i class="fas fa-truck"></i>Suppliers
+                </a>
+            </li>
+            <li class="nav-item" data-page="customers">
+                <a href="{% url 'customers' %}">
+                    <i class="fas fa-users"></i>Customers
+                </a>
+            </li>
 
-            <li class="nav-item" data-page="payments"><a href="{% url 'payment-list' %}"><i class="fas fa-money-check-alt"></i>Payments</a></li>
-            <li class="nav-item" data-page="expenses"><a href="{% url 'expense' %}"><i class="fas fa-file-invoice-dollar"></i>Expenses</a></li>
+            <li class="nav-item" data-page="payments">
+                <a href="{% url 'payment-list' %}">
+                    <i class="fas fa-money-check-alt"></i>Payments
+                </a>
+            </li>
+            <li class="nav-item" data-page="expenses">
+                <a href="{% url 'expense' %}">
+                    <i class="fas fa-file-invoice-dollar"></i>Expenses
+                </a>
+            </li>
 
-            <li class="nav-item" data-page="barcodes"><a href="#"><i class="fas fa-barcode"></i>Barcode Print</a></li>
-            <li class="nav-item" data-page="reports"><a href="#"><i class="fas fa-chart-bar"></i>Reports</a></li>
-            <li class="nav-item" data-page="logs"><a href="#"><i class="fas fa-history"></i>Activity Logs</a></li>
+            <li class="nav-item" data-page="barcodes">
+                <a href="#">
+                    <i class="fas fa-barcode"></i>Barcode Print
+                </a>
+            </li>
+            <li class="nav-item" data-page="reports">
+                <a href="#">
+                    <i class="fas fa-chart-bar"></i>Reports
+                </a>
+            </li>
+            <li class="nav-item" data-page="logs">
+                <a href="#">
+                    <i class="fas fa-history"></i>Activity Logs
+                </a>
+            </li>
 
-            <li class="nav-item active" data-page="user"><a href="{% url 'user' %}"><i class="fas fa-tachometer-alt"></i>User</a></li>          
-            <li class="nav-item active" data-page="company"><a href="{% url 'company_details' %}"><i class="fas fa-info-circle"></i>Company Info</a></li>
-            <li class="nav-item" data-page="settings"><a href="#"><i class="fas fa-cog"></i>Settings</a></li>
+            <li class="nav-item" data-page="user">
+                <a href="{% url 'user' %}">
+                    <i class="fas fa-user-cog"></i>User Management
+                </a>
+            </li>          
+            <li class="nav-item" data-page="company">
+                <a href="{% url 'company_details' %}">
+                    <i class="fas fa-info-circle"></i>Company Info
+                </a>
+            </li>
+            <li class="nav-item" data-page="settings">
+                <a href="#">
+                    <i class="fas fa-cog"></i>Settings
+                </a>
+            </li>
             {% endif %}
-
         </ul>
     </aside>
 
-    <!-- Main Content -->
-   <main class="app-content" id="mainContent">
-    {% block content %}
-    <div class="card">
-        <h3>Welcome to MahilMart POS</h3>
-        <p>Select a section from the sidebar to get started.</p>
-    </div>
-    {% endblock %}
+    <!-- Premium Main Content -->
+  <main class="app-content" id="mainContent">
+      {% block content %}
+          {% if access_denied %}
+              <div class="d-flex justify-content-center align-items-center animate__animated animate__fadeIn" style="height: 80vh;">
+                  <div class="card access-denied-card shadow-lg text-center p-5 animate__animated animate__zoomIn" style="max-width: 500px; border-radius: 15px; color: #000;">
+                      <i class="fas fa-exclamation-triangle icon-xl"></i>
+                      <h2 class="mb-3">Access Denied</h2>
+                      <p class="mb-4">You don't have sufficient permissions to access this page. Only access the Store_Admin and Supervisor</p>
+                      <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg shadow-sm">
+                          <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                      </a>
+                  </div>
+              </div>
+          {% else %}
+              <div class="d-flex justify-content-center align-items-center animate__animated animate__fadeIn" style="height: 80vh;">
+                  <div class="card welcome-card shadow-lg text-center p-5 animate__animated animate__zoomIn" style="max-width: 600px; border-radius: 15px; color: #000;">
+                      <i class="fas fa-hand-holding-usd icon-xl"></i>
+                      <h3 class="mb-3">Welcome to MahilMart POS</h3>
+                      <p class="mb-4">Streamline your retail operations with our premium point of sale system.</p>
+                      <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg shadow-sm">
+                          <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                      </a>
+                  </div>
+              </div>
+          {% endif %}
+      {% endblock %}
   </main>
 </div>
 
-<!-- Footer -->
-<footer class="content-footer">
+<!-- Premium Footer -->
+<header class="app-header">...</header>
+    <div class="app-container">
+        <aside class="app-sidebar">...</aside>
+        <main class="app-content">...</main>
+    </div>
+    <footer class="content-footer">...</footer>
     <div>MahilMart Pro v2.5.1</div>
-    <div>© 2025 SuperMart Solutions Inc.</div>
+    <div>
+        <i class="fas fa-copyright me-1"></i>2025 SuperMart Solutions Inc.
+    </div>
 </footer>
 
-<!-- Confirm Modal -->
-<div class="modal" id="confirmModal">
-    <div class="modal-content">
-        <h5 id="confirmTitle">Confirm</h5>
-        <p id="confirmMessage">Are you sure?</p>
-        <div class="text-end">
-            <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-            <button class="btn btn-danger" id="confirmBtn">Confirm</button>
+<!-- Premium Confirm Modal -->
+<div class="modal fade" id="confirmModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="confirmTitle">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Are you sure you want to perform this action?</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmBtn">Confirm</button>
+            </div>
         </div>
     </div>
 </div>
 
-  {% if messages %}
-      {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}">
-              {{ message }}
-          </div>
-      {% endfor %}
-  {% endif %}
-
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show position-fixed top-0 end-0 m-3 animate__animated animate__fadeInRight" role="alert" style="z-index: 1100;">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
 
 <!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    const sidebarToggle = document.getElementById("sidebarToggle");
-    const appSidebar = document.getElementById("appSidebar");
-    const navItems = document.querySelectorAll(".nav-item");
-    const mainContent = document.getElementById("mainContent");
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const appSidebar = document.getElementById("appSidebar");
+        const navItems = document.querySelectorAll(".nav-item");
+        const mainContent = document.getElementById("mainContent");
+        const currentPath = window.location.pathname;
 
-    if (sidebarToggle) {
-      sidebarToggle.addEventListener("click", () => {
-        appSidebar.classList.toggle("active");
-      });
-    }
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
 
-    navItems.forEach(item => {
-      item.addEventListener("click", () => {
-        navItems.forEach(i => i.classList.remove("active"));
-        item.classList.add("active");
-        const page = item.getAttribute("data-page");
-        loadPageContent(page);
-      });
+        // Mobile sidebar toggle
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener("click", () => {
+                appSidebar.classList.toggle("active");
+            });
+        }
+
+        // Highlight current page in sidebar
+        navItems.forEach(item => {
+            const link = item.querySelector('a');
+            if (link && currentPath.includes(link.getAttribute('href'))) {
+                navItems.forEach(i => i.classList.remove("active"));
+                item.classList.add("active");
+            }
+        });
+
+        // Premium confirm modal
+        window.showConfirm = function(title, message, onConfirm) {
+            document.getElementById("confirmTitle").innerText = title;
+            document.getElementById("confirmMessage").innerText = message;
+            
+            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            modal.show();
+            
+            const confirmBtn = document.getElementById("confirmBtn");
+            confirmBtn.onclick = function() {
+                modal.hide();
+                if (typeof onConfirm === 'function') onConfirm();
+            };
+        };
+
+        // Auto-dismiss alerts after 5 seconds
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            setTimeout(() => {
+                bootstrap.Alert.getInstance(alert)?.close();
+            }, 5000);
+        });
+
+        // Add animation to cards on page load
+        const cards = document.querySelectorAll('.card');
+        cards.forEach((card, index) => {
+            card.classList.add('animate__animated', 'animate__fadeInUp');
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
     });
-
-    function loadPageContent(page) {
-      mainContent.innerHTML = `
-        <div class="card">
-          <h3>${capitalize(page)} Page</h3>
-          <p>Content for <strong>${page}</strong> will go here.</p>
-        </div>`;
-    }
-
-    function capitalize(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    // Confirm modal logic (for reuse)
-    function showConfirm(title, message, onConfirm) {
-      document.getElementById("confirmTitle").innerText = title;
-      document.getElementById("confirmMessage").innerText = message;
-
-      const modal = document.getElementById("confirmModal");
-      modal.style.display = "block";
-
-      const confirmBtn = document.getElementById("confirmBtn");
-      const newConfirmBtn = confirmBtn.cloneNode(true);
-      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-
-      newConfirmBtn.addEventListener("click", () => {
-        modal.style.display = "none";
-        if (typeof onConfirm === 'function') onConfirm();
-      });
-
-      document.getElementById("cancelBtn").onclick = () => {
-        modal.style.display = "none";
-      };
-    }
-
-    window.onclick = (e) => {
-      if (e.target.id === "confirmModal") {
-        e.target.style.display = "none";
-      }
-    };
 </script>
 {% block scripts %}
   {% block extra_js %}

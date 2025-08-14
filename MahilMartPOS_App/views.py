@@ -46,6 +46,7 @@ from datetime import timedelta
 from datetime import datetime, time
 from django.utils.dateparse import parse_date
 from django.contrib.auth.decorators import user_passes_test
+from .decorators import access_required
 from django.urls import reverse
 from .models import (
     Supplier,
@@ -99,6 +100,32 @@ def custom_permission_denied_view(request, exception=None):
     messages.error(request, "🚫 You do not have permission to access this page.")
     return redirect('dashboard')  # make sure 'dashboard' exists in urls.py
 
+@access_required(allowed_roles=['superuser'])
+def company_settings_view(request):
+    if request.method == 'POST':
+        form = CompanySettingsForm(request.POST)
+        if form.is_valid():
+            instance = form.save()
+
+            if instance.auto_backup:
+                if instance.daily_backup_path:
+                    backup_company_details(instance, instance.daily_backup_path)
+                if instance.daily_backup_path:
+                    backup_company_details(instance, instance.daily_backup_path)
+
+            messages.success(request, "Company details saved and backup created.")
+            return redirect('company_details')
+        else:
+            messages.error(request, "There was an error in the form.")
+    else:
+        form = CompanySettingsForm()
+
+    return render(request, 'company_details.html', {'form': form})
+
+@access_required(allowed_roles=['superuser'])
+def view_company_details(request):
+    company = CompanyDetails.objects.last()
+    return render(request, 'view_company_details.html', {'company': company})
 
 def dashboard_view(request):
     today = now().date()
@@ -410,12 +437,8 @@ def create_invoice_view(request):
             billing.points = total_points + points_earned_total
             billing.points_earned = points_earned_total
             billing.save()
-
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': True, 'message': "Invoice created successfully"})
-            else:
-                messages.success(request, "Invoice created successfully")
-                return redirect('billing')
+            
+            return redirect('billing')
 
         except Exception as e:
             print(f"[ERROR] Invoice creation failed: {e}")
@@ -814,7 +837,7 @@ def convert_quotation_to_order(request, qtn_no):
 
     return redirect('order_list')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def item_creation(request):  
     if request.method == "POST":
         code = request.POST.get('code')
@@ -923,7 +946,7 @@ def fetch_item_by_code(request):
     except Item.DoesNotExist:
         return JsonResponse({'exists': False})
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def Item_barcode(request):
     if request.method == 'POST':
         barcode = request.POST.get('barcode')
@@ -951,7 +974,7 @@ def Item_barcode(request):
     
     return render(request,'barcode.html')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def Unit_creation(request):
     if request.method == 'POST':
         unit_name = request.POST.get('unit_name')
@@ -988,7 +1011,7 @@ def Group_creation(request):
         return redirect('group_creation')
     return render(request,'group.html')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def Brand_creation(request):
     if request.method == 'POST':
         brand_name = request.POST.get('brand_name')
@@ -1005,7 +1028,7 @@ def Brand_creation(request):
         return redirect('brand_creation')
     return render(request,'brand.html')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def Tax_creation(request):
     if request.method =='POST':
         tax_name = request.POST.get('tax_name')
@@ -1339,7 +1362,7 @@ def products_view(request):
         'product_count': product_count,
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def purchase_view(request):
     if request.method == 'POST':
         supplier_id = request.POST.get('supplier')
@@ -1394,7 +1417,7 @@ def purchase_view(request):
     }
     return render(request, 'purchase.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def purchase_list(request):
     supplier_id = request.GET.get('supplier')
     sort_order = request.GET.get('sort', 'desc')
@@ -1421,7 +1444,7 @@ def purchase_list(request):
     }
     return render(request, 'purchase_list.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def fetch_item(request):
     name = request.GET.get('name', '').strip()
     code = request.GET.get('code', '').strip()
@@ -1456,14 +1479,14 @@ def fetch_item(request):
 
     return JsonResponse({'error': 'Item not found'}, status=404)
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def purchase_return_view(request):
     suppliers = Supplier.objects.all()
     return render(request, 'purchase_return.html', {
         'suppliers': suppliers
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 @csrf_exempt
 def create_purchase(request):
     if request.method != "POST":
@@ -1662,7 +1685,7 @@ def create_purchase(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def fetch_purchase_items(request):
     invoice_number = request.GET.get('invoice_number')
     print("Invoice number received:", invoice_number)
@@ -1704,7 +1727,7 @@ def fetch_purchase_items(request):
     print("Returning", len(items_data), "items for invoice:", invoice_number)
     return JsonResponse({'items': items_data})
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 @csrf_exempt
 def stock_adjustment_view(request):
     # Get latest item ID for each code
@@ -1918,7 +1941,7 @@ def stock_adjustment_view(request):
         "unique_products": unique_products
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def stock_adjustment_list(request):
     adjustments = StockAdjustment.objects.all()
 
@@ -1953,7 +1976,7 @@ def stock_adjustment_list(request):
         }
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def edit_bulk_item(request, item_id):
     bulk_item = get_object_or_404(Inventory, id=item_id)
 
@@ -2019,7 +2042,7 @@ def edit_bulk_item(request, item_id):
 
     return render(request, 'edit_bulk_item.html', {'item': bulk_item})
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def fetch_item_info(request):
     code = request.GET.get('code')
     name = request.GET.get('name')
@@ -2047,7 +2070,7 @@ def fetch_item_info(request):
     
     return JsonResponse({'error': 'Item not found'}, status=404)
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def inventory_view(request):
     query = request.GET.get('q', '').strip()
 
@@ -2068,7 +2091,7 @@ def inventory_view(request):
         'items': items
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def split_stock_page(request):
     queryset = Inventory.objects.filter(unit__icontains='bulk')
 
@@ -2104,12 +2127,12 @@ def split_stock_page(request):
         'filters': filters,
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
     return render(request, 'product_detail.html', {'product': product})
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def suppliers_view(request):
     search_query = request.GET.get('q', '')
     suppliers = Supplier.objects.all()
@@ -2137,7 +2160,7 @@ def suppliers_view(request):
         'form': form,
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def add_supplier(request):
     if request.method == 'POST':
         Supplier.objects.create(
@@ -2159,7 +2182,7 @@ def add_supplier(request):
         return redirect('suppliers')
     return render(request, 'add_supplier.html')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def edit_supplier(request, supplier_id):
     supplier = get_object_or_404(Supplier, pk=supplier_id)
     if request.method == 'POST':
@@ -2181,7 +2204,7 @@ def edit_supplier(request, supplier_id):
         return redirect('suppliers')
     return render(request, 'edit_supplier.html', {'supplier': supplier})
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def delete_supplier(request, supplier_id):
     supplier = get_object_or_404(Supplier, pk=supplier_id)
     supplier.delete()
@@ -2190,7 +2213,7 @@ def delete_supplier(request, supplier_id):
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def customers_view(request):
     try:
         # Customers from Customer table
@@ -2213,7 +2236,7 @@ def customers_view(request):
         'billing_customers': billing_customers
     })
  
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def add_customer(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -2233,7 +2256,7 @@ def add_customer(request):
 
     return render(request, 'add_customer.html')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def submit_customer(request):
     if request.method == 'POST':
         name = request.POST['customer_name']
@@ -2252,28 +2275,31 @@ def submit_customer(request):
 
     return redirect('customers')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def payment_list_view(request):
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
     payment_mode = request.GET.get('payment_mode')
 
-    billings = Billing.objects.all().order_by('id')
+    # Join customer table for name & phone
+    billings = Billing.objects.select_related('customer').all().order_by('id')
 
+    # Date filter
     if from_date and to_date:
         try:
             from_date_obj = datetime.datetime.strptime(from_date, '%Y-%m-%d')
             to_date_obj = datetime.datetime.strptime(to_date, '%Y-%m-%d')
+
             start_dt = datetime.datetime.combine(from_date_obj.date(), datetime.time.min)
             end_dt = datetime.datetime.combine(to_date_obj.date(), datetime.time.max)
+
             billings = billings.filter(date__range=(start_dt, end_dt))
         except Exception as e:
             print("Date Filter Error:", e)
 
+    # Payment mode filter
     if payment_mode and payment_mode != 'all':
         billings = billings.filter(bill_type__iexact=payment_mode)
-
-    print("Filtered billings count:", billings.count())
 
     return render(request, 'payments.html', {
         'billings': billings,
@@ -2282,13 +2308,13 @@ def payment_list_view(request):
         'payment_mode': payment_mode,
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def purchase_items_view(request):
     if request.method == 'POST':
         return redirect('payment_list')  
     return render(request, 'purchase_items.html')
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def create_expense(request):
     if request.method == 'POST':
         form = ExpenseForm(request.POST, request.FILES)
@@ -2301,7 +2327,7 @@ def create_expense(request):
         form = ExpenseForm()
     return render(request, 'expense.html', {'form': form})
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def expense_list(request):
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
@@ -2355,7 +2381,7 @@ def expense_list(request):
         'show_totals': bool(from_date or to_date),
     })
 
-@user_passes_test(lambda u: u.is_superuser)
+@access_required(allowed_roles=['superuser'])
 def user_view(request):
     if request.method == "POST":
         data = request.POST
@@ -2387,47 +2413,3 @@ def backup_company_details(instance, backup_dir):
         f.write(data)
 
     print(f"CompanyDetails backup saved at: {backup_file}")
-
-@user_passes_test(lambda u: u.is_superuser)
-def company_settings_view(request):
-    if request.method == 'POST':
-        form = CompanySettingsForm(request.POST)
-        if form.is_valid():
-            instance = form.save()
-
-            if instance.auto_backup:
-                if instance.daily_backup_path:
-                    backup_company_details(instance, instance.daily_backup_path)
-                if instance.daily_backup_path:
-                    backup_company_details(instance, instance.daily_backup_path)
-
-            messages.success(request, "Company details saved and backup created.")
-            return redirect('company_details')
-        else:
-            messages.error(request, "There was an error in the form.")
-    else:
-        form = CompanySettingsForm()
-
-    return render(request, 'company_details.html', {'form': form})
-
-@user_passes_test(lambda u: u.is_superuser)
-def view_company_details(request):
-    company = CompanyDetails.objects.last()
-    return render(request, 'view_company_details.html', {'company': company})
-
-
-
-
-
-from functools import wraps
-from django.core.exceptions import PermissionDenied
-from django.contrib.auth.decorators import login_required
-
-def superuser_required(view_func):
-    @wraps(view_func)
-    @login_required
-    def _wrapped_view(request, *args, **kwargs):
-        if not request.user.is_superuser:
-            raise PermissionDenied  # triggers handler403
-        return view_func(request, *args, **kwargs)
-    return _wrapped_view
