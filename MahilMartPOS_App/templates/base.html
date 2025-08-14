@@ -168,8 +168,17 @@
     </div>
 
     <div style="display: flex; align-items: center; gap: 20px;">
-        <span>Admin: Mahil</span>
-        <span>Role: Operator</span>
+        <span>User: {{ request.user.get_full_name|default:request.user.username }}</span>
+        <span>Role: 
+            {% if request.user.is_superuser %}
+                Store_Admin
+            {% elif request.user.is_staff %}
+                Cashier
+            {% else %}
+                User
+            {% endif %}
+        </span>
+
 
         <!-- Logout Button -->
         <form method="POST" action="{% url 'logout' %}">
@@ -189,8 +198,9 @@
             <li class="nav-item active" data-page="dashboard"><a href="{% url 'dashboard' %}"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>          
             <li class="nav-item active" data-page="billing"><a href="{% url 'billing' %}"><i class="fas fa-cash-register"></i>Billing</a></li>       
             <li class="nav-item active" data-page="sale_return"><a href="{% url 'sale_return' %}"><i class="fas fa-undo-alt"></i>Sales Return</a></li>
-
             <li class="nav-item active" data-page="products"><a href="{% url 'products' %}"><i class="fas fa-boxes"></i>Products</a></li>
+
+            {% if request.user.is_superuser %} 
             <li class="nav-item active" data-page="items"><a href="{% url 'items' %}"><i class="fas fa-box"></i>Items</a></li>
             <li class="nav-item active" data-page="purchase"><a href="{% url 'purchase' %}"><i class="fas fa-truck-loading"></i>Purchase</a></li>
                        
@@ -208,6 +218,8 @@
             <li class="nav-item active" data-page="user"><a href="{% url 'user' %}"><i class="fas fa-tachometer-alt"></i>User</a></li>          
             <li class="nav-item active" data-page="company"><a href="{% url 'company_details' %}"><i class="fas fa-info-circle"></i>Company Info</a></li>
             <li class="nav-item" data-page="settings"><a href="#"><i class="fas fa-cog"></i>Settings</a></li>
+            {% endif %}
+
         </ul>
     </aside>
 
@@ -239,6 +251,15 @@
         </div>
     </div>
 </div>
+
+  {% if messages %}
+      {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">
+              {{ message }}
+          </div>
+      {% endfor %}
+  {% endif %}
+
 
 <!-- Scripts -->
 <script>

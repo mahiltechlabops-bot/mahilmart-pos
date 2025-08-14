@@ -97,11 +97,11 @@
           <td>{{ item.item.unit }}</td>
           <td>{{ item.hsn }}</td>
           <td>{{ item.mrp_price }}</td>
-          <td>₹ {{ item.unit_price }}</td>
+          <td>₹ {{ item.cost_price }}</td>
           <td>₹ {{ item.sale_price }}</td>
           <td>{{ item.discount }}</td>
           <td>{{ item.tax }}%</td>
-          <td>₹ {{ item.net_price }}</td>
+          <td>₹ {{ item.net_price|floatformat:2 }}</td>
           <td>{{ item.quantity }}</td>          
           <td>{{ item.purchased_at|date:"Y-m-d" }}</td>
           <td>{{ item.batch_no }}</td>
