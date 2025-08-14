@@ -48,6 +48,7 @@ from django.utils.dateparse import parse_date
 from django.contrib.auth.decorators import user_passes_test
 from .decorators import access_required
 from django.urls import reverse
+from django.db import transaction
 from .models import (
     Supplier,
     Customer,
@@ -349,7 +350,8 @@ def create_invoice_view(request):
                 discount=request.POST.get('discount') or 0,
                 points=total_points,
                 points_earned=0,
-                remarks=request.POST.get('remarks', '')
+                remarks=request.POST.get('remarks', ''),
+                status_on="counter_bill"
             )
 
             # Process items
@@ -789,6 +791,7 @@ def edit_order(request, order_id):
     }
     return render(request, 'order_form.html', context)
 
+@transaction.atomic
 def convert_quotation_to_order(request, qtn_no):
     quotations = Quotation.objects.filter(qtn_no=qtn_no)
     if not quotations.exists():
@@ -802,7 +805,7 @@ def convert_quotation_to_order(request, qtn_no):
 
     total_amount = sum(float(item.get('amount', 0)) for item in items)
     due = total_amount - (advance + paid)
-           
+
     # Create the Order
     order = Order.objects.create(
         customer_name=first_qtn.name,
@@ -817,16 +820,15 @@ def convert_quotation_to_order(request, qtn_no):
         advance=advance,
         due_balance=due,
         payment_type='cash',
-        order_status='pending',
+        order_status='pending', 
+        qtn_no=qtn_no,       
     )
 
     # Create OrderItem records
     for q in quotations:
-        q_items = q.items or []
-        for item in q_items:
-            print("Item:", item)
-            rate = float(item.get("sellingprice", 0))   # Use correct key
-            amount = float(item.get("amount", 0))  
+        for item in (q.items or []):
+            rate = float(item.get("sellingprice", 0))
+            amount = float(item.get("amount", 0))
             OrderItem.objects.create(
                 order=order,
                 item_name=item.get("item_name", ""),
@@ -834,6 +836,108 @@ def convert_quotation_to_order(request, qtn_no):
                 rate=rate,
                 amount=amount,
             )
+
+    # ---- Billing Creation (similar to create_invoice_view) ----
+    customer, _ = Customer.objects.get_or_create(
+        cell=first_qtn.cell,
+        defaults={
+            'name': first_qtn.name,
+            'email': first_qtn.email,
+            'address': first_qtn.address,
+        }
+    )
+
+    # Generate next bill number
+    latest = Billing.objects.order_by('-id').first()
+    base_bill_no = int(latest.bill_no) + 1 if latest and str(latest.bill_no).isdigit() else 1
+    bill_no = str(base_bill_no)
+
+    # Points
+    previous_bill = Billing.objects.filter(customer=customer).order_by('-id').first()
+    total_points = previous_bill.points if previous_bill else 0.0
+    points_earned_total = 0.0
+
+    # Get values from the first quotation
+    bill_type = getattr(first_qtn, 'bill_type', 'order')
+    sale_type = getattr(first_qtn, 'sale_type', 'order')
+    counter = getattr(first_qtn, 'counter', 'Main Counter')
+
+    billing = Billing.objects.create(
+    customer=customer,
+    to=customer.name,
+    bill_no=bill_no,
+    date=timezone.now(),
+    bill_type=bill_type,
+    counter=counter,
+    order_no=order.order_id,
+    sale_type=sale_type,
+    received=advance + paid,
+    balance=due,
+    discount=0,
+    points=total_points,
+    points_earned=0,
+    remarks=f"Converted from Quotation {qtn_no}",
+    status_on="order_bill"
+    )
+
+    # Process stock and Billing Items
+    for item in items:
+        qty = round(float(item.get("qty", 0)), 2)
+        mrp = round(float(item.get("mrsp", 0)), 2)
+        selling_price = round(float(item.get("sellingprice", 0)), 2)
+        amount = round(qty * selling_price, 2)
+        points_earned = round(amount / 200, 2)
+        points_earned_total += points_earned
+
+        item_code = item.get("code", "")
+        remaining_qty = qty
+
+        inventory_items = Inventory.objects.filter(
+            code=item_code,
+            quantity__gt=0
+        ).order_by('purchased_at', 'id')
+
+        for inv_item in inventory_items:
+            if remaining_qty <= 0:
+                break
+
+            if "bulk" in inv_item.unit.lower():
+                available_qty = inv_item.split_unit or 0
+                deduct_qty = min(available_qty, remaining_qty)
+                unit_quantity = inv_item.unit_qty or 1
+                quantity_to_deduct = deduct_qty / unit_quantity
+                inv_item.split_unit = max(0, (inv_item.split_unit or 0) - deduct_qty)
+                inv_item.quantity = round(inv_item.quantity - quantity_to_deduct, 1)
+            else:
+                available_qty = inv_item.quantity
+                deduct_qty = min(available_qty, remaining_qty)
+                inv_item.quantity -= deduct_qty
+
+            if (inv_item.split_unit is not None and inv_item.split_unit <= 0) or (inv_item.quantity is not None and inv_item.quantity <= 0):
+                inv_item.status = "completed"
+
+            inv_item.save()
+            remaining_qty -= deduct_qty
+
+        if remaining_qty > 0:
+            raise ValueError(f"Insufficient stock for item {item.get('item_name', '')} (Code: {item_code})")
+
+        BillingItem.objects.create(
+            billing=billing,
+            customer=billing.customer,
+            code=item_code,
+            item_name=item.get("item_name", ""),
+            unit=item.get("unit", ""),
+            qty=qty,
+            mrp=mrp,
+            selling_price=selling_price,
+            amount=amount
+        )
+
+    # Update points in Billing
+    billing.points = total_points + points_earned_total
+    billing.points_earned = points_earned_total
+    billing.save()
 
     return redirect('order_list')
 
