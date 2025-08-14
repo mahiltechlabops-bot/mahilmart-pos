@@ -53,7 +53,8 @@ class Billing(models.Model):
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     points = models.FloatField(default=0.0)  
-    points_earned = models.FloatField(default=0.0)
+    points_earned = models.FloatField(default=0.0)   
+    status_on = models.CharField(max_length=50, default="counter_bill")
     remarks = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -114,6 +115,7 @@ class Order(models.Model):
 
     payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES)
     order_status = models.CharField(max_length=10, choices=ORDER_STATUS_CHOICES)
+    qtn_no = models.CharField(max_length=50, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if self.advance >= self.total_order_amount:
@@ -519,6 +521,7 @@ class PurchaseItem(models.Model):
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    taxable_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tax = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     net_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -555,6 +558,7 @@ class Inventory(models.Model):
     unit_price = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
     discount = models.FloatField(default=0)
+    taxable_price = models.FloatField(default=0)
     tax = models.FloatField(default=0)
     cost_price = models.FloatField(default=0)
     net_price = models.FloatField(default=0)

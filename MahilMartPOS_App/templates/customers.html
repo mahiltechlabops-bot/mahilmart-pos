@@ -5,67 +5,96 @@
 {% block content %}
 <div class="container mt-5">
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Customer Table Entries</h2>
-    <a href="{% url 'add_customer' %}" class="btn btn-success">+ Add Customer</a>
+  <!-- Header with button -->
+  <div class="row mb-4 align-items-center">
+    <div class="col">
+      <h2 class="mb-0" style="color: #770b0b;"><i class="bi bi-people-fill"></i> Customer Details</h2>
+      <small class="text-muted">Manage all registered and billing-derived customers</small>
+    </div>
+    <div class="col-auto">
+      <a href="{% url 'add_customer' %}" class="btn btn-success shadow-sm">
+        <i class="bi bi-plus-circle"></i> Add Customer
+      </a>
+    </div>
   </div>
 
-  <table class="table table-bordered table-striped">
-    <thead>
-      <tr>
-        <th>S.No.</th>
-        <th>Name</th>
-        <th>Phone</th>
-        <th>Address</th>
-        <th>Email</th>
-        <th>Date Joined</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in customer_entries %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>{{ c.name }}</td>
-        <td>{{ c.cell }}</td>
-        <td>{{ c.address|default:"-" }}</td>
-        <td>{{ c.email|default:"-" }}</td>
-        <td>{{ c.date_joined|date:"Y-m-d" }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6">No customer records found.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <!-- Registered Customers -->
+  <div class="card shadow-sm mb-5">
+    <div class="card-header bg-primary text-white">
+      <strong>Customer Table Entries</strong>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>S.No.</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Email</th>
+            <th>Date Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customer_entries %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ c.name }}</td>
+            <td>{{ c.cell }}</td>
+            <td>{{ c.address|default:"-" }}</td>
+            <td>{{ c.email|default:"-" }}</td>
+            <td>{{ c.date_joined|date:"Y-m-d" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">
+              No customer records found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-  <hr class="my-5">
-
-  <h2>Billing-Derived Customer Entries</h2>
-  <table class="table table-bordered table-striped">
-    <thead>
-      <tr>
-        <th>S.No.</th>
-        <th>Name</th>
-        <th>Phone</th>
-        <th>Address</th>
-        <th>Email</th>
-        <th>First Billing Date</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for b in billing_customers %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>{{ b.name }}</td>
-        <td>{{ b.cell }}</td>
-        <td>{{ b.address|default:"-" }}</td>
-        <td>{{ b.email|default:"-" }}</td>
-        <td>{{ b.date_joined|date:"Y-m-d" }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6">No billing records found.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <!-- Billing Customers -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-secondary text-white">
+      <strong>Billing-Derived Customer Entries</strong>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>S.No.</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Email</th>
+            <th>First Billing Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in billing_customers %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ b.name }}</td>
+            <td>{{ b.cell }}</td>
+            <td>{{ b.address|default:"-" }}</td>
+            <td>{{ b.email|default:"-" }}</td>
+            <td>{{ b.date_joined|date:"Y-m-d" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">
+              No billing records found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
 </div>
 {% endblock %}
