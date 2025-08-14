@@ -16,10 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf.urls import handler403
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('MahilMartPOS_App.urls')),  # Don't use 'MahilMartPOS_App/urls.py'
 ]
 
-
+handler403 = 'MahilMartPOS_App.views.custom_permission_denied_view'
