@@ -1,13 +1,15 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
+from django.conf.urls import handler403
 
 urlpatterns = [
     path('', views.login_view, name='home'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
-    path('billing/', views.create_invoice_view, name='billing'),
     path('billing/<int:id>/', views.billing_detail_view, name='billing_detail'),
     path('billing/<int:bill_id>/items/', views.billing_items_api, name='billing_items_api'),
+    path('sales-chart-data/', views.sales_chart_data, name='sales_chart_data'),
+    path('billing/', views.create_invoice_view, name='billing'),
     path('ajax/get-item-info/', views.get_item_info, name='get_item_info'),     
     path('order/', views.order_view, name='order'),
     path('orders/', views.order_list, name='order_list'),
@@ -21,18 +23,22 @@ urlpatterns = [
     path('quotation/last/', views.get_last_quotation, name='last_quotation'),
     path('update-payment/<int:order_id>/', views.update_payment, name='update_payment'),
     path('convert-to-order/<str:qtn_no>/', views.convert_quotation_to_order, name='convert_to_order'),
+    path('sale-return/', views.sale_return_view, name='sale_return'),
+    path('sale-return/success/', views.sale_return_success_view, name='sale_return_success'),
+    path('sale_return/detail/<int:pk>/', views.sale_return_detail, name='sale_return_detail'),
+    path('sale-return-items/', views.sale_return_items_api, name='sale_return_items_api'),
     path('products/', views.products_view, name='products'),
     path('item/create', views.item_creation, name='items'),
     path('barcode',views.Item_barcode,name='item_barcode'),
     path('unit', views.Unit_creation, name='unit_creation'),
     path('group', views.Group_creation, name='group_creation'),
     path('brand', views.Brand_creation, name='brand_creation'),
-    path('tax', views.Tax_creation, name='tax_creation'),
-    path('sale_return/', views.sale_return_view, name='sale_return'),
+    path('tax', views.Tax_creation, name='tax_creation'),    
     path('purchase/', views.purchase_view, name='purchase'),
     path('purchase_list/', views.purchase_list, name='purchase_list'),
     path('api/item/fetch/', views.fetch_item, name='fetch_item'),
     path('api/purchase/create/', views.create_purchase, name='create_purchase'),
+    path('api/purchase/items/', views.fetch_purchase_items, name='fetch_purchase_items'),
     path('purchase_return/', views.purchase_return_view, name='purchase_return'),
     path('stock_adjustment/', views.stock_adjustment_view, name='stock_adjustment'),   
     path('stock_adjustments/', views.stock_adjustment_list, name='stock_adjustment_list'),
@@ -57,3 +63,5 @@ urlpatterns = [
     path('company-details/view/', views.view_company_details, name='view_company_details'),
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
 ]
+
+handler403 = 'MahilMartPOS_App.views.custom_permission_denied_view'
