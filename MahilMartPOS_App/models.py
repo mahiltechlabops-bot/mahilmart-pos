@@ -19,13 +19,16 @@ class Supplier(models.Model):
     email = models.EmailField(blank=True, default="unknown@example.com")
     address = models.TextField(blank=True, default="N/A")
     gst_number = models.CharField(max_length=20, blank=True, default="N/A")
+    fssai_number = models.CharField(max_length=20, blank=True, default="N/A")
     pan_number = models.CharField(max_length=20, blank=True, default="N/A")
     credit_terms = models.CharField(max_length=50, blank=True, default="N/A")
     opening_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     bank_name = models.CharField(max_length=100, blank=True, default="N/A")
     account_number = models.CharField(max_length=50, blank=True, default="N/A")
     ifsc_code = models.CharField(max_length=20, blank=True, default="N/A")
+    status = models.CharField(max_length=20, default='Active')
     notes = models.TextField(blank=True, default="")
+    bill_attachment = models.FileField(upload_to='supplier_bills/', null=True, blank=True)
 
     def __str__(self):
         return self.name        

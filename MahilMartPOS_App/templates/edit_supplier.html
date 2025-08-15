@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container mt-4">
   <h2>Edit Supplier</h2>
-  <form method="POST">
+  <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
 
     <div class="mb-3">
@@ -42,6 +42,11 @@
       <input type="text" name="gst_number" class="form-control" value="{{ supplier.gst_number }}">
     </div>
 
+     <div class="mb-3">
+      <label class="form-label">FSSAI Number</label>
+      <input type="text" name="fssai_number" class="form-control" value="{{ supplier.fssai_number|default:'' }}">
+    </div>
+
     <div class="mb-3">
       <label class="form-label">PAN Number</label>
       <input type="text" name="pan_number" class="form-control" value="{{ supplier.pan_number }}">
@@ -73,8 +78,22 @@
     </div>
 
     <div class="mb-3">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-control" required>
+        <option value="Active" selected>Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
       <label class="form-label">Notes</label>
       <textarea name="notes" class="form-control" rows="3">{{ supplier.notes }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Bill Attachment</label>
+      <input type="file" name="bill_attachment" class="form-control" accept=".pdf,image/*">
+      <small class="form-text text-muted">Allowed formats: PDF, JPG, PNG. Max size: 5MB</small>
     </div>
 
     <button type="submit" class="btn btn-primary">Update Supplier</button>

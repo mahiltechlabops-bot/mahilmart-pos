@@ -1690,6 +1690,7 @@ def create_purchase(request):
                 purchase_item.whole_price = item['whole_price']
                 purchase_item.whole_price_2 = item['whole_price_2']
                 purchase_item.sale_price = item['sale_price']
+                purchase_item.taxable_price = item['taxable_price']
                 purchase_item.expiry_date = parse_date(item.get('expiry_date'))
                 purchase_item.previous_qty = previous_qty
                 purchase_item.total_qty = total_qty
@@ -1721,6 +1722,7 @@ def create_purchase(request):
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
                     sale_price=item['sale_price'],
+                    taxable_price=item['taxable_price'],
                     supplier_id=supplier.supplier_id,
                     purchased_at=now().date(),
                     batch_no=new_batch_no,
@@ -1746,6 +1748,7 @@ def create_purchase(request):
                 inv.whole_price = item['whole_price']
                 inv.whole_price_2 = item['whole_price_2']
                 inv.sale_price = item['sale_price']
+                inv.taxable_price = item['taxable_price']
                 inv.expiry_date = parse_date(item.get('expiry_date'))
                 inv.previous_qty = previous_qty
                 inv.total_qty = total_qty
@@ -1779,6 +1782,7 @@ def create_purchase(request):
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
                     sale_price=item['sale_price'],
+                    taxable_price=item['taxable_price'],
                     purchased_at=now().date(),
                     expiry_date=parse_date(item.get('expiry_date')),
                     purchase=purchase
@@ -1822,6 +1826,7 @@ def fetch_purchase_items(request):
             'tax': item.tax,
             'cost_price': item.cost_price,
             'net_price': item.net_price,
+            'taxable_price': item.taxable_price,
             'mrp': item.mrp_price,
             'whole_price': item.whole_price,
             'whole_price_2': item.whole_price_2,
@@ -2267,6 +2272,8 @@ def suppliers_view(request):
 @access_required(allowed_roles=['superuser'])
 def add_supplier(request):
     if request.method == 'POST':
+        bill_file = request.FILES.get('bill_attachment')
+
         Supplier.objects.create(
             supplier_id=request.POST.get('supplier_id'),
             name=request.POST.get('name'),
@@ -2281,14 +2288,18 @@ def add_supplier(request):
             bank_name=request.POST.get('bank_name'),
             account_number=request.POST.get('account_number'),
             ifsc_code=request.POST.get('ifsc_code'),
+            status = request.POST.get('status'),
             notes=request.POST.get('notes'),
+            bill_attachment=bill_file,
         )
         return redirect('suppliers')
+
     return render(request, 'add_supplier.html')
 
 @access_required(allowed_roles=['superuser'])
 def edit_supplier(request, supplier_id):
     supplier = get_object_or_404(Supplier, pk=supplier_id)
+
     if request.method == 'POST':
         supplier.supplier_id = request.POST.get('supplier_id')
         supplier.name = request.POST.get('name')
@@ -2297,13 +2308,17 @@ def edit_supplier(request, supplier_id):
         supplier.email = request.POST.get('email')
         supplier.address = request.POST.get('address')
         supplier.gst_number = request.POST.get('gst_number')
+        supplier.fssai_number = request.POST.get('fssai_number')
         supplier.pan_number = request.POST.get('pan_number')
         supplier.credit_terms = request.POST.get('credit_terms')
         supplier.opening_balance = request.POST.get('opening_balance') or 0
         supplier.bank_name = request.POST.get('bank_name')
         supplier.account_number = request.POST.get('account_number')
         supplier.ifsc_code = request.POST.get('ifsc_code')
+        supplier.status = request.POST.get('status')
         supplier.notes = request.POST.get('notes')
+        if 'bill_attachment' in request.FILES:
+            supplier.bill_attachment = request.FILES['bill_attachment']
         supplier.save()
         return redirect('suppliers')
     return render(request, 'edit_supplier.html', {'supplier': supplier})

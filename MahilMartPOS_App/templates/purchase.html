@@ -80,6 +80,8 @@
 .split_unit_price::-webkit-outer-spin-button,
 .discount::-webkit-inner-spin-button,
 .discount::-webkit-outer-spin-button,
+.taxable_price::-webkit-inner-spin-button,
+.taxable_price::-webkit-outer-spin-button,
 .price::-webkit-inner-spin-button,
 .price::-webkit-outer-spin-button,
 .cost_price::-webkit-inner-spin-button,
@@ -104,6 +106,7 @@
 .split_unit,
 .split_unit_price,
 .discount,
+.taxable_price,
 .price,
 .cost_price,
 .qty,
@@ -122,6 +125,12 @@
 <main class="app-content">
   <div class="card p-4 mx-auto container-fluid">
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
+
+     <td>
+          <a href="{% url 'purchase_list'%}" class="btn btn-primary btn-sm ms-auto">
+          View Purchase Details
+        </a>
+      </td>
 
     <!-- Purchase Header -->
     <div class="row mb-4">
@@ -207,12 +216,7 @@
 
     <div class="mt-4 d-flex gap-2">
       <button id="completePurchaseBtn" class="btn btn-success">Complete Purchase</button>
-      <button id="cancelPurchaseBtn" class="btn btn-secondary">Cancel</button>
-       <td>
-          <a href="{% url 'purchase_list'%}" class="btn btn-primary btn-sm ms-auto">
-          View Purchase Details
-        </a>
-      </td>
+      <button id="cancelPurchaseBtn" class="btn btn-secondary">Cancel</button>      
     </div>       
   </div>
   
@@ -246,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <td><input type="number" class="form-control price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
       <td><input class="form-control total"></td>
       <td><input type="number" class="form-control discount" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
-      <td><input type="number" class="form-control taxable_amount" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td> 
+      <td><input type="number" class="form-control taxable_price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td> 
       <td><input type="number" class="form-control tax" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>           
       <td><input type="number" class="form-control cost_price" value="0" step="0.01" oninput="calculateRow(this.closest('tr'))"></td>
       <td><input type="number" class="form-control mrp" value="0" step="0.01"></td>
@@ -350,7 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
       total_price: r.querySelector('.total').value,
       discount: r.querySelector('.discount').value,
       tax: r.querySelector('.tax').value,
-      taxable_amount: r.querySelector('.taxable_amount').value,
+      taxable_price: r.querySelector('.taxable_price').value,
       cost_price: r.querySelector('.cost_price').value,
       net_price: r.querySelector('.net_price').value,
       mrp: r.querySelector('.mrp').value,
@@ -382,7 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function attachRecalcListeners(row) {
-  ['.qty', '.total', '.discount', '.tax', 'taxable_amount'].forEach(selector => {
+  ['.qty', '.total', '.discount', '.tax', '.taxable_price'].forEach(selector => {
     const input = row.querySelector(selector);
     if (input) {
       input.removeEventListener('input', input._recalcHandler || (()=>{}));
@@ -419,12 +423,13 @@ function fetchItemDetails(inputEl) {
         row.querySelector('.whole_price').value = data.wholesale;
         row.querySelector('.whole_price_2').value = data.wholesale_1;
         row.querySelector('.sale_price').value = data.sale_price;
+        
         row.querySelector('.mrp').value = data.mrp;   
 
         const splitUnitQtyInput = row.querySelector('.unit_qty');
         const splitUnitInput = row.querySelector('.split_unit');
         const splitUnitPriceInput = row.querySelector('.split_unit_price');
-        const taxableAmount = row.querySelector('.taxable_amount');
+        const taxableAmount = row.querySelector('.taxable_price');
         const unit = (data.unit || '').toLowerCase();
 
         if (unit.includes('bulk')) {
@@ -446,7 +451,7 @@ function fetchItemDetails(inputEl) {
           splitUnitPriceInput.value = 0;
         }
       
-        ['.qty', '.price', '.discount', '.tax', '.taxable_amount'].forEach(selector => {
+        ['.qty', '.price', '.discount', '.tax', '.taxable_price'].forEach(selector => {
           const input = row.querySelector(selector);
           if (input) {
             input.addEventListener('input', () => calculateRow(row));
@@ -492,7 +497,7 @@ function calculateRow(row) {
     // Taxable Amount
     const discountAmount = discount || 0;
     const taxableAmount = amount - discountAmount; 
-    row.querySelector('.taxable_amount').value = taxableAmount.toFixed(2);
+    row.querySelector('.taxable_price').value = taxableAmount.toFixed(2);
 
     // Tax & Net Price
     const taxAmount = taxableAmount * (tax / 100);
@@ -578,7 +583,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <td><input type="number" class="form-control price" value="${item.price || 0}" step="0.01"></td>
             <td><input class="form-control total" value="${item.total_price || 0}"></td>
             <td><input type="number" class="form-control discount" value="${item.discount || 0}" step="0.01"></td>
-            <td><input class="form-control total" value="${item.taxable_price || 0}"></td>
+            <td><input class="form-control taxable_price" value="${item.taxable_price || 0}"></td>
             <td><input type="number" class="form-control tax" value="${item.tax || 0}" step="0.01"></td>
             <td><input type="number" class="form-control cost_price" value="${item.cost_price || 0}" step="0.01"></td>
             <td><input type="number" class="form-control mrp" value="${item.mrp || 0}" step="0.01"></td>
