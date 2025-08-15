@@ -35,6 +35,7 @@ urlpatterns = [
     path('tax', views.Tax_creation, name='tax_creation'),    
     path('purchase/', views.purchase_view, name='purchase'),
     path('purchase_list/', views.purchase_list, name='purchase_list'),
+    path('purchases/export/', views.export_purchases, name='export_purchases'),
     path('api/item/fetch/', views.fetch_item, name='fetch_item'),
     path('api/purchase/create/', views.create_purchase, name='create_purchase'),
     path('api/purchase/items/', views.fetch_purchase_items, name='fetch_purchase_items'),

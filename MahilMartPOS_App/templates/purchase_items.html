@@ -92,8 +92,7 @@
 <div class="table-container">
     <table>
         <thead>
-            <tr>
-                <th>Payment ID</th>
+            <tr>               
                 <th>Purchase ID</th>
                 <th>Supplier ID</th>
                 <th>Payment Rate</th>
@@ -108,8 +107,7 @@
         </thead>
         <tbody>
             {% for p in payments %}
-            <tr>
-                <td>{{ p.payment_id }}</td>
+            <tr>                
                 <td>{{ p.purchase_id }}</td>
                 <td>{{ p.supplier_id }}</td>
                 <td>{{ p.payment_rate }}</td>

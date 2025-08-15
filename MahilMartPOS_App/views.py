@@ -1548,6 +1548,13 @@ def purchase_list(request):
     }
     return render(request, 'purchase_list.html', context)
 
+def export_purchases(request):
+    # Example: return CSV
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="purchases.csv"'
+    response.write("id,supplier,amount\n")  # Just a test line
+    return response
+
 @access_required(allowed_roles=['superuser'])
 def fetch_item(request):
     name = request.GET.get('name', '').strip()
@@ -1715,6 +1722,7 @@ def create_purchase(request):
                     split_unit_price=item['split_unit_price'],
                     total_price=item['total_price'],
                     discount=item['discount'],
+                    taxable_price=item['taxable_price'],
                     tax=item['tax'],
                     cost_price=item['cost_price'],
                     net_price=item['net_price'],
@@ -1722,7 +1730,6 @@ def create_purchase(request):
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
                     sale_price=item['sale_price'],
-                    taxable_price=item['taxable_price'],
                     supplier_id=supplier.supplier_id,
                     purchased_at=now().date(),
                     batch_no=new_batch_no,
@@ -2271,8 +2278,7 @@ def suppliers_view(request):
 
 @access_required(allowed_roles=['superuser'])
 def add_supplier(request):
-    if request.method == 'POST':
-        bill_file = request.FILES.get('bill_attachment')
+    if request.method == 'POST':      
 
         Supplier.objects.create(
             supplier_id=request.POST.get('supplier_id'),
@@ -2289,8 +2295,7 @@ def add_supplier(request):
             account_number=request.POST.get('account_number'),
             ifsc_code=request.POST.get('ifsc_code'),
             status = request.POST.get('status'),
-            notes=request.POST.get('notes'),
-            bill_attachment=bill_file,
+            notes=request.POST.get('notes'),            
         )
         return redirect('suppliers')
 
@@ -2316,9 +2321,7 @@ def edit_supplier(request, supplier_id):
         supplier.account_number = request.POST.get('account_number')
         supplier.ifsc_code = request.POST.get('ifsc_code')
         supplier.status = request.POST.get('status')
-        supplier.notes = request.POST.get('notes')
-        if 'bill_attachment' in request.FILES:
-            supplier.bill_attachment = request.FILES['bill_attachment']
+        supplier.notes = request.POST.get('notes')       
         supplier.save()
         return redirect('suppliers')
     return render(request, 'edit_supplier.html', {'supplier': supplier})

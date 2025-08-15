@@ -27,8 +27,7 @@ class Supplier(models.Model):
     account_number = models.CharField(max_length=50, blank=True, default="N/A")
     ifsc_code = models.CharField(max_length=20, blank=True, default="N/A")
     status = models.CharField(max_length=20, default='Active')
-    notes = models.TextField(blank=True, default="")
-    bill_attachment = models.FileField(upload_to='supplier_bills/', null=True, blank=True)
+    notes = models.TextField(blank=True, default="")    
 
     def __str__(self):
         return self.name        
@@ -503,9 +502,36 @@ class Purchase(models.Model):
     invoice_no = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     total_products = models.FloatField(default=0)
+    total_amount = models.FloatField(default=0)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    outstanding_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    payment_mode = models.CharField(
+        max_length=50,
+        choices=[
+            ('Cash', 'Cash'),
+            ('Card', 'Card'),
+            ('Bank Transfer', 'Bank Transfer'),
+            ('UPI', 'UPI'),
+            ('Cheque', 'Cheque'),
+            ('Credit', 'Credit'),
+            ('Partial Credit', 'Partial Credit'),
+        ],
+        blank=True,
+        null=True
+    )
+    payment_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)  # Percentage
+    payment_reference = models.CharField(max_length=255, blank=True, null=True)
+    bill_attachment = models.FileField(upload_to='bill_attachments/', blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate outstanding amount and payment rate
+        if self.total_products and self.amount_paid is not None:
+            self.outstanding_amount = max(self.total_products - self.amount_paid, 0)
+            self.payment_rate = (self.amount_paid / self.total_products) * 100 if self.total_products > 0 else 0
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Purchase #{self.id} - {self.supplier.name}"          
+        return f"Purchase #{self.id} - {self.supplier.name}"         
 
 class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
