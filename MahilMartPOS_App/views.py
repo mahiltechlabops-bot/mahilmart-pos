@@ -1,5 +1,6 @@
 import json
 import os,datetime
+from django.db import models
 from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
@@ -73,7 +74,8 @@ from .models import (
     Expense,
     Quotation,
     SaleReturn,
-    SaleReturnItem
+    SaleReturnItem,
+    PurchasePayment,
 )
 
 def home(request):
@@ -1548,6 +1550,13 @@ def purchase_list(request):
     }
     return render(request, 'purchase_list.html', context)
 
+def export_purchases(request):
+    # Example: return CSV
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="purchases.csv"'
+    response.write("id,supplier,amount\n")  # Just a test line
+    return response
+
 @access_required(allowed_roles=['superuser'])
 def fetch_item(request):
     name = request.GET.get('name', '').strip()
@@ -1596,11 +1605,21 @@ def create_purchase(request):
     if request.method != "POST":
         return JsonResponse({'error': 'Invalid method'}, status=405)
 
-    try:
-        data = json.loads(request.body)
-        supplier_id = data.get("supplier_id")
-        items_data = data.get("items", [])
-        invoice_no = data.get("invoice_no", "").strip()
+    try:    
+        supplier_id = request.POST.get("supplier_id")       
+        invoice_no = request.POST.get("invoice_no", "").strip()  
+        items_data = json.loads(request.POST.get("items", "[]"))
+        subtotal = Decimal(request.POST.get("subtotal", 0))
+        discount = Decimal(request.POST.get("discount", 0))
+        tax = Decimal(request.POST.get("tax", 0))
+        total_amount = Decimal(request.POST.get("total", 0))
+        amount_paid = Decimal(request.POST.get("amount_paid", 0))
+        outstanding_amount = Decimal(request.POST.get("outstanding", 0))
+        payment_rate = request.POST.get("payment_rate", "")
+        payment_mode = request.POST.get("payment_mode", "")
+        payment_ref = request.POST.get("payment_reference", "")
+
+        bill_file = request.FILES.get("bill_attachment")
 
         supplier = Supplier.objects.get(id=supplier_id)
         total_products = len(items_data)
@@ -1611,6 +1630,17 @@ def create_purchase(request):
             # ---- UPDATE EXISTING PURCHASE ----
             purchase.supplier = supplier
             purchase.total_products = total_products
+            purchase.subtotal = subtotal
+            purchase.discount = discount
+            purchase.tax = tax
+            purchase.total_amount = total_amount
+            purchase.amount_paid = amount_paid
+            purchase.outstanding_amount = outstanding_amount
+            purchase.payment_rate = payment_rate
+            purchase.payment_mode = payment_mode
+            purchase.payment_reference = payment_ref
+            if bill_file:
+                purchase.bill_attachment = bill_file
             purchase.save()
 
             # Track incoming (item_id, purchase_id) combos
@@ -1633,7 +1663,17 @@ def create_purchase(request):
             purchase = Purchase.objects.create(
                 supplier=supplier,
                 invoice_no=invoice_no,
-                total_products=total_products
+                total_products=total_products,
+                subtotal=subtotal,
+                discount=discount,
+                tax=tax,
+                amount_paid=amount_paid,
+                total_amount=total_amount,
+                outstanding_amount=outstanding_amount,
+                payment_rate=payment_rate,
+                payment_mode=payment_mode,
+                payment_reference=payment_ref,
+                bill_attachment=bill_file,                              
             )
 
         latest_qty_cache = {}       
@@ -1690,6 +1730,7 @@ def create_purchase(request):
                 purchase_item.whole_price = item['whole_price']
                 purchase_item.whole_price_2 = item['whole_price_2']
                 purchase_item.sale_price = item['sale_price']
+                purchase_item.taxable_price = item['taxable_price']
                 purchase_item.expiry_date = parse_date(item.get('expiry_date'))
                 purchase_item.previous_qty = previous_qty
                 purchase_item.total_qty = total_qty
@@ -1714,6 +1755,7 @@ def create_purchase(request):
                     split_unit_price=item['split_unit_price'],
                     total_price=item['total_price'],
                     discount=item['discount'],
+                    taxable_price=item['taxable_price'],
                     tax=item['tax'],
                     cost_price=item['cost_price'],
                     net_price=item['net_price'],
@@ -1746,6 +1788,7 @@ def create_purchase(request):
                 inv.whole_price = item['whole_price']
                 inv.whole_price_2 = item['whole_price_2']
                 inv.sale_price = item['sale_price']
+                inv.taxable_price = item['taxable_price']
                 inv.expiry_date = parse_date(item.get('expiry_date'))
                 inv.previous_qty = previous_qty
                 inv.total_qty = total_qty
@@ -1779,11 +1822,35 @@ def create_purchase(request):
                     whole_price=item['whole_price'],
                     whole_price_2=item['whole_price_2'],
                     sale_price=item['sale_price'],
+                    taxable_price=item['taxable_price'],
                     purchased_at=now().date(),
                     expiry_date=parse_date(item.get('expiry_date')),
                     purchase=purchase
                 )
 
+        # Calculate running totals
+        previous_total_paid = purchase.payments.aggregate(total=models.Sum('payment_amount'))['total'] or 0
+        new_total_paid = previous_total_paid + amount_paid
+        balance_amount = total_amount - new_total_paid
+
+        # Create a new payment record
+        PurchasePayment.objects.create(
+            purchase=purchase,
+            supplier=purchase.supplier,
+            invoice_no=purchase.invoice_no,
+            payment_date=now().date(),
+            payment_amount=amount_paid,
+            payment_mode=payment_mode,
+            payment_reference=payment_ref,
+            total_amount=total_amount,
+            balance_amount=balance_amount
+        )
+
+        # Update Purchase totals
+        purchase.amount_paid = new_total_paid
+        purchase.outstanding_amount = balance_amount
+        purchase.save()
+              
         return JsonResponse({'success': True, 'purchase_id': purchase.id})
 
     except Exception as e:
@@ -1822,6 +1889,7 @@ def fetch_purchase_items(request):
             'tax': item.tax,
             'cost_price': item.cost_price,
             'net_price': item.net_price,
+            'taxable_price': item.taxable_price,
             'mrp': item.mrp_price,
             'whole_price': item.whole_price,
             'whole_price_2': item.whole_price_2,
@@ -2266,7 +2334,8 @@ def suppliers_view(request):
 
 @access_required(allowed_roles=['superuser'])
 def add_supplier(request):
-    if request.method == 'POST':
+    if request.method == 'POST':      
+
         Supplier.objects.create(
             supplier_id=request.POST.get('supplier_id'),
             name=request.POST.get('name'),
@@ -2281,14 +2350,17 @@ def add_supplier(request):
             bank_name=request.POST.get('bank_name'),
             account_number=request.POST.get('account_number'),
             ifsc_code=request.POST.get('ifsc_code'),
-            notes=request.POST.get('notes'),
+            status = request.POST.get('status'),
+            notes=request.POST.get('notes'),            
         )
         return redirect('suppliers')
+
     return render(request, 'add_supplier.html')
 
 @access_required(allowed_roles=['superuser'])
 def edit_supplier(request, supplier_id):
     supplier = get_object_or_404(Supplier, pk=supplier_id)
+
     if request.method == 'POST':
         supplier.supplier_id = request.POST.get('supplier_id')
         supplier.name = request.POST.get('name')
@@ -2297,13 +2369,15 @@ def edit_supplier(request, supplier_id):
         supplier.email = request.POST.get('email')
         supplier.address = request.POST.get('address')
         supplier.gst_number = request.POST.get('gst_number')
+        supplier.fssai_number = request.POST.get('fssai_number')
         supplier.pan_number = request.POST.get('pan_number')
         supplier.credit_terms = request.POST.get('credit_terms')
         supplier.opening_balance = request.POST.get('opening_balance') or 0
         supplier.bank_name = request.POST.get('bank_name')
         supplier.account_number = request.POST.get('account_number')
         supplier.ifsc_code = request.POST.get('ifsc_code')
-        supplier.notes = request.POST.get('notes')
+        supplier.status = request.POST.get('status')
+        supplier.notes = request.POST.get('notes')       
         supplier.save()
         return redirect('suppliers')
     return render(request, 'edit_supplier.html', {'supplier': supplier})
@@ -2414,9 +2488,29 @@ def payment_list_view(request):
 
 @access_required(allowed_roles=['superuser'])
 def purchase_items_view(request):
-    if request.method == 'POST':
-        return redirect('payment_list')  
-    return render(request, 'purchase_items.html')
+    items = PurchaseItem.objects.select_related(
+        "purchase",
+        "purchase__supplier"
+    ).all().order_by('id')
+
+    return render(request, "purchase_items.html", {"items": items})
+
+def purchase_payments_api(request, invoice_no):
+    payments = PurchasePayment.objects.filter(invoice_no=invoice_no).order_by('payment_date')
+    data = [
+        {
+            "payment_amount": str(p.payment_amount),
+            "payment_mode": p.payment_mode,
+            "payment_reference": p.payment_reference,
+            "purchase_id": p.purchase.id,
+            "payment_date": p.payment_date.strftime("%Y-%m-%d"),
+            "supplier_id": p.supplier.supplier_id,
+            "balance_amount": str(p.balance_amount),
+            "total_amount": str(p.total_amount),
+        }
+        for p in payments
+    ]
+    return JsonResponse({"payments": data})
 
 @access_required(allowed_roles=['superuser'])
 def create_expense(request):
