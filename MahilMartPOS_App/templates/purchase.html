@@ -126,7 +126,12 @@
   <div class="card p-4 mx-auto container-fluid">
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
 
+    
      <td>
+          <a href="{% url 'purchase_items'%}" class="btn btn-primary btn-sm ms-auto">
+            Purchase Payment Details
+          </a>
+          <br>
           <a href="{% url 'purchase_list'%}" class="btn btn-primary btn-sm ms-auto">
           View Purchase Details
         </a>
@@ -404,18 +409,48 @@ document.addEventListener("DOMContentLoaded", () => {
       expiry_date: r.querySelector('.expiry_date').value
     }));
 
+    // Collect summary + payment fields
+    const subtotal = document.getElementById("subtotal").innerText;
+    const discount = document.getElementById("discount").innerText;
+    const tax = document.getElementById("tax").innerText;
+    const total = document.getElementById("total").innerText;
+    const amountPaid = document.getElementById("amount-paid").value;
+    const outstanding = document.getElementById("outstanding-amount").innerText;
+    const paymentRate = document.getElementById("payment-rate").innerText;
+    const paymentMode = document.getElementById("payment-mode").value;
+    const paymentRef = document.getElementById("payment-reference").value;
+    const billAttachment = document.getElementById("bill-attachment").files[0];
+
+    // Use FormData for file + JSON mix
+    const formData = new FormData();
+    formData.append("supplier_id", opt.dataset.id);    
+    formData.append("invoice_no", invoiceInput.value.trim());
+    formData.append("subtotal", subtotal);
+    formData.append("discount", discount);
+    formData.append("tax", tax);
+    formData.append("total", total);
+    formData.append("amount_paid", amountPaid);
+    formData.append("outstanding", outstanding);
+    formData.append("payment_rate", paymentRate);
+    formData.append("payment_mode", paymentMode);
+    formData.append("payment_reference", paymentRef);
+
+    if (billAttachment) {
+      formData.append("bill_attachment", billAttachment);
+    }
+
+    // stringify items
+    formData.append("items", JSON.stringify(items));
+
     fetch("/api/purchase/create/", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCSRFToken()
-      },
-      body: JSON.stringify({
-        supplier_id: opt.dataset.id,
-        invoice_no: invoiceInput.value.trim(),     
-        items
-      })
-    })
+        headers: {
+      "X-CSRFToken": getCSRFToken(),
+      "X-Requested-With": "XMLHttpRequest"
+    },
+    credentials: "same-origin",
+    body: formData
+  })
     .then(r => r.json()).then(d => {
       if (d.success) alert("Saved!");
       else alert("Error: "+d.error);

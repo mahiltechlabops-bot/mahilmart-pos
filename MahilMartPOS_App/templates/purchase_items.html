@@ -79,52 +79,82 @@
         .back-btn:hover {
             background: linear-gradient(to right, #1d4ed8, #1e40af);
         }
+        .status-pending {
+            background-color: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: bold;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-<h2>Purchase Payment Details</h2>
-    <div align="right">
-        <a href="{% url 'payment-list' %}">
-            <button class="back-btn">Back</button>
-        </a>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Purchase Payment Details</h2>
+    <a href="{% url 'purchase' %}">
+        <button class="back-btn">Back</button>
+    </a>
+</div>
 
 <div class="table-container">
     <table>
         <thead>
-            <tr>               
+            <tr>         
+                <th>S.no</th>      
                 <th>Purchase ID</th>
                 <th>Supplier ID</th>
-                <th>Payment Rate</th>
-                <th>Payment Mode</th>
-                <th>Amount Paid</th>
-                <th>Total Invoice Amount</th>
-                <th>Outstanding Amount</th>
+                <th>Invoice No</th>
+                <th>Subtotal amount</th>
+                <th>Tax</th>
                 <th>Discount</th>
+                <th>Total Invoice Amount</th>               
+                <th>Amount Paid</th>
+                <th>Outstanding Amount</th>                                          
+                <th>Payment Mode</th>
+                <th>Payment Rate</th>
                 <th>Payment Reference</th>
                 <th>Status</th>
             </tr>
         </thead>
         <tbody>
-            {% for p in payments %}
+            {% for item in items %}
             <tr>                
-                <td>{{ p.purchase_id }}</td>
-                <td>{{ p.supplier_id }}</td>
-                <td>{{ p.payment_rate }}</td>
-                <td>{{ p.payment_mode }}</td>
-                <td>{{ p.amount_paid }}</td>
-                <td>{{ p.total_invoice_amount }}</td>
-                <td>{{ p.outstanding_amount }}</td>
-                <td>{{ p.discount }}</td>
-                <td>{{ p.payment_reference_number }}</td>
-                <td class="
-                    {% if p.payment_status == 'Paid' %}status-paid
-                    {% elif p.payment_status == 'Unpaid' %}status-unpaid
-                    {% elif p.payment_status == 'Partial' %}status-partial
-                    {% endif %}
-                ">
-                    {{ p.payment_status }}
-                </td>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ item.purchase.id }}</td>
+            <td>{{ item.purchase.supplier.name }}</td>
+            <td>
+                <a href="#" class="invoice-link" data-invoice="{{ item.purchase.invoice_no }}">
+                    {{ item.purchase.invoice_no }}
+                </a>
+            </td>
+            <td>{{ item.purchase.subtotal }}</td>
+            <td>{{ item.purchase.tax }}</td>
+            <td>{{ item.purchase.discount }}</td>
+            <td>{{ item.purchase.total_amount }}</td>
+            <td>{{ item.purchase.amount_paid }}</td>
+            <td>{{ item.purchase.outstanding_amount }}</td>
+            <td>{{ item.purchase.payment_mode }}</td>
+            <td>{{ item.purchase.payment_rate }}</td>
+            <td>{{ item.purchase.payment_reference }}</td>
+            <td class="
+                {% if item.purchase.outstanding_amount > 0 %}
+                    status-pending
+                {% else %}
+                    status-completed
+                {% endif %}
+            ">
+                {% if item.purchase.outstanding_amount > 0 %}
+                    Pending
+                {% else %}
+                    Completed
+                {% endif %}
+            </td>
             </tr>
             {% empty %}
             <tr>
@@ -135,6 +165,79 @@
     </table>
 </div>
 
+<!-- Payment Details Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="paymentModalLabel">Payments for Invoice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered text-center">
+          <thead>
+            <tr>
+              <th>S.no</th>
+              <th>Payment Amount</th>
+              <th>Payment Mode</th>
+              <th>Payment Reference</th>
+              <th>Purchase ID</th>
+              <th>Payment Date</th>
+              <th>Supplier ID</th>
+              <th>Balance Amount</th>
+              <th>Total Amount</th>
+            </tr>
+          </thead>
+          <tbody id="modalPaymentBody">
+            <!-- Payments will be loaded here via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const invoiceLinks = document.querySelectorAll('.invoice-link');
+
+    invoiceLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const invoiceNo = this.dataset.invoice;
+
+            fetch(`/api/purchase-payments/${invoiceNo}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('modalPaymentBody');
+                    tbody.innerHTML = '';
+
+                    data.payments.forEach((p, index) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${p.payment_amount}</td>
+                            <td>${p.payment_mode}</td>
+                            <td>${p.payment_reference}</td>
+                            <td>${p.purchase_id}</td>
+                            <td>${p.payment_date}</td>
+                            <td>${p.supplier_id}</td>
+                            <td>${p.balance_amount}</td>
+                            <td>${p.total_amount}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    // Show modal
+                    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                    paymentModal.show();
+                });
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -1,5 +1,6 @@
 import json
 import os,datetime
+from django.db import models
 from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
@@ -73,7 +74,8 @@ from .models import (
     Expense,
     Quotation,
     SaleReturn,
-    SaleReturnItem
+    SaleReturnItem,
+    PurchasePayment,
 )
 
 def home(request):
@@ -1603,11 +1605,21 @@ def create_purchase(request):
     if request.method != "POST":
         return JsonResponse({'error': 'Invalid method'}, status=405)
 
-    try:
-        data = json.loads(request.body)
-        supplier_id = data.get("supplier_id")
-        items_data = data.get("items", [])
-        invoice_no = data.get("invoice_no", "").strip()
+    try:    
+        supplier_id = request.POST.get("supplier_id")       
+        invoice_no = request.POST.get("invoice_no", "").strip()  
+        items_data = json.loads(request.POST.get("items", "[]"))
+        subtotal = Decimal(request.POST.get("subtotal", 0))
+        discount = Decimal(request.POST.get("discount", 0))
+        tax = Decimal(request.POST.get("tax", 0))
+        total_amount = Decimal(request.POST.get("total", 0))
+        amount_paid = Decimal(request.POST.get("amount_paid", 0))
+        outstanding_amount = Decimal(request.POST.get("outstanding", 0))
+        payment_rate = request.POST.get("payment_rate", "")
+        payment_mode = request.POST.get("payment_mode", "")
+        payment_ref = request.POST.get("payment_reference", "")
+
+        bill_file = request.FILES.get("bill_attachment")
 
         supplier = Supplier.objects.get(id=supplier_id)
         total_products = len(items_data)
@@ -1618,6 +1630,17 @@ def create_purchase(request):
             # ---- UPDATE EXISTING PURCHASE ----
             purchase.supplier = supplier
             purchase.total_products = total_products
+            purchase.subtotal = subtotal
+            purchase.discount = discount
+            purchase.tax = tax
+            purchase.total_amount = total_amount
+            purchase.amount_paid = amount_paid
+            purchase.outstanding_amount = outstanding_amount
+            purchase.payment_rate = payment_rate
+            purchase.payment_mode = payment_mode
+            purchase.payment_reference = payment_ref
+            if bill_file:
+                purchase.bill_attachment = bill_file
             purchase.save()
 
             # Track incoming (item_id, purchase_id) combos
@@ -1640,7 +1663,17 @@ def create_purchase(request):
             purchase = Purchase.objects.create(
                 supplier=supplier,
                 invoice_no=invoice_no,
-                total_products=total_products
+                total_products=total_products,
+                subtotal=subtotal,
+                discount=discount,
+                tax=tax,
+                amount_paid=amount_paid,
+                total_amount=total_amount,
+                outstanding_amount=outstanding_amount,
+                payment_rate=payment_rate,
+                payment_mode=payment_mode,
+                payment_reference=payment_ref,
+                bill_attachment=bill_file,                              
             )
 
         latest_qty_cache = {}       
@@ -1795,6 +1828,29 @@ def create_purchase(request):
                     purchase=purchase
                 )
 
+        # Calculate running totals
+        previous_total_paid = purchase.payments.aggregate(total=models.Sum('payment_amount'))['total'] or 0
+        new_total_paid = previous_total_paid + amount_paid
+        balance_amount = total_amount - new_total_paid
+
+        # Create a new payment record
+        PurchasePayment.objects.create(
+            purchase=purchase,
+            supplier=purchase.supplier,
+            invoice_no=purchase.invoice_no,
+            payment_date=now().date(),
+            payment_amount=amount_paid,
+            payment_mode=payment_mode,
+            payment_reference=payment_ref,
+            total_amount=total_amount,
+            balance_amount=balance_amount
+        )
+
+        # Update Purchase totals
+        purchase.amount_paid = new_total_paid
+        purchase.outstanding_amount = balance_amount
+        purchase.save()
+              
         return JsonResponse({'success': True, 'purchase_id': purchase.id})
 
     except Exception as e:
@@ -2432,9 +2488,29 @@ def payment_list_view(request):
 
 @access_required(allowed_roles=['superuser'])
 def purchase_items_view(request):
-    if request.method == 'POST':
-        return redirect('payment_list')  
-    return render(request, 'purchase_items.html')
+    items = PurchaseItem.objects.select_related(
+        "purchase",
+        "purchase__supplier"
+    ).all().order_by('id')
+
+    return render(request, "purchase_items.html", {"items": items})
+
+def purchase_payments_api(request, invoice_no):
+    payments = PurchasePayment.objects.filter(invoice_no=invoice_no).order_by('payment_date')
+    data = [
+        {
+            "payment_amount": str(p.payment_amount),
+            "payment_mode": p.payment_mode,
+            "payment_reference": p.payment_reference,
+            "purchase_id": p.purchase.id,
+            "payment_date": p.payment_date.strftime("%Y-%m-%d"),
+            "supplier_id": p.supplier.supplier_id,
+            "balance_amount": str(p.balance_amount),
+            "total_amount": str(p.total_amount),
+        }
+        for p in payments
+    ]
+    return JsonResponse({"payments": data})
 
 @access_required(allowed_roles=['superuser'])
 def create_expense(request):

@@ -56,6 +56,7 @@ urlpatterns = [
     path('submit-customer/', views.submit_customer, name='submit_customer'),
     path('payments/', views.payment_list_view, name='payment-list'),
     path('purchase_items/', views.purchase_items_view, name='purchase_items'),
+    path('api/purchase-payments/<str:invoice_no>/', views.purchase_payments_api, name='purchase-payments-api'),
     path('expense/',views.create_expense,name='expense'),
     path('expense/list/', views.expense_list, name='expense_list'),
     path('user/', views.user_view, name='user'),
