@@ -314,12 +314,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (itemInput) itemInput.focus();
   });
 
+  // Initially disable invoice number until supplier is selected
+  invoiceInput.disabled = true;
+
   // populate supplier details
   dealerInput.addEventListener("input", () => {
     const opt = Array.from(document.getElementById("dealerOptions").options)
       .find(o => o.value === dealerInput.value);
     if (opt) {
       supplierDetails.style.display = "block";
+      invoiceInput.disabled = false;
       document.getElementById("supplierContact").textContent = opt.dataset.contact;
       document.getElementById("supplierPhone").textContent = dealerInput.value.match(/\((.+)\)/)?.[1]||"";
       document.getElementById("supplierEmail").textContent = opt.dataset.email;
@@ -333,6 +337,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("supplierCredit").textContent = opt.dataset.credit;
     } else {
       supplierDetails.style.display = "none";
+      invoiceInput.disabled = true;
+      invoiceInput.value = ""; 
     }
   });
 
