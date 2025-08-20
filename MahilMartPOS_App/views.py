@@ -1854,22 +1854,16 @@ def create_purchase(request):
 
 @access_required(allowed_roles=['superuser'])
 def fetch_purchase_items(request):
-    invoice_number = request.GET.get('invoice_number')
-    print("Invoice number received:", invoice_number)
-    if not invoice_number:
-        print("No invoice number provided in request.")
+    invoice_number = request.GET.get('invoice_number')    
+    if not invoice_number:       
         return JsonResponse({'error': 'Invoice number is required'}, status=400)
     try:
-        purchase = Purchase.objects.get(invoice_no=invoice_number)
-        print("Purchase found:", purchase.id, purchase.invoice_no)
-    except Purchase.DoesNotExist:
-        print("No purchase found for invoice:", invoice_number)
+        purchase = Purchase.objects.get(invoice_no=invoice_number)       
+    except Purchase.DoesNotExist:       
         return JsonResponse({'error': 'Purchase not found'}, status=404)
-    items = PurchaseItem.objects.filter(purchase_id=purchase.id)
-    print("Number of items found:", items.count())
+    items = PurchaseItem.objects.filter(purchase_id=purchase.id)    
     items_data = []
-    for item in items:
-        print("Serializing item:", item.id, item.item_name, "Qty:", item.quantity)
+    for item in items:       
         items_data.append({
             'item_name': item.item_name,
             'item_code': item.code,
@@ -1899,15 +1893,7 @@ def fetch_purchase_items(request):
     'payment_mode': purchase.payment_mode or "",
     'payment_rate': str(purchase.payment_rate or 0),
     'payment_reference': purchase.payment_reference or "",
-    }
-
-    print("=== Purchase Data Debug ===")
-    print("Amount Paid:", purchase.amount_paid)
-    print("Outstanding:", purchase.outstanding_amount)
-    print("Payment Mode:", purchase.payment_mode)
-    print("Payment Rate:", purchase.payment_rate)
-    print("Payment Ref:", purchase.payment_reference)
-    print("===========================")
+    }   
 
     print("Returning", len(items_data), "items for invoice:", invoice_number)
     return JsonResponse({'items': items_data,  'purchase': purchase_data})
@@ -2514,12 +2500,40 @@ def payment_list_view(request):
 
 @access_required(allowed_roles=['superuser'])
 def purchase_items_view(request):
+    
+    # Start with all PurchaseItems and select related purchase & supplier
     items = PurchaseItem.objects.select_related(
         "purchase",
         "purchase__supplier"
-    ).all().order_by('id')
+    ).all()
 
-    return render(request, "purchase_items.html", {"items": items})
+    # Fetch suppliers for the dropdown
+    suppliers = Supplier.objects.all()
+
+    # Get filter parameters from GET
+    supplier_id = request.GET.get("supplier")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date") 
+
+    # Apply supplier filter
+    if supplier_id:
+        items = items.filter(purchase__supplier_id=supplier_id)
+
+    # Apply date range filter using 'created_at'
+    if start_date:
+        items = items.filter(purchase__created_at__date__gte=start_date)
+    if end_date:
+        items = items.filter(purchase__created_at__date__lte=end_date) 
+
+    context = {
+        "items": items,
+        "suppliers": suppliers,
+        "selected_supplier": supplier_id,
+        "start_date": start_date,
+        "end_date": end_date,         
+    }
+
+    return render(request, "purchase_items.html", context)
 
 def purchase_payments_api(request, invoice_no):
     payments = PurchasePayment.objects.filter(invoice_no=invoice_no).order_by('payment_date')

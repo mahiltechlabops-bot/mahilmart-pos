@@ -96,11 +96,49 @@
 </head>
 <body>
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Purchase Payment Details</h2>
-    <a href="{% url 'purchase' %}">
-        <button class="back-btn">Back</button>
-    </a>
+    <h2>Purchase Payment Details</h2>   
 </div>
+
+
+<form method="get" id="filterForm" class="mb-3" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+    <label>Supplier:</label>
+    <select name="supplier" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ccc;">
+        <option value="">All</option>
+        {% for supplier in suppliers %}
+            <option value="{{ supplier.id }}" {% if selected_supplier == supplier.id|stringformat:"s" %}selected{% endif %}>
+                {{ supplier.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label>Start Date:</label>
+    <input type="date" name="start_date" id="start_date" value="{{ start_date }}" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ccc;">
+
+    <label>End Date:</label>
+    <input type="date" name="end_date" id="end_date" value="{{ end_date }}" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ccc;">
+
+
+    <button type="submit" style="
+        padding: 6px 15px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.3s;
+    " 
+    onmouseover="this.style.backgroundColor='#45a049';" 
+    onmouseout="this.style.backgroundColor='#4CAF50';">
+        Filter
+    </button>
+     <div style="margin-left: auto;">
+        <a href="{% url 'purchase' %}">
+            <button type="button" class="back-btn" style="padding: 6px 15px; background: linear-gradient(to right, #2563eb, #1d4ed8); color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s;">
+                Back
+            </button>
+        </a>
+    </div>
+</form>
 
 <div class="table-container">
     <table>
@@ -239,5 +277,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+
+    document.getElementById("filterForm").addEventListener("submit", function (e) {
+        const start = document.getElementById("start_date").value;
+        const end = document.getElementById("end_date").value;
+
+        if (start && end && end < start) {
+            e.preventDefault();
+            alert("⚠️ End date must be greater than or equal to Start date.");
+        }
+    });
+
+    window.addEventListener("keydown", function(e) {
+        if (e.key === "F5") {
+        e.preventDefault();
+        window.location.href = "{% url 'purchase_items' %}"; // reset on F5
+        }
+    });
 </script>
 {% endblock %}

@@ -43,6 +43,7 @@
   #purchaseTable td:nth-child(14) input,
   #purchaseTable td:nth-child(15) input,
   #purchaseTable td:nth-child(16) input,
+  #purchaseTable td:nth-child(17) input,
   #purchaseTable td:nth-child(18) input, 
   #purchaseTable td:nth-child(19) input, 
   #purchaseTable td:nth-child(20) input{
@@ -52,8 +53,7 @@
     box-sizing: border-box;
   }
 
-  #purchaseTable td:nth-child(2) input,  
-  #purchaseTable td:nth-child(19) input,
+  #purchaseTable td:nth-child(2) input,    
   #purchaseTable td:nth-child(21) input {
     width: 90px !important;
     padding: 3px 4px;
@@ -228,6 +228,13 @@
           <tr>
             <td><strong>Total:</strong></td>
             <td><strong>₹ <span id="total">0.00</span></strong></td>
+          </tr>         
+          <tr>
+            <td>Current Paid:</td>
+            <td>
+              <input type="number" id="current-paid" value="0" min="0" step="0.01" 
+                    style="width:100px; padding:4px; border:1px solid #ccc; border-radius:4px;">
+            </td>
           </tr>
         </table>
       </div>
@@ -238,13 +245,14 @@
               <tr>
                 <td>Amount Paid ₹:</td>
                 <td>
-                  <input type="number" id="amount-paid" class="form-control form-control-sm" step="0.01" min="0" value="0.00">
+                  <input type="number" id="amount-paid" class="form-control form-control-sm" step="0.01" min="0" value="0.00" readonly>
                 </td>
               </tr>
               <tr>
-                <td>Outstanding Amount:</td>
-                <td>₹ <span id="outstanding-amount">0.00</span></td>
-              </tr>
+              <td>Outstanding Amount:</td>
+              <td>₹ <span id="outstanding-amount" style="font-weight:bold; color:red;">0.00</span></td>
+            </tr>
+
               <tr>
                 <td>Payment Mode:</td>
                 <td>
@@ -657,7 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const invoiceInput = document.getElementById("invoiceNumber");
   const productTableBody = document.getElementById("productTableBody");
   
-  const amountPaidField = document.getElementById("amount_paid");
+  const amountPaidField = document.getElementById("amount-paid");
   const outstandingField = document.getElementById("outstanding_amount");
   const paymentModeField = document.getElementById("payment_mode");
   const paymentRateField = document.getElementById("payment_rate");
@@ -711,8 +719,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         updateTotals();
         
-        if (data.purchase) {
-            document.getElementById("amount-paid").value = data.purchase.amount_paid || "";
+        if (data.purchase) {                           
+            document.getElementById("amount-paid").value = data.purchase.amount_paid || "0.00";
             document.getElementById("outstanding-amount").textContent = data.purchase.outstanding_amount || "0.00";
             document.getElementById("payment-mode").value = data.purchase.payment_mode || "";
             document.getElementById("payment-rate").textContent = data.purchase.payment_rate || "0%";
@@ -726,49 +734,49 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-const amountPaidInput = document.getElementById('amount-paid');
-
-  let alertShown = false;
-
-  // Show alert on first click/focus
-  amountPaidInput.addEventListener('click', () => {
-    if (!alertShown) {
-      alert("⚠️ Please enter the correct amount. Total paid and current paid amount must be together");
-      alertShown = true;
-    }
-  });
-
-  // Reset alertShown when user leaves the field
-  amountPaidInput.addEventListener('blur', () => {
-    alertShown = false;
-  });
-
-  // Allow Enter key to confirm value without blocking
-  amountPaidInput.addEventListener('keydown', (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      console.log("Entered amount:", amountPaidInput.value);
-    }
-  });
-
 function calculateOutstanding() {
-    let total = parseFloat(document.getElementById("total").innerText) || 0;
-    let paid = parseFloat(document.getElementById("amount-paid").value) || 0;
+    const total = parseFloat(document.getElementById("total").innerText) || 0;
+    const amountPaidInput = document.getElementById("amount-paid");
+    const currentPaidInput = document.getElementById("current-paid");
 
-    // Ensure paid never exceeds total
-    if (paid > total) paid = total;
+    // Parse values strictly as floats
+    let previousAmountPaid = parseFloat(amountPaidInput.value) || 0;
+    let currentPaid = parseFloat(currentPaidInput.value) || 0;
 
-    let outstanding = total - paid;
+    if (currentPaid < 0) currentPaid = 0;
+
+    // Prevent overpayment BEFORE summing
+    if (previousAmountPaid + currentPaid > total) {
+        currentPaid = total - previousAmountPaid;
+        currentPaidInput.value = currentPaid.toFixed(2);
+    }
+
+    // Now calculate new total
+    const newTotalPaid = previousAmountPaid + currentPaid;
+
+    // Update amount paid
+    amountPaidInput.value = newTotalPaid.toFixed(2);
+
+    // Update outstanding
+    const outstanding = total - newTotalPaid;
     document.getElementById("outstanding-amount").innerText = outstanding.toFixed(2);
 
-    let paymentRate = total > 0 ? (paid / total) * 100 : 0;
+    // Update payment rate
+    const paymentRate = total > 0 ? (newTotalPaid / total) * 100 : 0;
     document.getElementById("payment-rate").innerText = paymentRate.toFixed(2) + "%";
 }
 
-// Trigger calculation when Amount Paid changes
-document.getElementById("amount-paid").addEventListener("input", calculateOutstanding);
+// Update when user leaves the input (Tab or click outside)
+document.getElementById("current-paid").addEventListener("blur", calculateOutstanding);
 
-// Initial calculation when page loads
+// Optional: handle Enter key as well
+document.getElementById("current-paid").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault(); // prevents form submission
+    }
+});
+
+// Initial calculation on page load
 calculateOutstanding();
 </script>
 {% endblock %}
