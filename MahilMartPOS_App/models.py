@@ -39,6 +39,7 @@ class Customer(models.Model):
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True, default="billing_entry")
 
     def __str__(self):
         return f"{self.name} ({self.cell})"     
