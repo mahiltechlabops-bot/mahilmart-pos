@@ -1,6 +1,7 @@
 from datetime import date
 from django.db import models
 from django.utils import timezone
+from django.utils.timezone import now
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission
@@ -19,13 +20,15 @@ class Supplier(models.Model):
     email = models.EmailField(blank=True, default="unknown@example.com")
     address = models.TextField(blank=True, default="N/A")
     gst_number = models.CharField(max_length=20, blank=True, default="N/A")
+    fssai_number = models.CharField(max_length=20, blank=True, default="N/A")
     pan_number = models.CharField(max_length=20, blank=True, default="N/A")
     credit_terms = models.CharField(max_length=50, blank=True, default="N/A")
     opening_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     bank_name = models.CharField(max_length=100, blank=True, default="N/A")
     account_number = models.CharField(max_length=50, blank=True, default="N/A")
     ifsc_code = models.CharField(max_length=20, blank=True, default="N/A")
-    notes = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, default='Active')
+    notes = models.TextField(blank=True, default="")    
 
     def __str__(self):
         return self.name        
@@ -36,6 +39,7 @@ class Customer(models.Model):
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True, default="billing_entry")
 
     def __str__(self):
         return f"{self.name} ({self.cell})"     
@@ -53,7 +57,8 @@ class Billing(models.Model):
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     points = models.FloatField(default=0.0)  
-    points_earned = models.FloatField(default=0.0)
+    points_earned = models.FloatField(default=0.0)   
+    status_on = models.CharField(max_length=50, default="counter_bill")
     remarks = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -114,6 +119,7 @@ class Order(models.Model):
 
     payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES)
     order_status = models.CharField(max_length=10, choices=ORDER_STATUS_CHOICES)
+    qtn_no = models.CharField(max_length=50, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if self.advance >= self.total_order_amount:
@@ -498,9 +504,41 @@ class Purchase(models.Model):
     invoice_no = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     total_products = models.FloatField(default=0)
+    total_amount = models.FloatField(default=0)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    outstanding_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    payment_mode = models.CharField(
+        max_length=50,
+        choices=[
+            ('Cash', 'Cash'),
+            ('Card', 'Card'),
+            ('Bank Transfer', 'Bank Transfer'),
+            ('UPI', 'UPI'),
+            ('Cheque', 'Cheque'),
+            ('Credit', 'Credit'),
+            ('Partial Credit', 'Partial Credit'),
+        ],
+        blank=True,
+        null=True
+    )
+    payment_rate = models.DecimalField(max_digits=7, decimal_places=2, default=0.00)  
+    payment_reference = models.CharField(max_length=255, blank=True, null=True)
+    bill_attachment = models.FileField(upload_to='bill_attachments/', blank=True, null=True) 
+
+    def save(self, *args, **kwargs):
+        if self.total_amount and self.amount_paid is not None:
+            self.outstanding_amount = max(self.total_amount - self.amount_paid, 0)
+            self.payment_rate = (
+                (self.amount_paid / self.total_amount) * 100
+                if self.total_amount > 0 else 0
+            )
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Purchase #{self.id} - {self.supplier.name}"          
+        return f"Purchase #{self.id} - {self.supplier.name}"         
 
 class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
@@ -519,6 +557,7 @@ class PurchaseItem(models.Model):
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    taxable_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tax = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     net_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -535,6 +574,29 @@ class PurchaseItem(models.Model):
   
     def __str__(self):
         return f"{self.purchase.supplier.name} - {self.code} - {self.item_name}"
+    
+class PurchasePayment(models.Model):
+    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name="payments")
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="payments",default=1)
+    invoice_no = models.CharField(max_length=100, blank=True, null=True)
+    payment_date = models.DateField(default=now)
+    payment_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_mode = models.CharField(max_length=50, blank=True, null=True)
+    payment_reference = models.CharField(max_length=100, blank=True, null=True)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    balance_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    @property
+    def payment_status(self):
+        if self.purchase.outstanding_amount <= 0:
+            return "Completed"
+        elif self.purchase.amount_paid == 0:
+            return "Unpaid"
+        else:
+            return "Partial"
+
+    def __str__(self):
+        return f"Payment {self.id} for Invoice {self.purchase.invoice_no}"
     
 class Inventory(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
@@ -555,6 +617,7 @@ class Inventory(models.Model):
     unit_price = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
     discount = models.FloatField(default=0)
+    taxable_price = models.FloatField(default=0)
     tax = models.FloatField(default=0)
     cost_price = models.FloatField(default=0)
     net_price = models.FloatField(default=0)

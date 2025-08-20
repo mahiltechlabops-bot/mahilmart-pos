@@ -3,87 +3,146 @@
 {% block content %}
 <style>
     .payment-dashboard {
-        font-family: Arial, sans-serif;
-        padding: 0px;
+        font-family: "Segoe UI", Arial, sans-serif;
+        padding: 20px;
+        background-color: #f8f9fa;
     }
+
     .payment-dashboard h2 {
         text-align: center;
+        margin-bottom: 20px;
+        color: #333;
     }
-    .payment-dashboard form {
-        text-align: center;
+
+    .filter-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         margin-bottom: 20px;
     }
-    .payment-dashboard input[type="date"] {
-        padding: 5px;
-        margin: 0 10px;
+
+    .filter-card label {
+        font-weight: 600;
+        font-size: 14px;
     }
-    .payment-dashboard button {
-        padding: 6px 12px;
-        background-color: #4CAF50;
+
+    .filter-card input,
+    .filter-card select {
+        padding: 6px 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        outline: none;
+    }
+
+    .filter-card button {
+        padding: 8px 16px;
+        background-color: #28a745;
         color: white;
         border: none;
+        border-radius: 4px;
+        font-weight: 600;
         cursor: pointer;
+        transition: 0.3s;
     }
+    .filter-card button:hover {
+        background-color: #218838;
+    }
+
     .payment-dashboard table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 15px;
-    }
-    .payment-dashboard th, .payment-dashboard td {
-        border: 1px solid #aaa;
-        padding: 8px 10px;
-        text-align: center;
-    }
-    .payment-dashboard th {
-        background-color: #f2f2f2;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    .payment-dashboard .status-paid {
+    .payment-dashboard th, 
+    .payment-dashboard td {
+        padding: 10px;
+        text-align: center;
+    }
+
+    .payment-dashboard thead th {
+        background-color: #007bff;
+        color: white;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .payment-dashboard tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .payment-dashboard tbody tr:hover {
+        background-color: #eef6ff;
+        transition: 0.2s;
+    }
+
+    .status-paid {
         color: green;
         font-weight: bold;
     }
-    .payment-dashboard .status-unpaid {
+    .status-unpaid {
         color: red;
         font-weight: bold;
     }
-    .payment-dashboard .status-partial {
+    .status-partial {
         color: orange;
         font-weight: bold;
+    }
+
+    .btn-purchase {
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: 0.3s;
+    }
+    .btn-purchase:hover {
+        background-color: #0069d9;
     }
 </style>
 
 <div class="payment-dashboard">
     <h2>Payment Records</h2>
+    <div class="filter-card">
+        <form method="get" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            
+            <!-- Left Section: Date & Payment Mode -->
+            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="from_date">From:</label>
+                    <input type="date" name="from_date" id="from_date" value="{{ from_date }}">
+                    <label for="to_date">To:</label>
+                    <input type="date" name="to_date" id="to_date" value="{{ to_date }}">
+                </div>
 
-    <form method="get">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <label for="from_date" style="font-weight: bold;">From Date:</label>
-                <input type="date" name="from_date" id="from_date" value="{{ from_date }}">
-
-                <label for="to_date" style="font-weight: bold;">To Date:</label>
-                <input type="date" name="to_date" id="to_date" value="{{ to_date }}">
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <label for="payment_mode" style="font-weight: bold;">Payment Mode:</label>
-                <select name="payment_mode" id="payment_mode" style="width: 80px; height: 35px;">
-                    <option value="all" {% if payment_mode == 'all' or not payment_mode %}selected{% endif %}>All</option>
-                    <option value="cash" {% if payment_mode == 'cash' %}selected{% endif %}>Cash</option>
-                    <option value="card" {% if payment_mode == 'card' %}selected{% endif %}>Card</option>
-                </select>
-
-                <button type="submit">Filter</button>
-            </div>
-        </div>
-    </form>
-
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="payment_mode">Payment Mode:</label>
+                    <select name="payment_mode" id="payment_mode">
+                        <option value="all" {% if payment_mode == 'all' or not payment_mode %}selected{% endif %}>All</option>
+                        <option value="cash" {% if payment_mode == 'cash' %}selected{% endif %}>Cash</option>
+                        <option value="card" {% if payment_mode == 'card' %}selected{% endif %}>Card</option>
+                    </select>
+                    <button type="submit">Filter</button>
+                </div>
+            </div>           
+        </form>
+    </div>
     <table>
         <thead>
             <tr>
                 <th>S No</th>
                 <th>Bill No</th>
                 <th>Customer</th>
+                <th>Phone</th>
                 <th>Date & Time</th>
                 <th>Cashier</th>
                 <th>Payment Mode</th>
@@ -96,7 +155,8 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>{{ bill.bill_no }}</td>
-                <td>{{ bill.name }}</td>
+                <td>{{ bill.customer.name }}</td>
+                <td>{{ bill.customer.cell }}</td>
                 <td>{{ bill.date|date:"d-m-Y h:i A" }}</td>
                 <td>{{ bill.counter }}</td>
                 <td>{{ bill.bill_type }}</td>
@@ -118,12 +178,5 @@
             {% endfor %}
         </tbody>
     </table>
-
-    <div style="text-align: center; margin-top: 40px; margin-bottom: 10px;">
-        <button type="button" onclick="window.location.href='/purchase_items/'"
-            style="background-color: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 5px;">
-            Purchase
-        </button>
-    </div>
 </div>
 {% endblock %}
