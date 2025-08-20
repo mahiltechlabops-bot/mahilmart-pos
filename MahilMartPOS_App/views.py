@@ -1828,10 +1828,11 @@ def create_purchase(request):
                     purchase=purchase
                 )
 
-        # Calculate running totals
-        previous_total_paid = purchase.payments.aggregate(total=models.Sum('payment_amount'))['total'] or 0
-        new_total_paid = previous_total_paid + amount_paid
-        balance_amount = total_amount - new_total_paid
+         # Calculate running totals
+        previous_total_paid = purchase.payments.aggregate(total_paid=models.Sum('payment_amount'))['total_paid'] or 0
+        payment_amount = amount_paid - previous_total_paid
+        total_payment_amount = previous_total_paid + payment_amount
+        balance_amount = total_amount - total_payment_amount
 
         # Create a new payment record
         PurchasePayment.objects.create(
@@ -1839,17 +1840,12 @@ def create_purchase(request):
             supplier=purchase.supplier,
             invoice_no=purchase.invoice_no,
             payment_date=now().date(),
-            payment_amount=amount_paid,
+            payment_amount=payment_amount,
             payment_mode=payment_mode,
             payment_reference=payment_ref,
             total_amount=total_amount,
             balance_amount=balance_amount
-        )
-
-        # Update Purchase totals
-        purchase.amount_paid = new_total_paid
-        purchase.outstanding_amount = balance_amount
-        purchase.save()
+        )    
               
         return JsonResponse({'success': True, 'purchase_id': purchase.id})
 
@@ -1896,8 +1892,25 @@ def fetch_purchase_items(request):
             'sale_price': item.sale_price,
             'expiry_date': item.expiry_date,
         })
+
+    purchase_data = {
+    'amount_paid': str(purchase.amount_paid or 0),
+    'outstanding_amount': str(purchase.outstanding_amount or 0),
+    'payment_mode': purchase.payment_mode or "",
+    'payment_rate': str(purchase.payment_rate or 0),
+    'payment_reference': purchase.payment_reference or "",
+    }
+
+    print("=== Purchase Data Debug ===")
+    print("Amount Paid:", purchase.amount_paid)
+    print("Outstanding:", purchase.outstanding_amount)
+    print("Payment Mode:", purchase.payment_mode)
+    print("Payment Rate:", purchase.payment_rate)
+    print("Payment Ref:", purchase.payment_reference)
+    print("===========================")
+
     print("Returning", len(items_data), "items for invoice:", invoice_number)
-    return JsonResponse({'items': items_data})
+    return JsonResponse({'items': items_data,  'purchase': purchase_data})
 
 @access_required(allowed_roles=['superuser'])
 @csrf_exempt
@@ -2394,64 +2407,77 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 @access_required(allowed_roles=['superuser'])
 def customers_view(request):
     try:
-        # Customers from Customer table
-        customer_entries = Customer.objects.all().order_by('-date_joined')
+        start_date = request.GET.get("start")
+        end_date = request.GET.get("end")
+
+        # Base QuerySets
+        manual_qs = Customer.objects.filter(remarks="manual_entry")
+        billing_qs = Customer.objects.filter(remarks="billing_entry")
+
+        # Apply Date Filter
+        if start_date and end_date:
+            manual_qs = manual_qs.filter(date_joined__date__range=[start_date, end_date])
+            billing_qs = billing_qs.filter(date_joined__date__range=[start_date, end_date])
+
+        # Customers from Customer table (manual entries)
+        customer_entries = manual_qs.order_by("-date_joined")
 
         # Customers from Billing table (unique by phone, grouped)
         billing_customers = (
-            Customer.objects
-            .values('name', 'cell', 'address', 'email')
-            .annotate(date_joined=Min('date_joined'))
-            .order_by('-date_joined')
+            billing_qs
+            .values("name", "cell", "address", "email")
+            .annotate(date_joined=Min("date_joined"))
+            .order_by("-date_joined")
         )
+
+        # Counts (based on filter if applied)
+        total_customers = manual_qs.count() + billing_qs.count()
+        total_manual_customers = manual_qs.count()
+        total_billing_customers = billing_customers.count()
 
     except Exception as e:
         from django.http import HttpResponse
         return HttpResponse("Error: " + str(e))
 
-    return render(request, 'customers.html', {
-        'customer_entries': customer_entries,
-        'billing_customers': billing_customers
+    return render(request, "customers.html", {
+        "customer_entries": customer_entries,
+        "billing_customers": billing_customers,
+        "total_customers": total_customers,
+        "total_manual_customers": total_manual_customers,
+        "total_billing_customers": total_billing_customers,
+        "start_date": start_date,
+        "end_date": end_date,
     })
  
 @access_required(allowed_roles=['superuser'])
 def add_customer(request):
     if request.method == 'POST':
         name = request.POST.get('name')
-        cell = request.POST.get('cell')
+        cell = request.POST.get('phone')
         address = request.POST.get('address')
         email = request.POST.get('email')
 
+        if Customer.objects.filter(cell=cell).exists():
+            messages.error(request, f"Customer with phone {cell} already exists! or Empty values, Please enter on the alternate number")
+            return render(request, 'add_customer.html', {
+                "name": name,
+                "cell": cell,
+                "address": address,
+                "email": email,
+            })
+      
         Customer.objects.create(
             name=name,
             cell=cell,
             address=address,
             email=email,
-            date_joined=timezone.now()
+            date_joined=timezone.now(),
+            remarks="manual_entry"
         )
-
+        messages.success(request, "Customer added successfully!")
         return redirect('customers')
 
     return render(request, 'add_customer.html')
-
-@access_required(allowed_roles=['superuser'])
-def submit_customer(request):
-    if request.method == 'POST':
-        name = request.POST['customer_name']
-        cell = request.POST['phone_number']
-        address = request.POST['address']
-        email = request.POST.get('email')
-        date_joined = request.POST.get('date_joined')
-
-        Customer.objects.create(
-            name=name,
-            phone_number=cell,
-            address=address,
-            email=email,
-            date_joined=date_joined
-        )
-
-    return redirect('customers')
 
 @access_required(allowed_roles=['superuser'])
 def payment_list_view(request):

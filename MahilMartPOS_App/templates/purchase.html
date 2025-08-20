@@ -126,16 +126,14 @@
   <div class="card p-4 mx-auto container-fluid">
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
 
-    
-     <td>
-          <a href="{% url 'purchase_items'%}" class="btn btn-primary btn-sm ms-auto">
-            Purchase Payment Details
-          </a>
-          <br>
-          <a href="{% url 'purchase_list'%}" class="btn btn-primary btn-sm ms-auto">
+     <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'purchase_items' %}" class="btn btn-primary btn-sm">
+          Purchase Payment Details
+        </a>
+        <a href="{% url 'purchase_list' %}" class="btn btn-primary btn-sm">
           View Purchase Details
         </a>
-      </td>
+      </div>
 
     <!-- Purchase Header -->
     <div class="row mb-4">
@@ -206,56 +204,81 @@
        </div>
     <button id="addProductBtn" class="btn btn-primary">+ Add Product</button>
 
-    <!-- Summary -->
-    <div class="row mt-5">
+    <!-- Purchase Summary -->
+<div class="row mt-5">
+  <div class="col-md-12">
+    <h5 class="text-center">Purchase Summary</h5>
+    <div class="row">
+      
+      <!-- Left Side -->
       <div class="col-md-6">
-        <h5>Purchase Summary</h5>
         <table class="table summary-table">
-          <tr><td>Subtotal:</td><td>₹ <span id="subtotal">0.00</span></td></tr>
-          <tr><td>Tax:</td><td>₹ <span id="tax">0.00</span></td></tr>
-          <tr><td>Discount:</td><td>₹ <span id="discount">0.00</span></td></tr>
-          <tr><td><strong>Total:</strong></td><td><strong>₹ <span id="total">0.00</span></strong></td></tr>
           <tr>
-        <td>Amount Paid ₹:</td>
-        <td>
-           <input type="number" id="amount-paid" class="form-control form-control-sm" step="0.01" min="0" value="0.00">
-        </td>
-      </tr>
-      <tr>
-        <td>Outstanding Amount:</td>
-        <td>₹ <span id="outstanding-amount">0.00</span></td>
-      </tr>
-      <tr>
-        <td>Payment Mode:</td>
-        <td>
-          <select id="payment-mode" class="form-control form-control-sm">
-            <option value="">-- Select --</option>
-            <option value="Cash">Cash</option>
-            <option value="Cash">Credit</option>
-            <option value="Cash">Partial Credit</option>
-            <option value="Card">Card</option>
-            <option value="UPI">UPI</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-          </select>
-        </td>
-      </tr>
-        <tr>
-        <td>Payment Reference:</td>
-        <td>
-          <input type="text" id="payment-reference" class="form-control form-control-sm" placeholder="e.g., UPI ID / Transaction ID">
-        </td>
-      </tr>
-      <tr>
-        <td>Payment Rate:</td>
-        <td><span id="payment-rate">0%</span></td>
-      </tr>
-      <tr>
-        <td>Bill Attachment:</td>
-        <td>
-          <input type="file" id="bill-attachment" class="form-control form-control-sm">
-        </td>
-      </tr>
+            <td>Subtotal:</td>
+            <td>₹ <span id="subtotal">0.00</span></td>
+          </tr>
+          <tr>
+            <td>Tax:</td>
+            <td>₹ <span id="tax">0.00</span></td>
+          </tr>
+          <tr>
+            <td>Discount:</td>
+            <td>₹ <span id="discount">0.00</span></td>
+          </tr>
+          <tr>
+            <td><strong>Total:</strong></td>
+            <td><strong>₹ <span id="total">0.00</span></strong></td>
+          </tr>
         </table>
+      </div>
+      
+          <!-- Right Side -->
+          <div class="col-md-6">
+            <table class="table summary-table">
+              <tr>
+                <td>Amount Paid ₹:</td>
+                <td>
+                  <input type="number" id="amount-paid" class="form-control form-control-sm" step="0.01" min="0" value="0.00">
+                </td>
+              </tr>
+              <tr>
+                <td>Outstanding Amount:</td>
+                <td>₹ <span id="outstanding-amount">0.00</span></td>
+              </tr>
+              <tr>
+                <td>Payment Mode:</td>
+                <td>
+                  <select id="payment-mode" class="form-control form-control-sm">
+                    <option value="">-- Select --</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Credit">Credit</option>
+                    <option value="Partial Credit">Partial Credit</option>
+                    <option value="Card">Card</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td>Payment Reference:</td>
+                <td>
+                  <input type="text" id="payment-reference" class="form-control form-control-sm" placeholder="e.g., UPI ID / Transaction ID">
+                </td>
+              </tr>
+              <tr>
+                <td>Payment Rate:</td>
+                <td><span id="payment-rate">0%</span></td>
+              </tr>
+              <tr>
+                <td>Bill Attachment:</td>
+                <td>
+                  <input type="file" id="bill-attachment" class="form-control form-control-sm">
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+        </div>
       </div>
     </div>
 
@@ -633,6 +656,12 @@ function deleteRow(btn) {
 document.addEventListener("DOMContentLoaded", () => {
   const invoiceInput = document.getElementById("invoiceNumber");
   const productTableBody = document.getElementById("productTableBody");
+  
+  const amountPaidField = document.getElementById("amount_paid");
+  const outstandingField = document.getElementById("outstanding_amount");
+  const paymentModeField = document.getElementById("payment_mode");
+  const paymentRateField = document.getElementById("payment_rate");
+  const paymentRefField = document.getElementById("payment_reference");
 
   invoiceInput.addEventListener("change", () => {
     const invoiceNumber = invoiceInput.value.trim();
@@ -681,6 +710,14 @@ document.addEventListener("DOMContentLoaded", () => {
           calculateRow(row);
         });
         updateTotals();
+        
+        if (data.purchase) {
+            document.getElementById("amount-paid").value = data.purchase.amount_paid || "";
+            document.getElementById("outstanding-amount").textContent = data.purchase.outstanding_amount || "0.00";
+            document.getElementById("payment-mode").value = data.purchase.payment_mode || "";
+            document.getElementById("payment-rate").textContent = data.purchase.payment_rate || "0%";
+            document.getElementById("payment-reference").value = data.purchase.payment_reference || "";
+          }
       })
       .catch(e => {
         console.error("Fetch purchase items failed:", e);
@@ -688,6 +725,31 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   });
 });
+
+const amountPaidInput = document.getElementById('amount-paid');
+
+  let alertShown = false;
+
+  // Show alert on first click/focus
+  amountPaidInput.addEventListener('click', () => {
+    if (!alertShown) {
+      alert("⚠️ Please enter the correct amount. Total paid and current paid amount must be together");
+      alertShown = true;
+    }
+  });
+
+  // Reset alertShown when user leaves the field
+  amountPaidInput.addEventListener('blur', () => {
+    alertShown = false;
+  });
+
+  // Allow Enter key to confirm value without blocking
+  amountPaidInput.addEventListener('keydown', (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      console.log("Entered amount:", amountPaidInput.value);
+    }
+  });
 
 function calculateOutstanding() {
     let total = parseFloat(document.getElementById("total").innerText) || 0;
