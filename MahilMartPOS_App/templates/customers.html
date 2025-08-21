@@ -37,12 +37,16 @@
 
 <form method="get" id="filterForm" class="row g-2 mb-4">
   <div class="col-auto">
-    <label class="form-label">Start Date</label>
+    <label class="form-label" style="color: #770b0b;">Start Date</label>
     <input type="date" id="startDate" name="start" value="{{ start_date }}" class="form-control">
   </div>
   <div class="col-auto">
-    <label class="form-label">End Date</label>
+    <label class="form-label" style="color: #770b0b">End Date</label>
     <input type="date" id="endDate" name="end" value="{{ end_date }}" class="form-control">
+  </div>
+  <div class="col-auto">
+    <label class="form-label" style="color: #770b0b">Phone Number</label>
+    <input type="text" name="phone" value="{{ phone|default_if_none:'' }}" placeholder="Enter phone number" class="form-control">
   </div>
   <div class="col-auto align-self-end">
     <button type="submit" class="btn btn-primary">
@@ -69,6 +73,7 @@
             <th>Address</th>
             <th>Email</th>
             <th>Date Joined</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -80,6 +85,11 @@
             <td>{{ c.address|default:"-" }}</td>
             <td>{{ c.email|default:"-" }}</td>
             <td>{{ c.date_joined|date:"Y-m-d" }}</td>
+            <td>             
+              <a href="{% url 'edit_customer' c.id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-square"></i> Edit
+              </button>
+            </td> 
           </tr>
           {% empty %}
           <tr>
@@ -107,7 +117,8 @@
             <th>Phone</th>
             <th>Address</th>
             <th>Email</th>
-            <th>First Billing Date</th>
+            <th>Date Joined</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -119,6 +130,12 @@
             <td>{{ b.address|default:"-" }}</td>
             <td>{{ b.email|default:"-" }}</td>
             <td>{{ b.date_joined|date:"Y-m-d" }}</td>
+            <td>             
+              <a href="{% url 'edit_customer' b.id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-square"></i> Edit
+              </button>
+            </td>            
+           </td>
           </tr>
           {% empty %}
           <tr>

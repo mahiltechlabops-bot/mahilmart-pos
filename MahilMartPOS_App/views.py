@@ -2395,6 +2395,7 @@ def customers_view(request):
     try:
         start_date = request.GET.get("start")
         end_date = request.GET.get("end")
+        phone = request.GET.get("phone")
 
         # Base QuerySets
         manual_qs = Customer.objects.filter(remarks="manual_entry")
@@ -2405,13 +2406,17 @@ def customers_view(request):
             manual_qs = manual_qs.filter(date_joined__date__range=[start_date, end_date])
             billing_qs = billing_qs.filter(date_joined__date__range=[start_date, end_date])
 
+        if phone:
+            manual_qs = manual_qs.filter(cell__icontains=phone)
+            billing_qs = billing_qs.filter(cell__icontains=phone)            
+
         # Customers from Customer table (manual entries)
         customer_entries = manual_qs.order_by("-date_joined")
 
         # Customers from Billing table (unique by phone, grouped)
         billing_customers = (
-            billing_qs
-            .values("name", "cell", "address", "email")
+            billing_qs            
+            .values("id", "name", "cell", "address", "email")
             .annotate(date_joined=Min("date_joined"))
             .order_by("-date_joined")
         )
@@ -2433,6 +2438,7 @@ def customers_view(request):
         "total_billing_customers": total_billing_customers,
         "start_date": start_date,
         "end_date": end_date,
+        "phone": phone,
     })
  
 @access_required(allowed_roles=['superuser'])
@@ -2464,6 +2470,40 @@ def add_customer(request):
         return redirect('customers')
 
     return render(request, 'add_customer.html')
+
+@login_required
+@access_required(allowed_roles=['superuser'])
+def edit_customer(request, id):
+    customer = get_object_or_404(Customer, id=id)
+
+    if request.method == "POST":
+        name = request.POST.get("name")
+        cell = request.POST.get("cell")
+        address = request.POST.get("address")
+        email = request.POST.get("email")
+
+        # Check if another customer already has this phone number
+        if Customer.objects.filter(cell=cell).exclude(id=customer.id).exists():
+            # Return with error message
+            return render(
+                request,
+                "edit_customer.html",
+                {
+                    "customer": customer,
+                    "error": f"Phone number {cell} is already registered with another customer."
+                },
+            )
+
+        # Save only if phone number is unique
+        customer.name = name
+        customer.cell = cell
+        customer.address = address
+        customer.email = email
+        customer.save()
+
+        return redirect("customers")
+
+    return render(request, "edit_customer.html", {"customer": customer})
 
 @access_required(allowed_roles=['superuser'])
 def payment_list_view(request):
