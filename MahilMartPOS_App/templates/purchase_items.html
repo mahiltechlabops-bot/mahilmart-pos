@@ -170,7 +170,7 @@
                 <a href="#" class="invoice-link" data-invoice="{{ item.purchase.invoice_no }}">
                     {{ item.purchase.invoice_no }}
                 </a>
-            </td>
+            </td>          
             <td>{{ item.purchase.subtotal }}</td>
             <td>{{ item.purchase.tax }}</td>
             <td>{{ item.purchase.discount }}</td>
@@ -205,14 +205,14 @@
 
 <!-- Payment Details Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
+  <div class="modal-dialog modal-xl" style="max-width: 1400px !important; width: 90vw !important;">
+    <div class="modal-content" style="width: 100%; max-width: 1200px;">
       <div class="modal-header">
         <h5 class="modal-title" id="paymentModalLabel">Payments for Invoice</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <table class="table table-bordered text-center">
+        <table class="table table-bordered">
           <thead>
             <tr>
               <th>S.no</th>

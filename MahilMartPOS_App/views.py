@@ -4,7 +4,7 @@ from django.db import models
 from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from django.db.models import Min, Q, Sum
+from django.db.models import Min, Q, Sum, FloatField
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -212,6 +212,47 @@ def dashboard_view(request):
         )
     )
 
+    last_30_days = datetime.now() - timedelta(days=30)
+
+    # Sales Trend
+    sales_trend_qs = (
+        BillingItem.objects
+        .filter(created_at__gte=last_30_days)
+        .extra({'date': 'date(created_at)'})
+        .values('date')
+        .annotate(total_sales=Sum('amount'))
+        .order_by('date')
+    )
+    sales_trend = list(sales_trend_qs)
+    
+    # Top Selling Products
+    top_selling_qs = (
+        BillingItem.objects
+        .filter(created_at__gte=last_30_days)
+        .values('item_name')
+        .annotate(total_quantity=Sum('qty'))
+        .order_by('-total_quantity')[:10]
+    )
+    top_selling = list(top_selling_qs)
+
+    # Sales by Category
+    item_groups = dict(Item.objects.values_list('item_name', 'group'))
+    category_sales_dict = {}
+    for bi in BillingItem.objects.all():
+        group_name = item_groups.get(bi.item_name, 'Uncategorized')
+        category_sales_dict[group_name] = category_sales_dict.get(group_name, 0) + bi.amount
+    category_sales = [{'group': k, 'total_sales': v} for k, v in category_sales_dict.items()]
+    category_sales = sorted(category_sales, key=lambda x: x['total_sales'], reverse=True)
+
+    # Top 10 Products by Revenue
+    top_products_qs = (
+        BillingItem.objects
+        .values('item_name')
+        .annotate(total_sales=Sum('amount'))
+        .order_by('-total_sales')[:10]
+    )
+    top_products = list(top_products_qs)
+
     return render(request, 'dashboard.html', {
         'transaction_count': transaction_count,
         'today_sales': today_sales,
@@ -225,6 +266,10 @@ def dashboard_view(request):
         'start_date': start_date,
         'end_date': end_date,
         "user": request.user,
+        'sales_trend': sales_trend,
+        'top_selling': top_selling,
+        'category_sales': category_sales,
+        'top_products': top_products,
     })
 
 def generate_report(request):
@@ -1067,6 +1112,7 @@ def item_creation(request):
             whole_rate_2=whole_rate_2,
             min_stock=min_stock
         )
+        messages.success(request, "Saved successfully!")
         return redirect('items')
 
     context = {
@@ -1613,7 +1659,7 @@ def export_purchases(request):
     # Example: return CSV
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="purchases.csv"'
-    response.write("id,supplier,amount\n")  # Just a test line
+    response.write("id,supplier,amount\n")
     return response
 
 @access_required(allowed_roles=['superuser'])
@@ -2604,7 +2650,7 @@ def purchase_items_view(request):
     items = PurchaseItem.objects.select_related(
         "purchase",
         "purchase__supplier"
-    ).all()
+    ).all().order_by('-purchase__id')
 
     # Fetch suppliers for the dropdown
     suppliers = Supplier.objects.all()

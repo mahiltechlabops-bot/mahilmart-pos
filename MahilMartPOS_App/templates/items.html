@@ -236,9 +236,35 @@
         <a href="{% url 'tax_creation' %}">
             <button type="button">Tax</button>
         </a>
-        <button type="submit">Save</button>
+        <button type="submit" id="saveBtn">Save</button>
         <button type="button" onclick="window.location.href='{% url 'dashboard' %}'">Exit</button>
         <button type="reset">Reset</button>
     </div>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    const saveBtn = document.getElementById('saveBtn');
+
+    // Before save confirmation
+    saveBtn.addEventListener('click', function(e) {
+        const confirmed = confirm("Are you sure you want to save?");
+        if (!confirmed) {
+            e.preventDefault();
+        }
+    });
+
+    // After save success messages
+    const messagesScript = document.getElementById('djangoMessages');
+    if (messagesScript) {
+        const messages = JSON.parse(messagesScript.textContent);
+        messages.forEach(msg => {
+            alert(msg.message);  // Show alert for each message
+        });
+    }
+});
+</script>
 {% endblock %}
