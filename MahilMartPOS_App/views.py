@@ -1828,10 +1828,11 @@ def create_purchase(request):
                     purchase=purchase
                 )
 
-        # Calculate running totals
-        previous_total_paid = purchase.payments.aggregate(total=models.Sum('payment_amount'))['total'] or 0
-        new_total_paid = previous_total_paid + amount_paid
-        balance_amount = total_amount - new_total_paid
+         # Calculate running totals
+        previous_total_paid = purchase.payments.aggregate(total_paid=models.Sum('payment_amount'))['total_paid'] or 0
+        payment_amount = amount_paid - previous_total_paid
+        total_payment_amount = previous_total_paid + payment_amount
+        balance_amount = total_amount - total_payment_amount
 
         # Create a new payment record
         PurchasePayment.objects.create(
@@ -1839,17 +1840,12 @@ def create_purchase(request):
             supplier=purchase.supplier,
             invoice_no=purchase.invoice_no,
             payment_date=now().date(),
-            payment_amount=amount_paid,
+            payment_amount=payment_amount,
             payment_mode=payment_mode,
             payment_reference=payment_ref,
             total_amount=total_amount,
             balance_amount=balance_amount
-        )
-
-        # Update Purchase totals
-        purchase.amount_paid = new_total_paid
-        purchase.outstanding_amount = balance_amount
-        purchase.save()
+        )    
               
         return JsonResponse({'success': True, 'purchase_id': purchase.id})
 
@@ -1858,22 +1854,16 @@ def create_purchase(request):
 
 @access_required(allowed_roles=['superuser'])
 def fetch_purchase_items(request):
-    invoice_number = request.GET.get('invoice_number')
-    print("Invoice number received:", invoice_number)
-    if not invoice_number:
-        print("No invoice number provided in request.")
+    invoice_number = request.GET.get('invoice_number')    
+    if not invoice_number:       
         return JsonResponse({'error': 'Invoice number is required'}, status=400)
     try:
-        purchase = Purchase.objects.get(invoice_no=invoice_number)
-        print("Purchase found:", purchase.id, purchase.invoice_no)
-    except Purchase.DoesNotExist:
-        print("No purchase found for invoice:", invoice_number)
+        purchase = Purchase.objects.get(invoice_no=invoice_number)       
+    except Purchase.DoesNotExist:       
         return JsonResponse({'error': 'Purchase not found'}, status=404)
-    items = PurchaseItem.objects.filter(purchase_id=purchase.id)
-    print("Number of items found:", items.count())
+    items = PurchaseItem.objects.filter(purchase_id=purchase.id)    
     items_data = []
-    for item in items:
-        print("Serializing item:", item.id, item.item_name, "Qty:", item.quantity)
+    for item in items:       
         items_data.append({
             'item_name': item.item_name,
             'item_code': item.code,
@@ -1896,8 +1886,17 @@ def fetch_purchase_items(request):
             'sale_price': item.sale_price,
             'expiry_date': item.expiry_date,
         })
+
+    purchase_data = {
+    'amount_paid': str(purchase.amount_paid or 0),
+    'outstanding_amount': str(purchase.outstanding_amount or 0),
+    'payment_mode': purchase.payment_mode or "",
+    'payment_rate': str(purchase.payment_rate or 0),
+    'payment_reference': purchase.payment_reference or "",
+    }   
+
     print("Returning", len(items_data), "items for invoice:", invoice_number)
-    return JsonResponse({'items': items_data})
+    return JsonResponse({'items': items_data,  'purchase': purchase_data})
 
 @access_required(allowed_roles=['superuser'])
 @csrf_exempt
@@ -2394,64 +2393,117 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 @access_required(allowed_roles=['superuser'])
 def customers_view(request):
     try:
-        # Customers from Customer table
-        customer_entries = Customer.objects.all().order_by('-date_joined')
+        start_date = request.GET.get("start")
+        end_date = request.GET.get("end")
+        phone = request.GET.get("phone")
+
+        # Base QuerySets
+        manual_qs = Customer.objects.filter(remarks="manual_entry")
+        billing_qs = Customer.objects.filter(remarks="billing_entry")
+
+        # Apply Date Filter
+        if start_date and end_date:
+            manual_qs = manual_qs.filter(date_joined__date__range=[start_date, end_date])
+            billing_qs = billing_qs.filter(date_joined__date__range=[start_date, end_date])
+
+        if phone:
+            manual_qs = manual_qs.filter(cell__icontains=phone)
+            billing_qs = billing_qs.filter(cell__icontains=phone)            
+
+        # Customers from Customer table (manual entries)
+        customer_entries = manual_qs.order_by("-date_joined")
 
         # Customers from Billing table (unique by phone, grouped)
         billing_customers = (
-            Customer.objects
-            .values('name', 'cell', 'address', 'email')
-            .annotate(date_joined=Min('date_joined'))
-            .order_by('-date_joined')
+            billing_qs            
+            .values("id", "name", "cell", "address", "email")
+            .annotate(date_joined=Min("date_joined"))
+            .order_by("-date_joined")
         )
+
+        # Counts (based on filter if applied)
+        total_customers = manual_qs.count() + billing_qs.count()
+        total_manual_customers = manual_qs.count()
+        total_billing_customers = billing_customers.count()
 
     except Exception as e:
         from django.http import HttpResponse
         return HttpResponse("Error: " + str(e))
 
-    return render(request, 'customers.html', {
-        'customer_entries': customer_entries,
-        'billing_customers': billing_customers
+    return render(request, "customers.html", {
+        "customer_entries": customer_entries,
+        "billing_customers": billing_customers,
+        "total_customers": total_customers,
+        "total_manual_customers": total_manual_customers,
+        "total_billing_customers": total_billing_customers,
+        "start_date": start_date,
+        "end_date": end_date,
+        "phone": phone,
     })
  
 @access_required(allowed_roles=['superuser'])
 def add_customer(request):
     if request.method == 'POST':
         name = request.POST.get('name')
-        cell = request.POST.get('cell')
+        cell = request.POST.get('phone')
         address = request.POST.get('address')
         email = request.POST.get('email')
 
+        if Customer.objects.filter(cell=cell).exists():
+            messages.error(request, f"Customer with phone {cell} already exists! or Empty values, Please enter on the alternate number")
+            return render(request, 'add_customer.html', {
+                "name": name,
+                "cell": cell,
+                "address": address,
+                "email": email,
+            })
+      
         Customer.objects.create(
             name=name,
             cell=cell,
             address=address,
             email=email,
-            date_joined=timezone.now()
+            date_joined=timezone.now(),
+            remarks="manual_entry"
         )
-
+        messages.success(request, "Customer added successfully!")
         return redirect('customers')
 
     return render(request, 'add_customer.html')
 
+@login_required
 @access_required(allowed_roles=['superuser'])
-def submit_customer(request):
-    if request.method == 'POST':
-        name = request.POST['customer_name']
-        cell = request.POST['phone_number']
-        address = request.POST['address']
-        email = request.POST.get('email')
-        date_joined = request.POST.get('date_joined')
+def edit_customer(request, id):
+    customer = get_object_or_404(Customer, id=id)
 
-        Customer.objects.create(
-            name=name,
-            phone_number=cell,
-            address=address,
-            email=email,
-            date_joined=date_joined
-        )
+    if request.method == "POST":
+        name = request.POST.get("name")
+        cell = request.POST.get("cell")
+        address = request.POST.get("address")
+        email = request.POST.get("email")
 
-    return redirect('customers')
+        # Check if another customer already has this phone number
+        if Customer.objects.filter(cell=cell).exclude(id=customer.id).exists():
+            # Return with error message
+            return render(
+                request,
+                "edit_customer.html",
+                {
+                    "customer": customer,
+                    "error": f"Phone number {cell} is already registered with another customer."
+                },
+            )
+
+        # Save only if phone number is unique
+        customer.name = name
+        customer.cell = cell
+        customer.address = address
+        customer.email = email
+        customer.save()
+
+        return redirect("customers")
+
+    return render(request, "edit_customer.html", {"customer": customer})
 
 @access_required(allowed_roles=['superuser'])
 def payment_list_view(request):
@@ -2488,12 +2540,40 @@ def payment_list_view(request):
 
 @access_required(allowed_roles=['superuser'])
 def purchase_items_view(request):
+    
+    # Start with all PurchaseItems and select related purchase & supplier
     items = PurchaseItem.objects.select_related(
         "purchase",
         "purchase__supplier"
-    ).all().order_by('id')
+    ).all()
 
-    return render(request, "purchase_items.html", {"items": items})
+    # Fetch suppliers for the dropdown
+    suppliers = Supplier.objects.all()
+
+    # Get filter parameters from GET
+    supplier_id = request.GET.get("supplier")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date") 
+
+    # Apply supplier filter
+    if supplier_id:
+        items = items.filter(purchase__supplier_id=supplier_id)
+
+    # Apply date range filter using 'created_at'
+    if start_date:
+        items = items.filter(purchase__created_at__date__gte=start_date)
+    if end_date:
+        items = items.filter(purchase__created_at__date__lte=end_date) 
+
+    context = {
+        "items": items,
+        "suppliers": suppliers,
+        "selected_supplier": supplier_id,
+        "start_date": start_date,
+        "end_date": end_date,         
+    }
+
+    return render(request, "purchase_items.html", context)
 
 def purchase_payments_api(request, invoice_no):
     payments = PurchasePayment.objects.filter(invoice_no=invoice_no).order_by('payment_date')
