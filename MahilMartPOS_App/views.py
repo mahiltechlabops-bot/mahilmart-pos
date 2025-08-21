@@ -50,6 +50,7 @@ from django.contrib.auth.decorators import user_passes_test
 from .decorators import access_required
 from django.urls import reverse
 from django.db import transaction
+from django.contrib.auth.decorators import login_required 
 from .models import (
     Supplier,
     Customer,
@@ -131,17 +132,25 @@ def view_company_details(request):
     return render(request, 'view_company_details.html', {'company': company})
 
 def dashboard_view(request):
-    today = now().date()
-    transaction_count = Billing.objects.filter(created_at__date=today).count()
+    today = now().date()  
     yesterday = today - timedelta(days=1)
 
-    # Today's total sales (received + abs(balance))
-    today_sales = Billing.objects.filter(date__date=today).annotate(
+    # Base queryset depending on user
+    if request.user.is_superuser:
+        bills_qs = Billing.objects.all()
+    else:
+        bills_qs = Billing.objects.filter(created_by=request.user)
+
+    # Transaction count (today only)
+    transaction_count = bills_qs.filter(created_at__date=today).count()
+
+     # Today's total sales
+    today_sales = bills_qs.filter(date__date=today).annotate(
         total=F('received') + Abs(F('balance'))
     ).aggregate(sum_total=Sum('total'))['sum_total'] or 0
 
     # Yesterday's total sales
-    yesterday_sales = Billing.objects.filter(date__date=yesterday).annotate(
+    yesterday_sales = bills_qs.filter(date__date=yesterday).annotate(
         total=F('received') + Abs(F('balance'))
     ).aggregate(sum_total=Sum('total'))['sum_total'] or 0
 
@@ -151,18 +160,15 @@ def dashboard_view(request):
     else:
         change_percentage = 0
 
-    # Aggregate stock quantities by code & name
+    # Stock aggregates (not user specific)
     stock_qty_expr = Case(
         When(unit__icontains='bulk', then=F('split_unit')),
         default=F('quantity'),
         output_field=DecimalField(max_digits=20, decimal_places=10)
     )
-
     stock_aggregates = Inventory.objects.values('code', 'item_name', 'unit').annotate(total_qty=Sum(stock_qty_expr))
-
     no_stock_items = stock_aggregates.filter(total_qty__lte=0)
     no_stock_count = no_stock_items.count()
-
     low_stock_items = stock_aggregates.filter(total_qty__gt=0, total_qty__lt=10)
     low_stock_count = low_stock_items.count()
 
@@ -170,20 +176,19 @@ def dashboard_view(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    bills_qs = Billing.objects.select_related('customer')
-
+    bills_filtered = bills_qs.select_related('customer')
     if start_date and end_date:
         start = parse_date(start_date)
         end = parse_date(end_date)
-        
         if start and end:
             if start == end:
-                bills_qs = bills_qs.filter(created_at__date=start)
+                bills_filtered = bills_filtered.filter(created_at__date=start)
             else:
-                bills_qs = bills_qs.filter(created_at__date__gte=start, created_at__date__lte=end)
+                bills_filtered = bills_filtered.filter(created_at__date__gte=start, created_at__date__lte=end)
 
+    # Recent bills
     recent_bills = (
-        bills_qs
+        bills_filtered
         .order_by('-created_at')
         .annotate(
             sale_amount=F('received') + Abs(F('balance')) + F('discount'),
@@ -210,6 +215,7 @@ def dashboard_view(request):
     return render(request, 'dashboard.html', {
         'transaction_count': transaction_count,
         'today_sales': today_sales,
+        'yesterday_sales': yesterday_sales,
         'change_percentage': change_percentage,
         'no_stock_count': no_stock_count,
         'no_stock_items': no_stock_items,
@@ -218,6 +224,57 @@ def dashboard_view(request):
         'recent_bills': recent_bills,
         'start_date': start_date,
         'end_date': end_date,
+        "user": request.user,
+    })
+
+def generate_report(request):
+    report_type = request.GET.get("reportType")
+    today = now().date()
+    yesterday = today - timedelta(days=1)
+
+    data = {}
+
+    if report_type == "Sales Report":
+        total_sales = Billing.objects.aggregate(
+            total=Sum(F('received') + F('balance'))
+        )['total'] or 0
+
+        data = {
+            "total_sales": total_sales,
+        }
+
+    elif report_type == "User-wise Transaction Report":
+        data = list(
+            Billing.objects.values("created_by__username")
+            .annotate(total_sales=Sum(F("received") + F("balance")))
+            .order_by("created_by__username")
+        )
+
+    elif report_type == "Customer Report (Purchases & Outstanding)":
+        data = list(
+            Billing.objects.values("customer__name", "customer__cell")
+            .annotate(
+                total_purchases=Sum(F("received") + F("balance")),
+                outstanding=Sum(F("balance")),
+            )
+            .order_by("customer__name")
+        )
+
+    elif report_type == "Inventory Report (Low Stock / Out of Stock)":
+        data = {
+            "low_stock": list(Inventory.objects.filter(quantity__lt=10).values("item_name", "quantity")),
+            "out_of_stock": list(Inventory.objects.filter(quantity__lte=0).values("item_name")),
+        }
+
+    elif report_type == "Revenue Report (Sales, Discounts, Returns)":
+        data = Billing.objects.aggregate(
+            total_sales=Sum(F("received") + F("balance")),
+            total_discounts=Sum("discount"),
+        )        
+
+    return JsonResponse({
+        "report_type": report_type,
+        "data": data
     })
 
 def billing_detail_view(request, id):
@@ -291,6 +348,7 @@ def sales_chart_data(request):
         'monthly_total': monthly_total
     })
 
+@login_required
 def create_invoice_view(request):
     if request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         phone = request.GET.get('phone')
@@ -353,7 +411,8 @@ def create_invoice_view(request):
                 points=total_points,
                 points_earned=0,
                 remarks=request.POST.get('remarks', ''),
-                status_on="counter_bill"
+                status_on="counter_bill",
+                created_by=request.user,
             )
 
             # Process items

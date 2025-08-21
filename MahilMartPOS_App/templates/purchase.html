@@ -10,13 +10,29 @@
 
   #purchaseTable td,
   #purchaseTable th {
-    white-space: nowrap;
-    padding: 4px 6px;
+    white-space: wrap;   
     font-size: 13px;
+    padding: 2px 4px !important;
+    line-height: 1.1;
+    font-size: 0.8rem;
   }
 
+   /* Reduce table min width */
+  #purchaseTable {
+    min-width: auto !important;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  /* Make header text compact */
   #purchaseTable th {
     font-weight: 600;
+    text-align: center;
+  }
+
+  /* Optional: fix row height */
+  #purchaseTable tbody tr {
+    height: 24px;
   }
 
   .table-responsive {
@@ -55,7 +71,7 @@
 
   #purchaseTable td:nth-child(2) input,    
   #purchaseTable td:nth-child(21) input {
-    width: 90px !important;
+    width: 100px !important;
     padding: 3px 4px;
     font-size: 12px;
     box-sizing: border-box;

@@ -4,7 +4,8 @@ from django.utils import timezone
 from django.utils.timezone import now
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission, User
+from django.conf import settings
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -60,7 +61,8 @@ class Billing(models.Model):
     points_earned = models.FloatField(default=0.0)   
     status_on = models.CharField(max_length=50, default="counter_bill")
     remarks = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)    
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="bills")
 
     def __str__(self):
         return f"Invoice {self.bill_no}"
