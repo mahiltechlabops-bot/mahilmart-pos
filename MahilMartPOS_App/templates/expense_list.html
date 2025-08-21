@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+    }
+    h2 {
+        text-align: center;
+        margin-top: 30px;
+        color: #333;
+    }
+
+    .filter-form {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        margin: 20px auto;
+        max-width: 1000px;
+        padding: 15px;
+        --background-color: #f0f8ff;
+        border-radius: 10px;
+        --box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    .filter-form label {
+        font-weight: bold;
+        font-size: 15px;
+    }
+
+    .filter-form input[type="date"],
+    .filter-form select {
+        padding: 6px 10px;
+        border-radius: 5px;
+        --border: 1px;
+        margin-left: 5px;
+    }
+
+    .filter-form button {
+        padding: 8px 20px;
+        border: none;
+        background-color: #28c7cb;
+        color: white;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.3s ease;
+    }
+
+    .date-block {
+        margin: 20px auto;
+        padding: 15px;
+        border-radius: 10px;
+        max-width: 800px;
+        background-color: #fafafa;
+        border: 1px solid #e0e0e0;
+        --box-shadow: 0 0 5px rgba(0,0,0,0.05);
+    }
+
+    .date-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #444;
+    }
+
+    .category-item {
+        margin-left: 20px;
+        font-size: 16px;
+        padding: 4px 0;
+        color: #333;
+    }
+
+    .category-item strong {
+        color: #222;
+    }
+
+    .category-item em {
+        color: #666;
+    }
+
+    .btn-container {
+        text-align: center;
+        margin: 30px 0;
+    }
+
+    .back-btn {
+        padding: 10px 25px;
+        background-color: #007bff;
+        border: none;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+</style>
+
+<h2>Expense Category</h2>
+
+
+<form method="get" class="filter-form">
+    <label>From:
+        <input type="date" name="from_date" value="{{ from_date }}">
+    </label>
+    <label>To:
+        <input type="date" name="to_date" value="{{ to_date }}">
+    </label>
+    <label>Category:
+        <select name="category">
+            <option value="all">All</option>
+            <option value="Staff Salaries"{% if selected_category == 'Staff Salaries' %} selected{% endif %}>Staff Salaries</option>
+            <option value="Water"{% if selected_category == 'Water' %} selected{% endif %}>Water Bill</option>
+            <option value="Internet"{% if selected_category == 'Internet' %} selected{% endif %}>Internet Bill</option>
+            <option value="Electricity"{% if selected_category == 'Electricity' %} selected{% endif %}>Electricity Bill</option>
+            <option value="Rent/Lease"{% if selected_category == 'Rent/Lease' %} selected{% endif %}>Rent/Lease</option>
+            <option value="Maintenance"{% if selected_category == 'Maintenance' %} selected{% endif %}>Maintenance</option>
+            <option value="Office Supplies"{% if selected_category == 'Office Supplies' %} selected{% endif %}>Office Supplies</option>
+            <option value="Software Maintenance"{% if selected_category == 'Software Maintenance' %} selected{% endif %}>Software Maintenance</option>
+            <option value="Marketing"{% if selected_category == 'Marketing' %} selected{% endif %}>Marketing</option>
+            <option value="Transport/Delivery"{% if selected_category == 'Transport/Delivery' %} selected{% endif %}>Transport/Delivery</option>
+            <option value="Miscellaneous"{% if selected_category == 'Miscellaneous' %} selected{% endif %}>Miscellaneous</option>
+        </select>
+    </label>
+    <button type="submit">Filter</button>
+</form>
+
+
+{% if show_totals %}
+    <div class="date-block" style="background-color: #e9ebd9; border-left: 5px ">
+        <div class="date-title">Category Total</div>
+        {% for cat, total in category_totals.items %}
+            <div class="category-item">
+                <strong>{{ cat }}:</strong> ₹{{ total }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% for date, entries in expenses_by_date.items %}
+    <div class="date-block">
+        <div class="date-title">{{ date }}</div>
+
+        {% for item in entries %}
+            <div class="category-item">
+                <strong>{{ item.datetime|date:"h:i A" }}</strong> – 
+                <strong>Category :</strong> {{ item.category }}
+
+                {% if item.detail %}
+                    : <em>{{ item.detail }}</em>
+                {% endif %}
+
+                {% if item.paid_to %}
+                    ; <strong>Paid To :</strong> {{ item.paid_to }}
+                {% endif %}
+
+                {% if item.payment_mode %}
+                    ; <strong>Payment Mode :</strong> {{ item.payment_mode }}
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% endfor %}
+
+<div class="btn-container">
+    <a href="{% url 'expense' %}">
+        <button class="back-btn">Back</button>
+    </a>
+</div>
+{% endblock %}
