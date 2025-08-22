@@ -76,7 +76,7 @@ from .models import (
     Quotation,
     SaleReturn,
     SaleReturnItem,
-    PurchasePayment,
+    PurchasePayment,   
 )
 
 def home(request):
@@ -225,33 +225,84 @@ def dashboard_view(request):
     )
     sales_trend = list(sales_trend_qs)
     
-    # Top Selling Products
+    # Top Selling Products          
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if start_date_str and end_date_str:
+        top_start_date = parse_date(start_date_str)
+        top_end_date = parse_date(end_date_str)
+    else:
+        top_end_date = datetime.today().date()
+        top_start_date = top_end_date - timedelta(days=30)
+
+    top_start_date_str = top_start_date.strftime("%Y-%m-%d") if top_start_date else ""
+    top_end_date_str = top_end_date.strftime("%Y-%m-%d") if top_end_date else ""        
+
+    # Query top selling products in the range
     top_selling_qs = (
         BillingItem.objects
-        .filter(created_at__gte=last_30_days)
+        .filter(created_at__date__gte=top_start_date, created_at__date__lte=top_end_date)
         .values('item_name')
         .annotate(total_quantity=Sum('qty'))
-        .order_by('-total_quantity')[:10]
+        .order_by('-total_quantity')[:25]
     )
     top_selling = list(top_selling_qs)
 
     # Sales by Category
+    today = datetime.today().date()
+    default_start = today - timedelta(days=30)
+    default_end = today
+
+    # Get category-specific date range from GET parameters
+    cat_start = request.GET.get('category_start_date')
+    cat_end = request.GET.get('category_end_date')
+    category_start_date = parse_date(cat_start) if cat_start else default_start
+    category_end_date = parse_date(cat_end) if cat_end else default_end
+
+    category_start_date_str = category_start_date.strftime("%Y-%m-%d") if category_start_date else ""
+    category_end_date_str = category_end_date.strftime("%Y-%m-%d") if category_end_date else ""
+
+    # Map item names to their group
     item_groups = dict(Item.objects.values_list('item_name', 'group'))
+
+    # Aggregate sales by group
     category_sales_dict = {}
-    for bi in BillingItem.objects.all():
+
+    billing_items = BillingItem.objects.filter(
+        created_at__date__gte=category_start_date,
+        created_at__date__lte=category_end_date
+    )
+
+    for bi in billing_items:
         group_name = item_groups.get(bi.item_name, 'Uncategorized')
         category_sales_dict[group_name] = category_sales_dict.get(group_name, 0) + bi.amount
-    category_sales = [{'group': k, 'total_sales': v} for k, v in category_sales_dict.items()]
+
+    # Convert to list of dicts and sort descending
+    category_sales = [
+        {'group': k, 'total_sales': v} 
+        for k, v in category_sales_dict.items()
+    ]
     category_sales = sorted(category_sales, key=lambda x: x['total_sales'], reverse=True)
 
-    # Top 10 Products by Revenue
-    top_products_qs = (
+
+    # Top 10 Products by Revenue   
+    rev_start = request.GET.get('revenue_start_date')
+    rev_end = request.GET.get('revenue_end_date')
+    revenue_start_date = parse_date(rev_start) if rev_start else default_start
+    revenue_end_date = parse_date(rev_end) if rev_end else default_end   
+
+    revenue_start_date_str = revenue_start_date.strftime("%Y-%m-%d") if revenue_start_date else ""
+    revenue_end_date_str = revenue_end_date.strftime("%Y-%m-%d") if revenue_end_date else ""
+
+    top_revenue_qs = (
         BillingItem.objects
+        .filter(created_at__date__gte=revenue_start_date, created_at__date__lte=revenue_end_date)
         .values('item_name')
-        .annotate(total_sales=Sum('amount'))
-        .order_by('-total_sales')[:10]
+        .annotate(total_revenue=Sum('amount'))
+        .order_by('-total_revenue')[:25]
     )
-    top_products = list(top_products_qs)
+    top_products = list(top_revenue_qs)
 
     return render(request, 'dashboard.html', {
         'transaction_count': transaction_count,
@@ -265,6 +316,12 @@ def dashboard_view(request):
         'recent_bills': recent_bills,
         'start_date': start_date,
         'end_date': end_date,
+        "top_start_date": top_start_date_str,
+        "top_end_date": top_end_date_str,
+        "category_start_date": category_start_date_str,
+        "category_end_date": category_end_date_str,
+        "revenue_start_date": revenue_start_date_str,
+        "revenue_end_date": revenue_end_date_str,
         "user": request.user,
         'sales_trend': sales_trend,
         'top_selling': top_selling,
@@ -440,6 +497,9 @@ def create_invoice_view(request):
             total_points = previous_bill.points if previous_bill else 0.0
             points_earned_total = 0.0
 
+            balance = float(request.POST.get("balance") or 0)
+            balance = 0 if balance > 0 else balance
+
             # Create Billing object first
             billing = Billing.objects.create(
                 customer=customer,
@@ -451,7 +511,7 @@ def create_invoice_view(request):
                 order_no=request.POST.get('order_no'),
                 sale_type=request.POST.get('sale_type'),
                 received=request.POST.get('received') or 0,
-                balance=request.POST.get('balance') or 0,
+                balance = balance,          
                 discount=request.POST.get('discount') or 0,
                 points=total_points,
                 points_earned=0,
@@ -1761,7 +1821,7 @@ def create_purchase(request):
             # Remove deleted inventory items
             Inventory.objects.filter(purchase=purchase).exclude(
                 item_id__in=[p[0] for p in incoming_pairs]
-            ).delete()
+            ).delete()           
 
         else:
             # ---- CREATE NEW PURCHASE ----
