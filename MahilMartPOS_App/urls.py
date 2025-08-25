@@ -6,6 +6,7 @@ from django.conf.urls import handler403
 urlpatterns = [
     path('', views.login_view, name='home'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    path('generate-report/', views.generate_report, name='generate_report'),
     path('billing/<int:id>/', views.billing_detail_view, name='billing_detail'),
     path('billing/<int:bill_id>/items/', views.billing_items_api, name='billing_items_api'),
     path('sales-chart-data/', views.sales_chart_data, name='sales_chart_data'),
