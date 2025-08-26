@@ -2357,9 +2357,30 @@ def fetch_purchase_items(request):
     return JsonResponse({'items': items_data,  'purchase': purchase_data})
 
 def purchase_tracking(request):
+    # Start with all records
     purchase_tracking_summary = PurchaseTracking.objects.select_related(
         'purchase', 'purchase__supplier'
     ).order_by('-tracked_at')
+
+    # Get filter values from GET parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    supplier_code = request.GET.get('supplier_code')
+    invoice_no = request.GET.get('invoice_no')
+
+    # Apply filters if provided
+    if start_date:
+        purchase_tracking_summary = purchase_tracking_summary.filter(tracked_at__date__gte=start_date)
+    if end_date:
+        purchase_tracking_summary = purchase_tracking_summary.filter(tracked_at__date__lte=end_date)
+    if supplier_code:
+        purchase_tracking_summary = purchase_tracking_summary.filter(
+            purchase__supplier__supplier_id__icontains=supplier_code
+        )
+    if invoice_no:
+        purchase_tracking_summary = purchase_tracking_summary.filter(
+            purchase__invoice_no__icontains=invoice_no
+        )
 
     return render(request, 'purchase_update_tracking.html', {
         'purchase_tracking_summary': purchase_tracking_summary
