@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group, Permission, User
 from django.conf import settings
+from django.contrib.postgres.fields import JSONField
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -55,6 +56,8 @@ class Billing(models.Model):
     order_no = models.CharField(max_length=50, blank=True, null=True)
     sale_type = models.CharField(max_length=20, blank=True, null=True)
     received = models.DecimalField(max_digits=10, decimal_places=2)
+    cash_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    card_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     points = models.FloatField(default=0.0)  
@@ -66,6 +69,15 @@ class Billing(models.Model):
 
     def __str__(self):
         return f"Invoice {self.bill_no}"
+    
+    @property
+    def total_amount(self):
+        return sum(item.amount for item in self.items.all())
+    
+    @property
+    def calc_balance(self):
+        """Always calculate balance dynamically"""
+        return self.total_amount - (self.received or 0)
     
 class BillingItem(models.Model):
     billing = models.ForeignKey(Billing, on_delete=models.CASCADE, related_name='items')
@@ -103,6 +115,7 @@ class Order(models.Model):
     ]
 
     order_id = models.AutoField(primary_key=True)
+    bill_no = models.CharField(max_length=100, null=True, blank=True)
     customer_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=10)
     address = models.TextField()
@@ -122,6 +135,16 @@ class Order(models.Model):
     payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES)
     order_status = models.CharField(max_length=10, choices=ORDER_STATUS_CHOICES)
     qtn_no = models.CharField(max_length=50, blank=True, null=True)
+
+    def update_payment(self, new_payment):
+        # Update paid_amount and due_balance like BillingPayment
+        self.paid_amount += Decimal(new_payment)
+        self.due_balance = self.total_order_amount - self.paid_amount
+
+        # If fully paid, mark completed
+        if self.due_balance <= 0:
+            self.order_status = 'completed'
+        self.save()
 
     def save(self, *args, **kwargs):
         if self.advance >= self.total_order_amount:
@@ -148,10 +171,53 @@ class Quotation(models.Model):
     points = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     points_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     items = models.JSONField()
+    bill_no = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return f"Quotation #{self.qtn_no} - {self.name}"
+    
+    def __str__(self):
+        return f"Quotation #{self.qtn_no} - {self.name}"
 
+class BillingPayment(models.Model):
+    billing = models.ForeignKey(Billing, on_delete=models.CASCADE, related_name="payments")
+    bill_no = models.CharField(max_length=50, blank=True)  
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    already_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    new_payment = models.DecimalField(max_digits=10, decimal_places=2)
+    balance = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(default=timezone.now)
+    payment_mode = models.CharField(max_length=50, choices=(('Cash','Cash'),('Card','Card'),('Online','Online')), default='Cash')
+
+    def save(self, *args, **kwargs):
+        if not self.bill_no:
+            self.bill_no = self.billing.bill_no  
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Payment {self.id} for {self.bill_no}"
+    
+class BillType(models.Model):
+    billtype_id = models.IntegerField(unique=True)
+    billtype = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.billtype
+    
+class PaymentMode(models.Model):
+    mode_id = models.IntegerField(unique=True)
+    mode_name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.mode_name
+    
+class Counter(models.Model):
+    counter_id = models.IntegerField(unique=True)
+    counter_name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.counter_name    
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
@@ -599,6 +665,40 @@ class PurchasePayment(models.Model):
 
     def __str__(self):
         return f"Payment {self.id} for Invoice {self.purchase.invoice_no}"
+    
+class PurchaseTracking(models.Model):
+    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name="tracking")
+    item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # PurchaseItem snapshot fields
+    existing_quantity = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  
+    updated_quantity = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)    
+    total_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)   
+    whole_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    whole_price_2 = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    sale_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    discount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    net_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    tax = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True)   
+    expiry_date = models.DateField(null=True, blank=True)
+    purchased_at = models.DateTimeField(null=True, blank=True)
+
+    code = models.CharField(max_length=100, null=True, blank=True)
+    item_name = models.CharField(max_length=255, null=True, blank=True)    
+    hsn = models.CharField(max_length=50, null=True, blank=True)
+
+    split_unit = models.CharField(max_length=50, null=True, blank=True)
+    split_unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    unit_qty = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    status = models.CharField(max_length=50, null=True, blank=True)
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    taxable_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    # Meta
+    tracked_at = models.DateTimeField(auto_now_add=True)   
     
 class Inventory(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)

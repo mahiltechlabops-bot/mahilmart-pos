@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div style="display: flex; justify-content: center; align-items: center; min-height: 80vh; background:#f9f9f9;">
+    <div style="padding:30px; background:white; border-radius:10px; box-shadow:0px 4px 10px rgba(0,0,0,0.1); width:800px;">
+        <h2 style="text-align:center; margin-bottom:20px;">Bill No : {{ bill.bill_no }}</h2>
+        
+        <form method="post">
+            {% csrf_token %}
+
+            <div style="display: flex; flex-wrap: wrap; gap:20px;">
+                <div style="flex: 1 1 45%;">
+                    <label>Bill No:</label>
+                    <input type="text" name="bill_no" value="{{ bill.bill_no }}" readonly style="width:100%; padding:6px; background:#e9ecef;">
+                </div>
+
+                <div style="flex: 1 1 45%;">
+                    <label>Customer Name:</label>
+                    <input type="text" value="{{ bill.customer }}" readonly style="width:100%; padding:6px;">
+                    <input type="hidden" name="customer" value="{{ bill.customer }}">
+                </div>
+
+                <div style="flex: 1 1 45%;">
+                    <label>Total Amount:</label>
+                    <input type="text" value="{{ bill.total_amount }}" readonly style="width:100%; padding:6px;">
+                    <input type="hidden" name="total_amount" value="{{ bill.total_amount }}">
+                </div>
+
+                <div style="flex: 1 1 45%;">
+                    <label>Already Paid:</label>
+                    <input type="text" id="already_paid" value="{{ total_paid|floatformat:2 }}" readonly style="width:100%; padding:6px;">
+                    <input type="hidden" name="received" value="{{ total_paid|floatformat:2 }}">
+                </div>
+
+                <div style="flex: 1 1 45%;">
+                    <label>Balance:</label>
+                    <input type="text" id="balance" name="balance" value="{{ balance_amount|floatformat:2 }}" readonly style="width:100%; padding:6px;">
+                </div>
+
+                <div style="flex: 1 1 45%;">
+                    <label>Payment Mode:</label>
+                    <select name="payment_mode" style="width:100%; padding:6px;">
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="Online">Online</option>
+                    </select>
+                </div>
+
+                <div style="flex: 1 1 45%;">
+                    <label>New Payment:</label>
+                    <input type="number" id="new_payment" name="new_payment" min="0" value="0" style="width:100%; padding:6px;">
+                </div>
+
+                <div style="flex: 1 1 45%;">
+                    <label>Payment Date:</label>
+                    <input type="datetime-local" name="payment_date" id="payment_date" style="width:100%; padding:6px;">
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-top:20px;">
+                <button type="submit" style="padding:8px 16px; background:#28a745; color:white; border:none; border-radius:4px;">
+                    Save
+                </button>
+                <a href="{% url 'payment_list' %}" 
+                   style="margin-left:10px; padding:8px 16px; background:#dc3545; color:white; border-radius:4px; text-decoration:none; display:inline-block;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function setCurrentDateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const formatted = `${year}-${month}-${day}T${hours}:${minutes}`;
+        document.getElementById('payment_date').value = formatted;
+    }
+
+    window.addEventListener('load', setCurrentDateTime);
+    setInterval(setCurrentDateTime, 60000);
+
+    document.getElementById("new_payment").addEventListener("input", function () {
+        let newPayment = parseFloat(this.value) || 0;
+        let alreadyPaid = parseFloat(document.getElementById("already_paid").value) || 0;
+        let totalAmount = parseFloat("{{ bill.total_amount|floatformat:2 }}");
+        let newBalance = totalAmount - (alreadyPaid + newPayment);
+        if (newBalance < 0) {
+            alert("Payment exceeds balance!");
+            this.value = totalAmount - alreadyPaid;
+            newBalance = 0;
+        }
+        document.getElementById("balance").value = newBalance.toFixed(2);
+    });
+</script>
+
+{% endblock %}

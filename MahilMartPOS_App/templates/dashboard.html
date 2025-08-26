@@ -223,7 +223,7 @@
               <td>{{ bill.customer_name }}</td>
               <td>{{ bill.customer_phone }}</td>
               <td>₹{{ bill.sale_amount|floatformat:2 }}</td>
-              <td>₹{{ bill.received|floatformat:2 }}</td>
+              <td>₹{{ bill.received|floatformat:2 }}</td>             
               <td>₹{{ bill.pending_amount|floatformat:2 }}</td>
               <td>{{ bill.date|date:"d M Y H:i" }}</td>
               <td>{{ bill.created_by.username }}</td>
