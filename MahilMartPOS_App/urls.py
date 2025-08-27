@@ -47,6 +47,7 @@ urlpatterns = [
     path('api/purchase/create/', views.create_purchase, name='create_purchase'),
     path('api/purchase/items/', views.fetch_purchase_items, name='fetch_purchase_items'),   
     path('purchase/tracking/', views.purchase_tracking, name='purchase_update_tracking'),
+    path("purchase/", views.purchase_page, name="purchase_page"),
     path('stock_adjustment/', views.stock_adjustment_view, name='stock_adjustment'),   
     path('stock_adjustments/', views.stock_adjustment_list, name='stock_adjustment_list'),
     path('split-stock/', views.split_stock_page, name='split_stock'),

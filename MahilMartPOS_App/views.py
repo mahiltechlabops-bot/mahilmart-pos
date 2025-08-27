@@ -2387,6 +2387,10 @@ def purchase_tracking(request):
     })
 
 @access_required(allowed_roles=['superuser'])
+def purchase_page(request):
+    return render(request, "purchase.html")
+
+@access_required(allowed_roles=['superuser'])
 @csrf_exempt
 def stock_adjustment_view(request):
     # Get latest item ID for each code
