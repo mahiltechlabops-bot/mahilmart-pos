@@ -102,8 +102,12 @@
         <div class="section">
             <h3>Item Information</h3>
             <table>
-                <tr>
-                    <td><label>Code</label><input type="text" name="code" required></td>
+                <tr>                    
+                    <td>
+                        <label>Code</label>
+                        <input type="text" id="item_code" name="code" required>
+                        <span id="codeAlert" style="color:red; display:none;">Code already exists!</span>
+                    </td>
                     <td><label>Status</label>
                         <select name="status">
                             <option>Active</option>
@@ -236,9 +240,11 @@
         <a href="{% url 'tax_creation' %}">
             <button type="button">Tax</button>
         </a>
-        <button type="submit" id="saveBtn">Save</button>
-        <button type="button" onclick="window.location.href='{% url 'dashboard' %}'">Exit</button>
-        <button type="reset">Reset</button>
+        <div class="btn-container">
+            <button type="submit" id="saveBtn">Save</button>
+            <button type="button" onclick="window.location.href='{% url 'dashboard' %}'">Exit</button>
+            <button type="reset">Reset</button>
+        </div>
     </div>
 </form>
 {% endblock %}
@@ -265,6 +271,33 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(msg.message);  // Show alert for each message
         });
     }
+});
+
+document.getElementById("saveBtn").addEventListener("click", function(event) {
+    let confirmSave = confirm("Are you sure you want to save?");
+    if (!confirmSave) {
+        event.preventDefault();
+    }
+});
+
+document.getElementById("item_code").addEventListener("blur", function() {
+    let code = this.value;
+    if (code.trim() === "") return;
+
+    fetch(`/check-item-code/?code=${encodeURIComponent(code)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                document.getElementById("codeAlert").style.display = "inline";
+                this.style.borderColor = "red";
+                document.querySelector("button[type='submit']").disabled = true;
+            } else {
+                document.getElementById("codeAlert").style.display = "none";
+                this.style.borderColor = "";
+                document.querySelector("button[type='submit']").disabled = false;
+            }
+        })
+        .catch(error => console.error("Error:", error));
 });
 </script>
 {% endblock %}

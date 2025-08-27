@@ -96,7 +96,7 @@
     }
 
     .btn-purchase {
-        background-color: #007bff;
+        background-color: #64a6ec;
         color: white;
         padding: 10px 20px;
         border: none;
@@ -105,9 +105,16 @@
         font-weight: 600;
         transition: 0.3s;
     }
-    .btn-purchase:hover {
-        background-color: #0069d9;
-    }
+    
+    .modal-dialog {
+    max-width: 95%; /* width of modal */
+    margin: 1.75rem auto; /* keep centered */
+}
+
+.modal-body table {
+    width: 200%; /* make table span full modal */
+}
+    
 </style>
 
 <div class="payment-dashboard">
@@ -130,10 +137,12 @@
                         <option value="all" {% if payment_mode == 'all' or not payment_mode %}selected{% endif %}>All</option>
                         <option value="cash" {% if payment_mode == 'cash' %}selected{% endif %}>Cash</option>
                         <option value="card" {% if payment_mode == 'card' %}selected{% endif %}>Card</option>
+                        <option value="credit"{% if payment_mode == 'credit' %}selected{% endif %}>Credit</option>
+                        <option value="Both Cash & Card"{% if payment_mode == 'Both Cash & Card' %}selected{% endif %}>Both Cash & Card</option>
                     </select>
                     <button type="submit">Filter</button>
                 </div>
-            </div>           
+            </div>
         </form>
     </div>
     <table>
@@ -146,8 +155,12 @@
                 <th>Date & Time</th>
                 <th>Cashier</th>
                 <th>Payment Mode</th>
+                <th>Total Amount</th>
                 <th>Amount Paid</th>
+                <th>Balance</th>
                 <th>Status</th>
+                <th>Action</th>
+                <th>Payments</th>
             </tr>
         </thead>
         <tbody>
@@ -160,17 +173,60 @@
                 <td>{{ bill.date|date:"d-m-Y h:i A" }}</td>
                 <td>{{ bill.counter }}</td>
                 <td>{{ bill.bill_type }}</td>
-                <td>{{ bill.received }}</td>
-                <td class="status-{% if bill.received >= bill.total_amount %}paid
-                                 {% elif bill.received == 0 %}unpaid
-                                 {% else %}partial{% endif %}">
-                    {% if bill.received >= bill.total_amount %}
-                        Paid
-                    {% elif bill.received == 0 %}
-                        Unpaid
+                <td>{{ bill.total_amount }}</td>
+                <td>{{ bill.total_received }}</td>
+                <td>
+                    {% if bill.balance_amount > 0 %}
+                        {{ bill.balance_amount }}
                     {% else %}
-                        Partially Paid
+                        0
                     {% endif %}
+                </td>
+            <td class="
+    {% if bill.bill_type == 'Credit' %}
+        {% if bill.total_received == 0 %}
+            status-unpaid
+        {% elif bill.total_received < bill.total_amount %}
+            status-partial
+        {% else %}
+            status-paid
+        {% endif %}
+    {% else %}
+        status-paid
+    {% endif %}
+">
+                    {% if bill.bill_type == 'Credit' %}
+                        {% if bill.total_received == 0 %}
+                            Unpaid
+                        {% elif bill.total_received < bill.total_amount %}
+                            Partially Paid
+                        {% else %}
+                            Paid
+                        {% endif %}
+                    {% else %}
+                        Paid
+                    {% endif %}
+                </td>
+         <td>
+            {% if bill.bill_type == "Credit" %}
+    {% if bill.total_received == 0 %}
+        <a href="{% url 'billing_edit' bill.id %}" 
+           style="padding:6px 12px; background:#aacc31; color:black; border-radius:4px; text-decoration:none; font-weight:600;">
+           Edit
+        </a>
+    {% elif bill.total_received < bill.total_amount %}
+        <a href="{% url 'billing_edit' bill.id %}" 
+           style="padding:6px 12px; background:#ffc107; color:black; border-radius:4px; text-decoration:none; font-weight:600;">
+           Edit
+        </a>
+    {% endif %}
+{% endif %}
+
+        </td>
+          <td>
+                    <button class="btn-purchase show-payment-btn" data-billing-id="{{ bill.id }}">
+                        View Payments
+                    </button>
                 </td>
             </tr>
             {% empty %}
@@ -179,4 +235,64 @@
         </tbody>
     </table>
 </div>
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="paymentModalLabel">Billing Payments</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered text-center">
+          <thead>
+            <tr>
+              <th>S.no</th>
+              <th>Bill No</th>
+              <th>Customer Name</th>
+              <th>Total Amount</th>
+              <th>Already Paid</th>
+              <th>New Payment</th>
+              <th>Balance</th>
+              <th>Payment Mode</th>
+              <th>Payment Date</th>
+            </tr>
+          </thead>
+          <tbody id="modalPaymentBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function loadPayments(billingId) {
+    fetch(`/payments/${billingId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('modalPaymentBody');
+            tbody.innerHTML = '';
+            data.payments.forEach(payment => {
+                let row = `<tr>
+                    <td>${payment.sno}</td>
+                    <td>${payment.bill_no}</td>
+                    <td>${payment.customer}</td>
+                    <td>${payment.total_amount.toFixed(2)}</td>
+                    <td>${payment.already_paid.toFixed(2)}</td>
+                    <td>${payment.new_payment.toFixed(2)}</td>
+                    <td>${payment.balance.toFixed(2)}</td>
+                    <td>${payment.payment_mode}</td>
+                    <td>${payment.payment_date}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        });
+}
+
+document.querySelectorAll('.show-payment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const billingId = btn.dataset.billingId;
+        loadPayments(billingId);
+        new bootstrap.Modal(document.getElementById('paymentModal')).show();
+    });
+});
+</script>
 {% endblock %}

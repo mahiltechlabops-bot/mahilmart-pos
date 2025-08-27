@@ -107,33 +107,81 @@
             </div>
         </div>
         <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">Top Selling Products (Last 30 Days)</div>
-                <div class="card-body">
-                    <canvas id="topProductsChart"></canvas>
-                </div>
-            </div>
-        </div>
+          <div class="card">
+              <div class="card-header">
+                  Top 25 Selling Products (By default last 30 days)
+              </div>
+              <div class="card-body">
+                  <!-- Date Filter (specific to this card) -->
+                  <div class="row mb-3">
+                      <div class="col-5">
+                          <input type="date" id="topStartDate" class="form-control" value="{{ top_start_date|default:'' }}">
+                      </div>
+                      <div class="col-5">
+                          <input type="date" id="topEndDate" class="form-control" value="{{ top_end_date|default:'' }}">
+                      </div>
+                      <div class="col-2">
+                          <button id="topFilterBtn" class="btn btn-primary">Filter</button>
+                      </div>
+                  </div>
+
+                  <!-- Chart -->
+                  <canvas id="topProductsChart"></canvas>
+              </div>
+          </div>
+      </div>
     </div>
 
     <div class="row">
         <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">Sales by Category</div>
-                <div class="card-body">
-                    <canvas id="categorySalesChart"></canvas>
-                </div>
-            </div>
+              <div class="card">
+                  <div class="card-header">
+                      Sales by Category (By default last 30 days)
+                  </div>
+                  <div class="card-body">
+                      <!-- Date Filter specific to this card -->
+                      <div class="row mb-3">
+                          <div class="col-5">
+                              <input type="date" id="categoryStartDate" class="form-control"  value="{{ category_start_date|default:'' }}">
+                          </div>
+                          <div class="col-5">
+                              <input type="date" id="categoryEndDate" class="form-control" value="{{ category_end_date|default:'' }}">
+                          </div>
+                          <div class="col-2">
+                              <button id="categoryFilterBtn" class="btn btn-primary">Filter</button>
+                          </div>
+                      </div>
+
+                      <!-- Chart -->
+                      <canvas id="categorySalesChart"></canvas>
+                  </div>
+              </div>
         </div>
         <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">Top 10 Products by Revenue</div>
-                <div class="card-body">
-                    <canvas id="topProductsPieChart"></canvas>
-                </div>
-            </div>
+              <div class="card">
+                  <div class="card-header">
+                      Top 25 Products by Revenue (By default last 30 days)
+                  </div>
+                  <div class="card-body">
+                      <!-- Date Filter specific to this card -->
+                      <div class="row mb-3">
+                          <div class="col-5">
+                              <input type="date" id="revenueStartDate" class="form-control" value="{{ revenue_start_date }}">
+                          </div>
+                          <div class="col-5">
+                              <input type="date" id="revenueEndDate" class="form-control" value="{{ revenue_end_date }}">
+                          </div>
+                          <div class="col-2">
+                              <button id="revenueFilterBtn" class="btn btn-primary">Filter</button>
+                          </div>
+                      </div>
+
+                      <!-- Chart -->
+                      <canvas id="topProductsPieChart"></canvas>
+                  </div>
+              </div>
+          </div>
         </div>
-    </div>
 
     <!-- JSON Data for Charts -->
     {{ sales_trend|json_script:"salesTrendData" }}
@@ -175,8 +223,14 @@
               <td>{{ bill.customer_name }}</td>
               <td>{{ bill.customer_phone }}</td>
               <td>₹{{ bill.sale_amount|floatformat:2 }}</td>
-              <td>₹{{ bill.received|floatformat:2 }}</td>
-              <td>₹{{ bill.pending_amount|floatformat:2 }}</td>
+              <td>₹{{ bill.received_amount|floatformat:2 }}</td>             
+              <td>
+                {% if bill.pending_amount > 0 %}
+                    ₹{{ bill.pending_amount|floatformat:2 }}
+                {% else %}
+                    ₹0.00
+                {% endif %}
+              </td>
               <td>{{ bill.date|date:"d M Y H:i" }}</td>
               <td>{{ bill.created_by.username }}</td>
               <td>
@@ -444,13 +498,26 @@ document.getElementById('filterTransactions').addEventListener('click', function
 function filterRows(startDate, endDate) {
   const rows = document.querySelectorAll('#transactionsTable tbody tr');
 
+  // Normalize filter dates (strip time)
+  if (startDate) startDate.setHours(0, 0, 0, 0);
+  if (endDate) endDate.setHours(23, 59, 59, 999);
+
   rows.forEach(row => {
     const dateCell = row.querySelector('td:nth-child(7)');
     if (!dateCell) return;
 
+    // Parse "22 Aug 2025 04:13" safely
     const billDate = new Date(dateCell.textContent.trim());
 
-    if ((startDate && billDate < startDate) || (endDate && billDate > endDate)) {
+    // Normalize bill date (ignore hours/minutes)
+    const normalizedBillDate = new Date(
+      billDate.getFullYear(),
+      billDate.getMonth(),
+      billDate.getDate()
+    );
+
+    if ((startDate && normalizedBillDate < startDate) ||
+        (endDate && normalizedBillDate > endDate)) {
       row.style.display = 'none';
     } else {
       row.style.display = '';
@@ -615,7 +682,11 @@ let salesTrendChart, topProductsChart, categoryChart, topProductsPieChart;
                 type: 'bar',
                 data: {
                     labels: data.map(d => d.item_name),
-                    datasets: [{ label: 'Quantity Sold', data: data.map(d => d.total_quantity), backgroundColor: '#36A2EB' }]
+                    datasets: [{
+                        label: 'Quantity Sold',
+                        data: data.map(d => d.total_quantity),
+                        backgroundColor: '#36A2EB'
+                    }]
                 },
                 options: {
                     responsive: true,
@@ -628,50 +699,136 @@ let salesTrendChart, topProductsChart, categoryChart, topProductsPieChart;
             });
         }
 
+        // Filter button (only for this chart)
+        document.getElementById('topFilterBtn').addEventListener('click', () => {
+            const start = document.getElementById('topStartDate').value;
+            const end = document.getElementById('topEndDate').value;
+
+            if (start && end) {
+                if (new Date(end) < new Date(start)) {
+                    alert("End date cannot be earlier than start date.");
+                    return;
+                }               
+                window.location.href = `?top_start_date=${start}&top_end_date=${end}`;
+            } else {
+                alert("Please select both start and end dates.");
+            }
+        });     
+        
         // --- Sales by Category ---
         function renderCategorySales(data) {
             const ctx = document.getElementById('categorySalesChart').getContext('2d');
+
+            // Destroy previous chart instance if exists
             if (categoryChart) categoryChart.destroy();
 
+            // Create new chart
             categoryChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: data.map(d => d.group),
-                    datasets: [{ label: 'Sales by Category', data: data.map(d => d.total_sales),
-                        backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#8AFF33','#33FFDD']
+                    labels: data.map(d => d.group), // Assuming your data has "group" key for category name
+                    datasets: [{
+                        label: 'Sales by Category',
+                        data: data.map(d => d.total_sales),
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#8AFF33', '#33FFDD'
+                        ],
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     plugins: {
-                        tooltip: { callbacks: { label: ctx => '₹' + ctx.parsed.toLocaleString('en-IN', { minimumFractionDigits: 2 }) } },
-                        legend: { position: 'right' }
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const value = ctx.parsed;
+                                    const total = ctx.chart._metasets[ctx.datasetIndex].total;
+                                    const percentage = ((value / total) * 100).toFixed(2);
+
+                                    return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${percentage}%)`;
+                                }
+                            }
+                        }
                     }
                 }
             });
         }
 
-        // --- Top 10 Products by Revenue ---
-        function renderTopProductsRevenue(data) {
-            const ctx = document.getElementById('topProductsPieChart').getContext('2d');
-            if (topProductsPieChart) topProductsPieChart.destroy();
+        // Filter button for Sales by Category (if using date filters)
+        document.getElementById('categoryFilterBtn').addEventListener('click', () => {
+            const start = document.getElementById('categoryStartDate').value;
+            const end = document.getElementById('categoryEndDate').value;          
 
-            topProductsPieChart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: data.map(d => d.item_name),
-                    datasets: [{ label: 'Revenue', data: data.map(d => d.total_sales),
-                        backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#8AFF33','#33FFDD','#FF33AA','#33FF77']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        tooltip: { callbacks: { label: ctx => '₹' + ctx.parsed.toLocaleString('en-IN', { minimumFractionDigits: 2 }) } },
-                        legend: { position: 'right' }
-                    }
-                }
-            });
-        }
+             if (start && end) {
+                if (new Date(end) < new Date(start)) {
+                    alert("End date cannot be earlier than start date.");
+                    return;
+                }               
+                window.location.href = `?category_start_date=${start}&category_end_date=${end}`;
+            } else {
+                alert("Please select both start and end dates.");
+            }
+        });
+
+    // --- Top 10 Products by Revenue ---
+    function renderTopProductsRevenue(data) {
+    const ctx = document.getElementById('topProductsPieChart').getContext('2d');
+
+    // Destroy old chart if exists
+    if (topProductsPieChart) topProductsPieChart.destroy();
+
+          // Create new chart
+          topProductsPieChart = new Chart(ctx, {
+              type: 'pie',
+              data: {
+                  labels: data.map(d => d.item_name),
+                  datasets: [{
+                      label: 'Revenue',
+                      data: data.map(d => d.total_revenue),
+                      backgroundColor: [
+                          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                          '#9966FF', '#FF9F40', '#8AFF33', '#33FFDD',
+                          '#FF33AA', '#33FF77'
+                      ]
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  plugins: {
+                      legend: { position: 'right' },
+                      tooltip: {
+                          callbacks: {
+                              label: function(ctx) {
+                                   const value = ctx.parsed;
+                                   const total = ctx.chart._metasets[ctx.datasetIndex].total;
+                                   const percentage = ((value / total) * 100).toFixed(2);
+
+                                   return `${ctx.label}: ₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${percentage}%)`;
+                              }
+                          }
+                      }
+                  }
+              }
+          });
+      }
+
+      // --- Filter button for this card only ---
+      document.getElementById('revenueFilterBtn').addEventListener('click', () => {
+          const start = document.getElementById('revenueStartDate').value;
+          const end = document.getElementById('revenueEndDate').value;
+       
+           if (start && end) {
+                if (new Date(end) < new Date(start)) {
+                    alert("End date cannot be earlier than start date.");
+                    return;
+                }               
+                window.location.href = `?revenue_start_date=${start}&revenue_end_date=${end}`;
+            } else {
+                alert("Please select both start and end dates.");
+            }
+      });
 </script>
 {% endblock %}

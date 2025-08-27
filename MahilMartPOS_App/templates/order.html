@@ -171,44 +171,31 @@
             <thead>
                 <tr>
                     <th>Order ID</th>
+                    <th>Bill No</th>
+                    <th>Quotation No</th>
                     <th>Customer</th>
                     <th>Date</th>
                     <th>Items</th>
                     <th>Total</th>
                     <th>Advance Paid</th>
-                    <th>Paid Amount</th>
                     <th>Due Balance</th>
                     <th>Status</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in orders %}
                 <tr>
                     <td>{{ order.order_id }}</td>
+                    <td>{{ order.bill_no }}</td>
+                    <td>{{ order.qtn_no }}</td>
                     <td>{{ order.customer_name }}</td>
                     <td>{{ order.date_of_order|date:"d-m-Y H:i" }}</td>
                     <td>{{ order.items.count }}</td>
                     <td>₹{{ order.total_order_amount }}</td>
                     <td>₹{{ order.advance }}</td>
-                    <td>₹{{ order.paid_amount }}</td>
                     <td>₹{{ order.due_balance }}</td>
                     <td><span class="status {{ order.order_status }}">{{ order.order_status }}</span></td>
-                    <td>
-                        <a href="{% url 'order_detail' order.order_id %}">View</a>
-                        {% if order.order_status == 'pending' %}
-                        <span style="margin-left: 15px;">
-                            <a href="javascript:void(0);"
-                            class="mark-paid-link"
-                            data-order-id="{{ order.order_id }}"
-                            data-total="{{ order.total_order_amount }}"
-                            data-advance="{{ order.advance }}"
-                            data-due="{{ order.due_balance }}">
-                            Update
-                        </a>
-                    </span>
-                    {% endif %}
-                </td>
+                    
             </tr>
             {% empty %}
             <tr><td colspan="7">No orders found.</td></tr>

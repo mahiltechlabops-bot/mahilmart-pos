@@ -17,7 +17,7 @@ from datetime import datetime
 from django.core.serializers import serialize
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.paginator import Paginator
-from .forms import OrderForm,OrderItem,ExpenseForm,PaymentForm
+from .forms import OrderForm,OrderItem,ExpenseForm,PaymentForm,BillingForm,BillTypeForm,PaymentModeForm,CounterForm
 from django.db import IntegrityError
 from collections import defaultdict
 from django.utils.timezone import localtime
@@ -50,12 +50,16 @@ from django.contrib.auth.decorators import user_passes_test
 from .decorators import access_required
 from django.urls import reverse
 from django.db import transaction
-from django.contrib.auth.decorators import login_required 
+from django.contrib.auth.decorators import login_required
 from .models import (
     Supplier,
     Customer,
     Billing,
+    BillingPayment,
     BillingItem,
+    BillType,
+    PaymentMode,
+    Counter,
     User,
     Item,
     ItemBarcode,
@@ -77,6 +81,7 @@ from .models import (
     SaleReturn,
     SaleReturnItem,
     PurchasePayment,
+    PurchaseTracking,
 )
 
 def home(request):
@@ -186,31 +191,31 @@ def dashboard_view(request):
             else:
                 bills_filtered = bills_filtered.filter(created_at__date__gte=start, created_at__date__lte=end)
 
-    # Recent bills
-    recent_bills = (
-        bills_filtered
-        .order_by('-created_at')
-        .annotate(
-            sale_amount=F('received') + Abs(F('balance')) + F('discount'),
-            pending_amount=Abs(F('balance')),
-            status=Case(
-                When(balance__gt=0, then=Value('Pending')),
-                When(balance__lt=0, then=Value('Pending')),
-                default=Value('Completed'),
-                output_field=CharField()
-            ),
-            customer_name=Case(
-                When(customer__isnull=False, then=F('customer__name')),
-                default=Value('Walk-in'),
-                output_field=CharField()
-            ),
-            customer_phone=Case(
-                When(customer__isnull=False, then=F('customer__cell')),
-                default=Value('N/A'),
-                output_field=CharField()
-            )
-        )
-    )
+    # Helper to calculate total_received including BillingPayment
+    def calculate_total_received(bill):
+        payments_total = BillingPayment.objects.filter(billing=bill).aggregate(
+            total=Sum('new_payment')
+        )['total'] or Decimal('0')
+        return (bill.received or Decimal('0')) + payments_total                
+
+    # Recent bills    
+    bills_qs = Billing.objects.select_related('customer').order_by('-created_at')
+    recent_bills = []
+    for bill in bills_qs:
+        total_received = calculate_total_received(bill)
+        pending_amount = bill.total_amount - total_received
+
+        recent_bills.append({
+            'id': bill.id,
+            'bill_no': bill.bill_no,
+            'received_amount': total_received, 
+            'date': bill.date,
+            'customer_name': bill.customer.name if bill.customer else 'Walk-in',
+            'customer_phone': bill.customer.cell if bill.customer else 'N/A',
+            'sale_amount': total_received + (bill.discount or 0),
+            'pending_amount': pending_amount,
+            'status': 'Pending' if pending_amount > 0 else 'Completed',
+        })
 
     last_30_days = datetime.now() - timedelta(days=30)
 
@@ -225,33 +230,84 @@ def dashboard_view(request):
     )
     sales_trend = list(sales_trend_qs)
     
-    # Top Selling Products
+    # Top Selling Products          
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if start_date_str and end_date_str:
+        top_start_date = parse_date(start_date_str)
+        top_end_date = parse_date(end_date_str)
+    else:
+        top_end_date = datetime.today().date()
+        top_start_date = top_end_date - timedelta(days=30)
+
+    top_start_date_str = top_start_date.strftime("%Y-%m-%d") if top_start_date else ""
+    top_end_date_str = top_end_date.strftime("%Y-%m-%d") if top_end_date else ""        
+
+    # Query top selling products in the range
     top_selling_qs = (
         BillingItem.objects
-        .filter(created_at__gte=last_30_days)
+        .filter(created_at__date__gte=top_start_date, created_at__date__lte=top_end_date)
         .values('item_name')
         .annotate(total_quantity=Sum('qty'))
-        .order_by('-total_quantity')[:10]
+        .order_by('-total_quantity')[:25]
     )
     top_selling = list(top_selling_qs)
 
     # Sales by Category
+    today = datetime.today().date()
+    default_start = today - timedelta(days=30)
+    default_end = today
+
+    # Get category-specific date range from GET parameters
+    cat_start = request.GET.get('category_start_date')
+    cat_end = request.GET.get('category_end_date')
+    category_start_date = parse_date(cat_start) if cat_start else default_start
+    category_end_date = parse_date(cat_end) if cat_end else default_end
+
+    category_start_date_str = category_start_date.strftime("%Y-%m-%d") if category_start_date else ""
+    category_end_date_str = category_end_date.strftime("%Y-%m-%d") if category_end_date else ""
+
+    # Map item names to their group
     item_groups = dict(Item.objects.values_list('item_name', 'group'))
+
+    # Aggregate sales by group
     category_sales_dict = {}
-    for bi in BillingItem.objects.all():
+
+    billing_items = BillingItem.objects.filter(
+        created_at__date__gte=category_start_date,
+        created_at__date__lte=category_end_date
+    )
+
+    for bi in billing_items:
         group_name = item_groups.get(bi.item_name, 'Uncategorized')
         category_sales_dict[group_name] = category_sales_dict.get(group_name, 0) + bi.amount
-    category_sales = [{'group': k, 'total_sales': v} for k, v in category_sales_dict.items()]
+
+    # Convert to list of dicts and sort descending
+    category_sales = [
+        {'group': k, 'total_sales': v} 
+        for k, v in category_sales_dict.items()
+    ]
     category_sales = sorted(category_sales, key=lambda x: x['total_sales'], reverse=True)
 
-    # Top 10 Products by Revenue
-    top_products_qs = (
+
+    # Top 10 Products by Revenue   
+    rev_start = request.GET.get('revenue_start_date')
+    rev_end = request.GET.get('revenue_end_date')
+    revenue_start_date = parse_date(rev_start) if rev_start else default_start
+    revenue_end_date = parse_date(rev_end) if rev_end else default_end   
+
+    revenue_start_date_str = revenue_start_date.strftime("%Y-%m-%d") if revenue_start_date else ""
+    revenue_end_date_str = revenue_end_date.strftime("%Y-%m-%d") if revenue_end_date else ""
+
+    top_revenue_qs = (
         BillingItem.objects
+        .filter(created_at__date__gte=revenue_start_date, created_at__date__lte=revenue_end_date)
         .values('item_name')
-        .annotate(total_sales=Sum('amount'))
-        .order_by('-total_sales')[:10]
+        .annotate(total_revenue=Sum('amount'))
+        .order_by('-total_revenue')[:25]
     )
-    top_products = list(top_products_qs)
+    top_products = list(top_revenue_qs)
 
     return render(request, 'dashboard.html', {
         'transaction_count': transaction_count,
@@ -265,6 +321,12 @@ def dashboard_view(request):
         'recent_bills': recent_bills,
         'start_date': start_date,
         'end_date': end_date,
+        "top_start_date": top_start_date_str,
+        "top_end_date": top_end_date_str,
+        "category_start_date": category_start_date_str,
+        "category_end_date": category_end_date_str,
+        "revenue_start_date": revenue_start_date_str,
+        "revenue_end_date": revenue_end_date_str,
         "user": request.user,
         'sales_trend': sales_trend,
         'top_selling': top_selling,
@@ -342,6 +404,7 @@ def billing_items_api(request, bill_id):
             "amount": float(item.amount),
         })
     return JsonResponse({"items": items_data})
+    
 
 def sales_chart_data(request):
     today = timezone.localdate()
@@ -438,7 +501,10 @@ def create_invoice_view(request):
             # Optional: for points accumulation
             previous_bill = Billing.objects.filter(customer=customer).order_by('-id').first()
             total_points = previous_bill.points if previous_bill else 0.0
-            points_earned_total = 0.0
+            points_earned_total = 0.0         
+
+            cash = float(request.POST.get('cash_amount') or 0)
+            card = float(request.POST.get('card_amount') or 0)
 
             # Create Billing object first
             billing = Billing.objects.create(
@@ -446,12 +512,14 @@ def create_invoice_view(request):
                 to=request.POST.get('to'),
                 bill_no=bill_no,
                 date=timezone.now(),
+                cash_amount=cash,            
+                card_amount=card,
                 bill_type=request.POST.get('bill_type'),
                 counter=request.POST.get('counter'),
                 order_no=request.POST.get('order_no'),
                 sale_type=request.POST.get('sale_type'),
                 received=request.POST.get('received') or 0,
-                balance=request.POST.get('balance') or 0,
+                balance = request.POST.get('balance') or 0,         
                 discount=request.POST.get('discount') or 0,
                 points=total_points,
                 points_earned=0,
@@ -559,9 +627,16 @@ def create_invoice_view(request):
     next_bill_no = str(int(latest_bill.bill_no) + 1) if latest_bill and str(latest_bill.bill_no).isdigit() else '1'
     today_date = timezone.now().strftime('%Y-%m-%d')
 
+    bill_types = BillType.objects.all().order_by('billtype_id')
+    payment_modes = PaymentMode.objects.all()
+    counter = Counter.objects.all().order_by('counter_id')
+
     return render(request, 'billing.html', {
         'today_date': today_date,
-        'bill_no': next_bill_no
+        'bill_no': next_bill_no,
+        'bill_types':bill_types,
+        'payment_modes':payment_modes,
+        'counter':counter,
     })
 
 def get_item_info(request):
@@ -663,7 +738,187 @@ def get_item_info(request):
         'batch_details': merged_batches,
         'all_batch_nos': all_batch_nos
     })
-       
+
+@access_required(allowed_roles=['superuser'])
+def add_billtype(request):
+    billtype_form = BillTypeForm()
+    paymentmode_form = PaymentModeForm()
+    counter_form = CounterForm()
+
+    if request.method == "POST":
+        if "save_billtype" in request.POST:
+            billtype_form = BillTypeForm(request.POST)
+            if billtype_form.is_valid():
+                billtype_form.save()
+                return redirect("add")
+
+        elif "save_paymentmode" in request.POST:  # PaymentMode form submitted
+            paymentmode_form = PaymentModeForm(request.POST)
+            if paymentmode_form.is_valid():
+                paymentmode_form.save()
+                return redirect("add")
+
+        elif "save_counter" in request.POST:  # Counter form submitted
+            counter_form = CounterForm(request.POST)
+            if counter_form.is_valid():
+                counter_form.save()
+                return redirect("add")
+
+    return render(request, "add_billtype.html", {
+        "billtype_form": billtype_form,
+        "paymentmode_form": paymentmode_form,
+        "counter_form": counter_form
+    })
+
+def order_payments(request, order_id):
+    payments = Order.objects.filter(order_id=order_id).values(
+        'order_id', 'customer_name', 'total_amount', 
+        'advance_paid', 'new_payment', 'due_balance', 
+        'payment_mode', 'payment_date'
+    )
+    payments_list = list(payments)
+    return JsonResponse({'payments': payments_list})
+
+@access_required(allowed_roles=['superuser'])
+def billing_edit(request, pk):
+    bill = get_object_or_404(Billing, pk=pk)
+
+    payments = BillingPayment.objects.filter(billing=bill).aggregate(
+        total_paid=Sum('new_payment')
+    )
+
+    # Calculate total already paid from BillingPayment
+    total_paid = (bill.received or Decimal('0')) + (payments['total_paid'] or Decimal('0'))
+    balance_amount = bill.total_amount - total_paid
+
+    balance_amount = bill.total_amount - total_paid
+
+    if request.method == "POST":
+        form = BillingForm(request.POST, instance=bill)
+        new_payment = request.POST.get("new_payment")
+
+        if form.is_valid():
+            if new_payment and float(new_payment) > 0:
+                try:
+                    new_payment_decimal = Decimal(new_payment)
+                except:
+                    new_payment_decimal = Decimal('0')
+
+                BillingPayment.objects.create(
+                    billing=bill,
+                    customer=bill.customer,
+                    total_amount=bill.total_amount,
+                    already_paid=total_paid,
+                    new_payment=new_payment_decimal,
+                    balance=bill.total_amount - (total_paid + new_payment_decimal),
+                    payment_date=timezone.now(),
+                    payment_mode=request.POST.get("payment_mode", "Cash")
+                )
+
+                try:
+                    order = Order.objects.get(bill_no=bill.bill_no)
+                    total_advance = total_paid + new_payment_decimal
+                    order.advance = total_advance
+                    order.due_balance = bill.total_amount - total_advance
+
+                    if order.due_balance <= 0:
+                        order.order_status = 'completed'
+                    else:
+                        order.order_status = 'pending'
+
+                    order.save()
+                except Order.DoesNotExist:
+                    pass
+
+            else:
+                form.save()
+
+            return redirect("payment_list")
+    else:
+        form = BillingForm(instance=bill)
+
+    return render(request, "billing_edit.html", {
+        "form": form,
+        "bill": bill,
+        "total_paid": total_paid,
+        "balance_amount": balance_amount
+    })
+
+@access_required(allowed_roles=['superuser'])
+def payment_list_view(request):
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    payment_mode = request.GET.get('payment_mode')
+
+    billings = Billing.objects.select_related('customer').all().order_by('id')
+
+    # Date filter
+    if from_date and to_date:
+        try:
+            from_date_obj = datetime.datetime.strptime(from_date, '%Y-%m-%d')
+            to_date_obj = datetime.datetime.strptime(to_date, '%Y-%m-%d')
+            start_dt = datetime.datetime.combine(from_date_obj.date(), datetime.time.min)
+            end_dt = datetime.datetime.combine(to_date_obj.date(), datetime.time.max)
+            billings = billings.filter(date__range=(start_dt, end_dt))
+        except Exception as e:
+            print("Date Filter Error:", e)
+
+    # Payment mode filter
+    if payment_mode and payment_mode != 'all':
+        billings = billings.filter(bill_type__iexact=payment_mode)
+
+    # Annotate total_received, balance_amount, and payment_status
+    for bill in billings:
+        payments = BillingPayment.objects.filter(billing=bill).aggregate(
+            total_paid=Sum('new_payment')
+        )
+        total_received = (bill.received or 0) + (payments['total_paid'] or 0)
+        balance_amount = bill.total_amount - total_received
+
+        bill.total_received = total_received
+        bill.balance_amount = balance_amount
+
+        # Precompute status
+        if bill.bill_type.lower() == 'credit':
+            if total_received == 0:
+                bill.payment_status = 'Unpaid'
+                bill.status_class = 'status-unpaid'
+            elif total_received < bill.total_amount:
+                bill.payment_status = 'Partially Paid'
+                bill.status_class = 'status-partial'
+            else:
+                bill.payment_status = 'Paid'
+                bill.status_class = 'status-paid'
+        else:
+            bill.payment_status = 'Paid'
+            bill.status_class = 'status-paid'
+
+    return render(request, 'payments.html', {
+        'billings': billings,
+        'from_date': from_date,
+        'to_date': to_date,
+        'payment_mode': payment_mode,
+    })
+
+@access_required(allowed_roles=['superuser'])
+def get_payments(request, billing_id):
+    payments = BillingPayment.objects.filter(billing_id=billing_id).order_by('payment_date')
+    data = []
+    for i, p in enumerate(payments, start=1):
+        data.append({
+            'sno': i,
+            'bill_no': p.bill_no,
+            'customer': p.customer.name,
+            'total_amount': float(p.total_amount),
+            'already_paid': float(p.already_paid),
+            'new_payment': float(p.new_payment),
+            'balance': float(p.balance),
+            'payment_mode': p.payment_mode,
+            'payment_date': p.payment_date.strftime('%d-%m-%Y %I:%M %p'),
+        })
+    return JsonResponse({'payments': data})
+
+@access_required(allowed_roles=['superuser'])
 def order_view(request):
     return render(request, 'order.html')
 
@@ -1156,6 +1411,13 @@ def fetch_item_by_code(request):
         })
     except Item.DoesNotExist:
         return JsonResponse({'exists': False})
+
+@access_required(allowed_roles=['superuser'])    
+@csrf_exempt
+def check_item_code(request):
+    code = request.GET.get("code", "").strip()
+    exists = Item.objects.filter(code=code).exists()
+    return JsonResponse({"exists": exists})    
 
 @access_required(allowed_roles=['superuser'])
 def Item_barcode(request):
@@ -1698,13 +1960,6 @@ def fetch_item(request):
     return JsonResponse({'error': 'Item not found'}, status=404)
 
 @access_required(allowed_roles=['superuser'])
-def purchase_return_view(request):
-    suppliers = Supplier.objects.all()
-    return render(request, 'purchase_return.html', {
-        'suppliers': suppliers
-    })
-
-@access_required(allowed_roles=['superuser'])
 @csrf_exempt
 def create_purchase(request):
     if request.method != "POST":
@@ -1727,7 +1982,7 @@ def create_purchase(request):
         bill_file = request.FILES.get("bill_attachment")
 
         supplier = Supplier.objects.get(id=supplier_id)
-        total_products = len(items_data)
+        total_products = len(items_data)    
 
         #  Check if invoice already exists
         purchase = Purchase.objects.filter(invoice_no=invoice_no).first()
@@ -1748,6 +2003,106 @@ def create_purchase(request):
                 purchase.bill_attachment = bill_file
             purchase.save()
 
+            def safe_date(value, default=None):
+                """Convert input to proper date or None."""
+                if not value:  # catches "", None, 0
+                    return default
+                if isinstance(value, (datetime,)):
+                    return value.date()
+                if isinstance(value, str):
+                    try:
+                        return datetime.strptime(value, "%Y-%m-%d").date()
+                    except ValueError:
+                        return default
+                return default
+
+           # TRACK PURCHASEITEM CHANGES                                   
+            existing_items = {pi.id: pi for pi in PurchaseItem.objects.filter(purchase=purchase)}
+
+            # 1. UPDATED (all items present in incoming data)
+            for data in items_data:
+                existing = None
+                item_obj = None
+
+                # Try to find existing by ID first
+                if data.get("id"):
+                    try:
+                        existing_id = int(data["id"])
+                        existing = existing_items.get(existing_id)
+                    except (ValueError, TypeError):
+                        existing = None
+
+                # Fallback, find by item_code if not found by ID
+                if not existing and data.get("item_code"):
+                    existing = next(
+                        (pi for pi in existing_items.values() if pi.code == data.get("item_code")), None
+                    )
+
+                # Get Item object
+                item_obj = Item.objects.filter(code=data.get("item_code")).first() if not existing else existing.item
+               
+                PurchaseTracking.objects.create(
+                    purchase=purchase,
+                    item=item_obj,
+                    existing_quantity=existing.quantity if existing else 0,
+                    updated_quantity=data.get("quantity"),                   
+                    total_price=data.get("total_price"),                    
+                    whole_price=data.get("whole_price"),
+                    whole_price_2=data.get("whole_price_2"),
+                    sale_price=data.get("sale_price"),
+                    discount=data.get("discount"),
+                    net_price=data.get("net_price"),
+                    tax=data.get("tax"),
+                    supplier=purchase.supplier,                    
+                    expiry_date=safe_date(data.get("expiry_date")),
+                    purchased_at=safe_date(data.get("purchased_at"), timezone.now()),                    
+                    code=data.get("item_code"),
+                    item_name=data.get("item_name"),                   
+                    hsn=data.get("hsn"),
+                    split_unit=data.get("split_unit"),
+                    split_unit_price=data.get("split_unit_price"),
+                    unit_qty=data.get("unit_qty"),
+                    cost_price=data.get("cost_price"),
+                    taxable_price=data.get("taxable_price"),
+                    status="UPDATED",
+                )
+
+            # 2. # REMOVED (items that exist in DB but not in the new request)           
+            incoming_ids = [int(i["id"]) for i in items_data if i.get("id")]
+            incoming_codes = [i["item_code"] for i in items_data if i.get("item_code")]
+
+            # Existing purchase items in DB
+            existing_items = {pi.id: pi for pi in PurchaseItem.objects.filter(purchase=purchase)}
+
+            # REMOVED: only those not present in both ids and codes
+            for existing_id, existing in existing_items.items():
+                if (existing_id not in incoming_ids) and (existing.code not in incoming_codes):
+                    PurchaseTracking.objects.create(
+                        purchase=purchase,
+                        item=existing.item,
+                        existing_quantity=existing.quantity,
+                        updated_quantity=0,                       
+                        total_price=existing.total_price,                       
+                        whole_price=existing.whole_price,
+                        whole_price_2=existing.whole_price_2,
+                        sale_price=existing.sale_price,
+                        discount=existing.discount,
+                        net_price=existing.net_price,
+                        tax=existing.tax,
+                        supplier=purchase.supplier,                       
+                        expiry_date=safe_date(existing.expiry_date),
+                        purchased_at=safe_date(existing.purchased_at, timezone.now()),                        
+                        code=existing.code,
+                        item_name=existing.item_name,                        
+                        hsn=existing.hsn,
+                        split_unit=existing.split_unit,
+                        split_unit_price=existing.split_unit_price,
+                        unit_qty=existing.unit_qty,
+                        cost_price=existing.cost_price,
+                        taxable_price=existing.taxable_price,
+                        status="REMOVED",
+                    )
+
             # Track incoming (item_id, purchase_id) combos
             incoming_pairs = [
                 (Item.objects.filter(code=i.get("item_code")).first().id, purchase.id)
@@ -1761,7 +2116,7 @@ def create_purchase(request):
             # Remove deleted inventory items
             Inventory.objects.filter(purchase=purchase).exclude(
                 item_id__in=[p[0] for p in incoming_pairs]
-            ).delete()
+            ).delete()           
 
         else:
             # ---- CREATE NEW PURCHASE ----
@@ -2002,6 +2357,40 @@ def fetch_purchase_items(request):
 
     print("Returning", len(items_data), "items for invoice:", invoice_number)
     return JsonResponse({'items': items_data,  'purchase': purchase_data})
+
+def purchase_tracking(request):
+    # Start with all records
+    purchase_tracking_summary = PurchaseTracking.objects.select_related(
+        'purchase', 'purchase__supplier'
+    ).order_by('-tracked_at')
+
+    # Get filter values from GET parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    supplier_code = request.GET.get('supplier_code')
+    invoice_no = request.GET.get('invoice_no')
+
+    # Apply filters if provided
+    if start_date:
+        purchase_tracking_summary = purchase_tracking_summary.filter(tracked_at__date__gte=start_date)
+    if end_date:
+        purchase_tracking_summary = purchase_tracking_summary.filter(tracked_at__date__lte=end_date)
+    if supplier_code:
+        purchase_tracking_summary = purchase_tracking_summary.filter(
+            purchase__supplier__supplier_id__icontains=supplier_code
+        )
+    if invoice_no:
+        purchase_tracking_summary = purchase_tracking_summary.filter(
+            purchase__invoice_no__icontains=invoice_no
+        )
+
+    return render(request, 'purchase_update_tracking.html', {
+        'purchase_tracking_summary': purchase_tracking_summary
+    })
+
+@access_required(allowed_roles=['superuser'])
+def purchase_page(request):
+    return render(request, "purchase.html")
 
 @access_required(allowed_roles=['superuser'])
 @csrf_exempt
@@ -2609,39 +2998,6 @@ def edit_customer(request, id):
         return redirect("customers")
 
     return render(request, "edit_customer.html", {"customer": customer})
-
-@access_required(allowed_roles=['superuser'])
-def payment_list_view(request):
-    from_date = request.GET.get('from_date')
-    to_date = request.GET.get('to_date')
-    payment_mode = request.GET.get('payment_mode')
-
-    # Join customer table for name & phone
-    billings = Billing.objects.select_related('customer').all().order_by('id')
-
-    # Date filter
-    if from_date and to_date:
-        try:
-            from_date_obj = datetime.datetime.strptime(from_date, '%Y-%m-%d')
-            to_date_obj = datetime.datetime.strptime(to_date, '%Y-%m-%d')
-
-            start_dt = datetime.datetime.combine(from_date_obj.date(), datetime.time.min)
-            end_dt = datetime.datetime.combine(to_date_obj.date(), datetime.time.max)
-
-            billings = billings.filter(date__range=(start_dt, end_dt))
-        except Exception as e:
-            print("Date Filter Error:", e)
-
-    # Payment mode filter
-    if payment_mode and payment_mode != 'all':
-        billings = billings.filter(bill_type__iexact=payment_mode)
-
-    return render(request, 'payments.html', {
-        'billings': billings,
-        'from_date': from_date,
-        'to_date': to_date,
-        'payment_mode': payment_mode,
-    })
 
 @access_required(allowed_roles=['superuser'])
 def purchase_items_view(request):

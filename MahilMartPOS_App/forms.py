@@ -2,7 +2,7 @@ from datetime import datetime
 from django import forms
 from .models import Supplier
 from .models import CompanyDetails
-from .models import Billing,Order,OrderItem,Expense
+from .models import Billing,Order,OrderItem,Expense,BillType,PaymentMode,Counter
 from django.forms.widgets import DateTimeInput
 from django.forms.widgets import DateInput
 import re
@@ -220,3 +220,47 @@ class ItemForm(forms.Form):
     carry_over = forms.ChoiceField(label="Carry Over", choices=[("Yes", "Yes"), ("No", "No")], initial="No")
     manual = forms.ChoiceField(label="Manual", choices=[("Yes", "Yes"), ("No", "No")], initial="No")
     stock_item = forms.ChoiceField(label="Stock Item", choices=[("Yes", "Yes"), ("No", "No")], initial="No")
+
+class BillingForm(forms.ModelForm):
+    total_amount = forms.DecimalField(
+        max_digits=10, decimal_places=2, required=False, 
+        label="Total Amount", disabled=True
+    )
+    calc_balance = forms.DecimalField(
+        max_digits=10, decimal_places=2, required=False, 
+        label="Balance", disabled=True
+    )
+
+    class Meta:
+        model = Billing
+        fields = ['received']   # only received is editable
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance:  # when editing existing bill
+            self.fields['total_amount'].initial = self.instance.total_amount
+            self.fields['calc_balance'].initial = self.instance.calc_balance
+            
+class BillTypeForm(forms.ModelForm):
+    class Meta:
+        model = BillType
+        fields = ['billtype_id', 'billtype']
+
+
+class PaymentModeForm(forms.ModelForm):
+    class Meta:
+        model = PaymentMode
+        fields = ['mode_id', 'mode_name']
+        widgets = {
+            'mode_id': forms.NumberInput(attrs={'placeholder': 'Enter ID'}),
+            'mode_name': forms.TextInput(attrs={'placeholder': 'Enter Payment Mode'}),
+        }
+
+class CounterForm(forms.ModelForm):
+    class Meta:
+        model = Counter
+        fields = ['counter_id', 'counter_name']
+        widgets = {
+            'counter_id': forms.NumberInput(attrs={'placeholder': 'Enter ID'}),
+            'counter_name': forms.TextInput(attrs={'placeholder': 'Enter Counter Name'}),
+        }

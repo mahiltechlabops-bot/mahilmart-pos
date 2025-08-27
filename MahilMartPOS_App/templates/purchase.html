@@ -2,7 +2,7 @@
 {% block style %}
 <style>
   #purchaseTable input {
-    width: 80px;            /* compact input width */
+    width: 80px;       
     padding: 4px 6px;
     font-size: 13px;
     box-sizing: border-box;
@@ -131,7 +131,7 @@
 .whole_price,
 .whole_price_2,
 .sale_price {
-    -moz-appearance: textfield; /* Firefox */
+    -moz-appearance: textfield;
 }
 </style>
 
@@ -148,6 +148,9 @@
         </a>
         <a href="{% url 'purchase_list' %}" class="btn btn-primary btn-sm">
           View Purchase Details
+        </a>
+         <a href="{% url 'purchase_update_tracking' %}" class="btn btn-primary btn-sm">
+          View Purchase Update Tracking Details
         </a>
       </div>
 
