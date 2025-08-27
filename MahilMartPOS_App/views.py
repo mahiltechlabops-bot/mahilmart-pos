@@ -191,31 +191,31 @@ def dashboard_view(request):
             else:
                 bills_filtered = bills_filtered.filter(created_at__date__gte=start, created_at__date__lte=end)
 
-    # Recent bills
-    recent_bills = (
-        bills_filtered
-        .order_by('-created_at')
-        .annotate(
-            sale_amount=F('received') + Abs(F('balance')) + F('discount'),
-            pending_amount=Abs(F('balance')),
-            status=Case(
-                When(balance__gt=0, then=Value('Pending')),
-                When(balance__lt=0, then=Value('Pending')),
-                default=Value('Completed'),
-                output_field=CharField()
-            ),
-            customer_name=Case(
-                When(customer__isnull=False, then=F('customer__name')),
-                default=Value('Walk-in'),
-                output_field=CharField()
-            ),
-            customer_phone=Case(
-                When(customer__isnull=False, then=F('customer__cell')),
-                default=Value('N/A'),
-                output_field=CharField()
-            )
-        )
-    )
+    # Helper to calculate total_received including BillingPayment
+    def calculate_total_received(bill):
+        payments_total = BillingPayment.objects.filter(billing=bill).aggregate(
+            total=Sum('new_payment')
+        )['total'] or Decimal('0')
+        return (bill.received or Decimal('0')) + payments_total                
+
+    # Recent bills    
+    bills_qs = Billing.objects.select_related('customer').order_by('-created_at')
+    recent_bills = []
+    for bill in bills_qs:
+        total_received = calculate_total_received(bill)
+        pending_amount = bill.total_amount - total_received
+
+        recent_bills.append({
+            'id': bill.id,
+            'bill_no': bill.bill_no,
+            'received_amount': total_received, 
+            'date': bill.date,
+            'customer_name': bill.customer.name if bill.customer else 'Walk-in',
+            'customer_phone': bill.customer.cell if bill.customer else 'N/A',
+            'sale_amount': total_received + (bill.discount or 0),
+            'pending_amount': pending_amount,
+            'status': 'Pending' if pending_amount > 0 else 'Completed',
+        })
 
     last_30_days = datetime.now() - timedelta(days=30)
 
@@ -501,10 +501,10 @@ def create_invoice_view(request):
             # Optional: for points accumulation
             previous_bill = Billing.objects.filter(customer=customer).order_by('-id').first()
             total_points = previous_bill.points if previous_bill else 0.0
-            points_earned_total = 0.0
+            points_earned_total = 0.0         
 
-            balance = float(request.POST.get("balance") or 0)
-            balance = 0 if balance > 0 else balance
+            cash = float(request.POST.get('cash_amount') or 0)
+            card = float(request.POST.get('card_amount') or 0)
 
             # Create Billing object first
             billing = Billing.objects.create(
@@ -512,12 +512,14 @@ def create_invoice_view(request):
                 to=request.POST.get('to'),
                 bill_no=bill_no,
                 date=timezone.now(),
+                cash_amount=cash,            
+                card_amount=card,
                 bill_type=request.POST.get('bill_type'),
                 counter=request.POST.get('counter'),
                 order_no=request.POST.get('order_no'),
                 sale_type=request.POST.get('sale_type'),
                 received=request.POST.get('received') or 0,
-                balance = balance,          
+                balance = request.POST.get('balance') or 0,         
                 discount=request.POST.get('discount') or 0,
                 points=total_points,
                 points_earned=0,

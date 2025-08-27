@@ -53,11 +53,11 @@
 </div>
  <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
       <div>
-        <a href="{% url 'stock_adjustment' %}" class="btn btn-sm btn-primary">Stock Adjustement</a>
-        <a href="{% url 'stock_adjustment_list' %}" class="btn btn-sm btn-success">View Adjusted Stock</a>
+        <a href="{% url 'stock_adjustment' %}" class="btn btn-sm btn-primary disabled" tabindex="-1" aria-disabled="true">Stock Adjustment</a>
+        <a href="{% url 'stock_adjustment_list' %}"   class="btn btn-sm btn-success disabled" tabindex="-1" aria-disabled="true">View Adjusted Stock</a>
         <a href="{% url 'split_stock' %}" class="btn btn-sm btn-success">Bulk Stock Details</a>
       </div>
-    </div>
+    </div> 
 
   <div class="table-responsive mt-3">
     <table class="table table-bordered table-sm inventory-table">

@@ -180,11 +180,13 @@
                         <td>₹ {{ item.discount }}</td>
                         <td>{{ item.batch_no|default:"-" }}</td>
                         <td>{{ item.purchased_at|date:"Y-m-d"|default:"-" }}</td>
-                        <td>{{ item.expiry_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td>{{ item.expiry_date|date:"Y-m-d"|default:"-" }}</td>                        
                         <td>
-                            <a href="{% url 'edit_bulk_item' item.id %}" class="btn btn-sm btn-primary">Edit</a>
-                        </td>
-                        
+                            <a href="javascript:void(0)" 
+                            class="btn btn-sm btn-primary disabled" 
+                            tabindex="-1" 
+                            aria-disabled="true">Edit</a>
+                        </td>                        
                     </tr>
                     {% empty %}
                     <tr>
