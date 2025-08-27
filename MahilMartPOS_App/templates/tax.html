@@ -99,27 +99,27 @@
         {% csrf_token %}
         <table>
             <tr>
-                <td><label>Tax Name:</label></td>
+                <td><label>Tax Name: (ex: GST 5%)</label></td>
                 <td><input type="text" name="tax_name"></td>
-                <td><label>Print Name:</label></td>
+                <td><label>Print Name: (ex: GST 5%)</label></td>
                 <td><input type="text" name="print_name"></td>
             </tr>
             <tr>
-                <td><label>Type:</label></td>
+                <td><label>Type: (ex: GST)</label></td>
                 <td><input type="text" name="tax_type"></td>
                 <td><label>Effect From:</label></td>
                 <td><input type="date" name="effect_form"></td>
             </tr>
             <tr>
-                <td><label>Rounded:</label></td>
+                <td><label>Rounded: (ex: 0/1)</label></td>
                 <td><input type="number" name="rounded"></td>
-                <td><label>Round Type:</label></td>
+                <td><label>Round Type: (ex: Up/None)</label></td>
                 <td><input type="text" name="round_type"></td>
             </tr>
             <tr>
-                <td><label>GST Type:</label></td>
+                <td><label>GST Type: (ex: 0/5/12/18/28)</label></td>
                 <td><input type="text" name="gst_type"></td>
-                <td><label>GST %:</label></td>
+                <td><label>GST %: (ex: 0/5/12/18/28)</label></td>
                 <td><input type="number" name="gst_percent"></td>
             </tr>
             <tr>
@@ -130,7 +130,7 @@
 
         <hr>
 
-        <label>SGST %:</label>
+        <label>SGST %: (ex: 5% -> 2.5%)</label>
         <input type="number" name="sgst_percent" step="0.01" style="width: 100px;"><br><br>   
 
         <table border="1">
@@ -142,14 +142,14 @@
                 <th>Return 2</th>
             </tr>
             <tr>
-                <th>Sales</th>
+                <th>Sales (ex: SGST Sales A1, SGST Ret A1)</th>
                 <td><input type="text" name="sgst_sales_account_1"></td>
                 <td><input type="text" name="sgst_sales_account_2"></td>
                 <td><input type="text" name="sgst_sales_return_1"></td>
                 <td><input type="text" name="sgst_sales_return_2"></td>
             </tr>
             <tr>
-                <th>Purchase</th>
+                <th>Purchase (ex: SGST Purch A1, SGST PRet A1)</th>
                 <td><input type="text" name="sgst_purchase_account_1"></td>
                 <td><input type="text" name="sgst_purchase_account_2"></td>
                 <td><input type="text" name="sgst_purchase_return_1"></td>
@@ -157,7 +157,7 @@
             </tr>
         </table>
 
-        <label>CGST %:</label>
+        <label>CGST %: (ex: 5% -> 2.5%)</label>
         <input type="number" name="cgst_percent" step="0.01" style="width: 100px;"><br><br>
 
         <table border="1">
@@ -169,14 +169,14 @@
                 <th>Return 2</th>
             </tr>
             <tr>
-                <th>Sales</th>
+                <th>Sales (ex: CGST Sales A1, CGST Ret A1)</th>
                 <td><input type="text" name="cgst_sales_account_1"></td>
                 <td><input type="text" name="cgst_sales_account_2"></td>
                 <td><input type="text" name="cgst_sales_return_1"></td>
                 <td><input type="text" name="cgst_sales_return_2"></td>
             </tr>
             <tr>
-                <th>Purchase</th>
+                <th>Purchase (ex: CGST Purch A1, CGST PRet A1)</th>
                 <td><input type="text" name="cgst_purchase_account_1"></td>
                 <td><input type="text" name="cgst_purchase_account_2"></td>
                 <td><input type="text" name="cgst_purchase_return_1"></td>
@@ -185,10 +185,17 @@
         </table>
 
         <div class="btn-container">
-            <button type="submit" class="btn">Save</button>           
+            <button type="submit" class="btn" onclick="return confirmSave()">Save</button>                  
             <button type="button" class="exit-btn" onclick="window.location.href='{% url 'items' %}'">Exit</button>
         </div>
     </form>
 </body>
 </html>
+{% endblock %}
+{% block extra_js %}
+<script>
+function confirmSave() {
+    return confirm("Are you sure you want to save this tax?");
+}
+</script>
 {% endblock %}
