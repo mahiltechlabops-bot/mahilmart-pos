@@ -11,7 +11,6 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 from .forms import SupplierForm, CompanySettingsForm
-from MahilMartPOS_App.models import Product as AppProduct
 from django.db.models.functions import Trim
 from datetime import datetime
 from django.core.serializers import serialize
@@ -69,8 +68,7 @@ from .models import (
     Purchase,
     PurchaseItem,
     Tax,
-    CompanyDetails,
-    Product,
+    CompanyDetails,  
     StockAdjustment,
     PurchaseItem,
     Inventory,
@@ -505,7 +503,7 @@ def create_invoice_view(request):
             points_earned_total = 0.0         
 
             cash = float(request.POST.get('cash_amount') or 0)
-            card = float(request.POST.get('card_amount') or 0)
+            card = float(request.POST.get('card_amount') or 0)            
 
             # Create Billing object first
             billing = Billing.objects.create(
@@ -520,7 +518,7 @@ def create_invoice_view(request):
                 order_no=request.POST.get('order_no'),
                 sale_type=request.POST.get('sale_type'),
                 received=request.POST.get('received') or 0,
-                balance = request.POST.get('balance') or 0,         
+                balance = max(float(request.POST.get('balance') or 0), 0),        
                 discount=request.POST.get('discount') or 0,
                 points=total_points,
                 points_earned=0,
@@ -1836,29 +1834,31 @@ def products_view(request):
     query = request.GET.get('q', '').strip()
     selected_group = request.GET.get('group', '').strip()
 
-    base_queryset = Product.objects.all()
+    base_queryset = Item.objects.all()
 
+    # Search by item_name
     if query:
-        base_queryset = base_queryset.filter(item__item_name__icontains=query)
+        base_queryset = base_queryset.filter(item_name__icontains=query)
 
+    # Filter by group
     if selected_group:
-        base_queryset = base_queryset.filter(item__group=selected_group)
+        base_queryset = base_queryset.filter(group=selected_group)
 
-    # Get unique product IDs by item code after filtering
+    # Get unique product IDs by code after filtering
     unique_ids = (
         base_queryset
-        .values('item__code')
+        .values('code')
         .annotate(min_id=Min('id'))
         .values_list('min_id', flat=True)
     )
 
-    items = Product.objects.filter(id__in=unique_ids).select_related('item', 'supplier')
+    items = Item.objects.filter(id__in=unique_ids)
 
-    # Count the products for current filter
+    # Count products
     product_count = items.count()
 
-    # Get distinct groups for the dropdown
-    groups = Product.objects.values_list('item__group', flat=True).distinct().order_by('item__group')
+    # Distinct groups for dropdown
+    groups = Item.objects.values_list('group', flat=True).distinct().order_by('group')
 
     return render(request, 'products.html', {
         'items': items,

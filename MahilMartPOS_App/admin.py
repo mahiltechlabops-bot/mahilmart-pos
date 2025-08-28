@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, Category, Supplier
+from .models import Category, Supplier
 from django.contrib import admin
 from .models import Customer
 from .models import Billing
