@@ -612,6 +612,8 @@ def create_invoice_view(request):
             billing.points = total_points + points_earned_total
             billing.points_earned = points_earned_total
             billing.save()
+
+            messages.success(request, f"✅ Billing submitted successfully!")
             
             return redirect('billing')
 
@@ -2775,6 +2777,7 @@ def inventory_view(request):
     # Exclude any unit that contains the word "bulk"
     items = Inventory.objects.select_related('item') \
         .exclude(item__unit__icontains='bulk') \
+        .filter(quantity__gt=0) \
         .order_by('-id')
 
     if query:
@@ -2791,7 +2794,7 @@ def inventory_view(request):
 
 @access_required(allowed_roles=['superuser'])
 def split_stock_page(request):
-    queryset = Inventory.objects.filter(unit__icontains='bulk')
+    queryset = Inventory.objects.filter(unit__icontains='bulk', split_unit__gt=0)
 
     batch_no = request.GET.get('batch_no', '').strip()
     purchased_at = request.GET.get('purchased_at', '').strip()

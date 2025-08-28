@@ -173,7 +173,7 @@
                     </td>
                 </tr>                                    
 
-                <tr><td colspan="2"><label>HSN / SAC</label><input type="text" name="hsn_sac"></td></tr>
+                <tr><td colspan="2"><label>HSN / SAC</label><input type="text" name="hsn_sac" required></td></tr>
                 <tr>
                     <td><label>Use MRP</label>
                         <select name="use_mrp">
@@ -228,6 +228,7 @@
           <a href="{% url 'unit_creation' %}">
             <button type="button">Unit's</button>
         </a>
+        <!-- Button to open the modal -->          
           <a href="{% url 'group_creation' %}">
             <button type="button">Group's</button>
         </a>
@@ -281,23 +282,42 @@ document.getElementById("saveBtn").addEventListener("click", function(event) {
 });
 
 document.getElementById("item_code").addEventListener("blur", function() {
-    let code = this.value;
-    if (code.trim() === "") return;
+    const codeInput = this;
+    const code = codeInput.value.trim();
+    if (code === "") return;
 
     fetch(`/check-item-code/?code=${encodeURIComponent(code)}`)
         .then(response => response.json())
         .then(data => {
             if (data.exists) {
+                // Show warning and block movement
                 document.getElementById("codeAlert").style.display = "inline";
-                this.style.borderColor = "red";
+                codeInput.style.borderColor = "red";
                 document.querySelector("button[type='submit']").disabled = true;
+
+                // Focus back to input
+                setTimeout(() => codeInput.focus(), 0);
+
+                // Block tab key temporarily
+                codeInput.addEventListener('keydown', blockTab, true);
             } else {
+                // Code is unique, allow normal interaction
                 document.getElementById("codeAlert").style.display = "none";
-                this.style.borderColor = "";
+                codeInput.style.borderColor = "";
                 document.querySelector("button[type='submit']").disabled = false;
+
+                // Remove the tab-blocking listener
+                codeInput.removeEventListener('keydown', blockTab, true);
             }
         })
         .catch(error => console.error("Error:", error));
 });
+
+// Function to block tab key when code exists
+function blockTab(e) {
+    if (e.key === "Tab") {
+        e.preventDefault();
+    }
+}
 </script>
 {% endblock %}

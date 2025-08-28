@@ -924,7 +924,7 @@ function resetRowInputs(row) {
         });
     });
     
-        function submitBilling() {
+    function submitBilling() {
     if (!validateForm()) return;
     if (!validateAllRows()) return;
 
@@ -959,14 +959,91 @@ function resetRowInputs(row) {
         }
     }
 
-    alert("✅ Billing submitted successfully!");
+    // Ask for printing before saving
+    // let printBill = confirm("Do you want to print the bill before saving?");
+    // if (printBill) {
+    //     const billData = getBillingInfo(); // Use your helper to get bill data
+    //     const printWindow = window.open('', '_blank', 'width=400,height=600');
+
+    //     if (printWindow) {
+    //         let html = `
+    //             <html>
+    //             <head>
+    //             <title>Bill Preview</title>
+    //             <style>
+    //                 body { font-family: monospace; font-size: 12px; }
+    //                 h2 { text-align: center; }
+    //                 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    //                 th, td { border: 1px solid #000; padding: 4px; text-align: center; }
+    //             </style>
+    //             </head>
+    //             <body>
+    //                 <h2>Mahil Mart</h2>
+    //                 <h2>No. 123, K.N.Patti, Pincode - 637404</h2>
+    //                 <h2>Contact no: +91 9876543210</h2>                   
+    //                 <p>Bill No: ${billData.bill_no} <br> Date: ${billData.date}</p>
+    //                 <p>Customer: ${billData.customer_name} <br> Address: ${billData.customer_address}</p>
+    //                 <table>
+    //                     <thead>
+    //                         <tr>
+    //                             <th>Sno</th>
+    //                             <th>Item</th>
+    //                             <th>Qty</th>
+    //                             <th>Price</th>
+    //                             <th>Amount</th>
+    //                         </tr>
+    //                     </thead>
+    //                     <tbody>
+    //                         ${billData.items.map((item, idx) => `
+    //                             <tr>
+    //                                 <td>${idx + 1}</td>
+    //                                 <td>${item.item_name}</td>
+    //                                 <td>${item.qty}</td>
+    //                                 <td>${item.sellingprice.toFixed(2)}</td>
+    //                                 <td>${item.amount.toFixed(2)}</td>
+    //                             </tr>
+    //                         `).join('')}
+    //                     </tbody>
+    //                 </table>
+    //                 <p>Total Qty: ${billData.total_qty} <br> Total Amount: ${billData.total_amount.toFixed(2)}</p>
+    //                 <p>Cash Paid: ${billData.cash_paid.toFixed(2)} <br> Balance: ${billData.balance.toFixed(2)}</p>
+    //             </body>
+    //             </html>
+    //         `;
+
+    //         printWindow.document.write(html);
+    //         printWindow.document.close();
+    //         printWindow.focus();
+    //         printWindow.print();
+    //     } else {
+    //         alert("⚠ Popup blocked! Please allow popups to print the bill.");
+    //     }
+    // }
+
+    // alert("✅ Billing submitted successfully!");
     document.getElementById('billingForm').submit();
 }
 
+// Helper function to get billing data (you'll need to implement this based on your form structure)
+// function getBillingInfo() {
+//     // Extract data from your form and return it in the expected format
+//     return {
+//         bill_no: document.querySelector('input[name="bill_no"]').value,
+//         date: document.querySelector('input[name="date"]').value,
+//         customer_name: document.querySelector('input[name="name"]').value,
+//         customer_address: document.querySelector('textarea[name="address"]').value,
+//         customer_vat_tin: '', // You'll need to add this field to your form if needed
+//         items: [], // Extract items from your table
+//         vat_amount: 22.00, // Calculate this based on your items
+//         total_qty: 10, // Calculate this based on your items
+//         total_amount: 572.00, // Calculate this based on your items
+//         cash_paid: 572.00,
+//         cash_tendered: 600.00,
+//         balance: 28.00
+//     };
+// }
 
     function submitAsQuotation() {
-
-
     const billTypeSelect = document.querySelector('select[name="bill_type"]');
     
     // Check Bill Type
