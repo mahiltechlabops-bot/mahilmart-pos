@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .payment-dashboard {
+        font-family: "Segoe UI", Arial, sans-serif;
+        padding: 20px;
+        background-color: #f8f9fa;
+    }
+
+    .payment-dashboard h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .filter-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .filter-card label {
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .filter-card input,
+    .filter-card select {
+        padding: 6px 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        outline: none;
+    }
+
+    .filter-card button {
+        padding: 8px 16px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    .filter-card button:hover {
+        background-color: #218838;
+    }
+
+    .payment-dashboard table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .payment-dashboard th, 
+    .payment-dashboard td {
+        padding: 10px;
+        text-align: center;
+    }
+
+    .payment-dashboard thead th {
+        background-color: #007bff;
+        color: white;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .payment-dashboard tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .payment-dashboard tbody tr:hover {
+        background-color: #eef6ff;
+        transition: 0.2s;
+    }
+
+    .status-paid {
+        color: green;
+        font-weight: bold;
+    }
+    .status-unpaid {
+        color: red;
+        font-weight: bold;
+    }
+    .status-partial {
+        color: orange;
+        font-weight: bold;
+    }
+
+    .btn-purchase {
+        background-color: #64a6ec;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: 0.3s;
+    }
+    
+    .modal-dialog {
+    max-width: 95%; /* width of modal */
+    margin: 1.75rem auto; /* keep centered */
+}
+
+.modal-body table {
+    width: 200%; /* make table span full modal */
+}
+    
+</style>
+
+<div class="payment-dashboard">
+    <h2>Payment Records</h2>
+    <div class="filter-card">
+        <form method="get" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            
+            <!-- Left Section: Date & Payment Mode -->
+            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="from_date">From:</label>
+                    <input type="date" name="from_date" id="from_date" value="{{ from_date }}">
+                    <label for="to_date">To:</label>
+                    <input type="date" name="to_date" id="to_date" value="{{ to_date }}">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="payment_mode">Payment Mode:</label>
+                    <select name="payment_mode" id="payment_mode">
+                        <option value="all" {% if payment_mode == 'all' or not payment_mode %}selected{% endif %}>All</option>
+                        <option value="cash" {% if payment_mode == 'cash' %}selected{% endif %}>Cash</option>
+                        <option value="card" {% if payment_mode == 'card' %}selected{% endif %}>Card</option>
+                        <option value="credit"{% if payment_mode == 'credit' %}selected{% endif %}>Credit</option>
+                        <option value="Both Cash & Card"{% if payment_mode == 'Both Cash & Card' %}selected{% endif %}>Both Cash & Card</option>
+                    </select>
+                    <button type="submit">Filter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>S No</th>
+                <th>Bill No</th>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Date & Time</th>
+                <th>Cashier</th>
+                <th>Payment Mode</th>
+                <th>Total Amount</th>
+                <th>Amount Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Action</th>
+                <th>Payments</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bill in billings %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ bill.bill_no }}</td>
+                <td>{{ bill.customer.name }}</td>
+                <td>{{ bill.customer.cell }}</td>
+                <td>{{ bill.date|date:"d-m-Y h:i A" }}</td>
+                <td>{{ bill.counter }}</td>
+                <td>{{ bill.bill_type }}</td>
+                <td>{{ bill.total_amount }}</td>
+                <td>{{ bill.total_received }}</td>
+                <td>
+                    {% if bill.balance_amount > 0 %}
+                        {{ bill.balance_amount }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </td>
+            <td class="
+    {% if bill.bill_type == 'Credit' %}
+        {% if bill.total_received == 0 %}
+            status-unpaid
+        {% elif bill.total_received < bill.total_amount %}
+            status-partial
+        {% else %}
+            status-paid
+        {% endif %}
+    {% else %}
+        status-paid
+    {% endif %}
+">
+                    {% if bill.bill_type == 'Credit' %}
+                        {% if bill.total_received == 0 %}
+                            Unpaid
+                        {% elif bill.total_received < bill.total_amount %}
+                            Partially Paid
+                        {% else %}
+                            Paid
+                        {% endif %}
+                    {% else %}
+                        Paid
+                    {% endif %}
+                </td>
+         <td>
+            {% if bill.bill_type == "Credit" %}
+    {% if bill.total_received == 0 %}
+        <a href="{% url 'billing_edit' bill.id %}" 
+           style="padding:6px 12px; background:#aacc31; color:black; border-radius:4px; text-decoration:none; font-weight:600;">
+           Edit
+        </a>
+    {% elif bill.total_received < bill.total_amount %}
+        <a href="{% url 'billing_edit' bill.id %}" 
+           style="padding:6px 12px; background:#ffc107; color:black; border-radius:4px; text-decoration:none; font-weight:600;">
+           Edit
+        </a>
+    {% endif %}
+{% endif %}
+
+        </td>
+          <td>
+                    <button class="btn-purchase show-payment-btn" data-billing-id="{{ bill.id }}">
+                        View Payments
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8">No billing records found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="paymentModalLabel">Billing Payments</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered text-center">
+          <thead>
+            <tr>
+              <th>S.no</th>
+              <th>Bill No</th>
+              <th>Customer Name</th>
+              <th>Total Amount</th>
+              <th>Already Paid</th>
+              <th>New Payment</th>
+              <th>Balance</th>
+              <th>Payment Mode</th>
+              <th>Payment Date</th>
+            </tr>
+          </thead>
+          <tbody id="modalPaymentBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function loadPayments(billingId) {
+    fetch(`/payments/${billingId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('modalPaymentBody');
+            tbody.innerHTML = '';
+            data.payments.forEach(payment => {
+                let row = `<tr>
+                    <td>${payment.sno}</td>
+                    <td>${payment.bill_no}</td>
+                    <td>${payment.customer}</td>
+                    <td>${payment.total_amount.toFixed(2)}</td>
+                    <td>${payment.already_paid.toFixed(2)}</td>
+                    <td>${payment.new_payment.toFixed(2)}</td>
+                    <td>${payment.balance.toFixed(2)}</td>
+                    <td>${payment.payment_mode}</td>
+                    <td>${payment.payment_date}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        });
+}
+
+document.querySelectorAll('.show-payment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const billingId = btn.dataset.billingId;
+        loadPayments(billingId);
+        new bootstrap.Modal(document.getElementById('paymentModal')).show();
+    });
+});
+</script>
+{% endblock %}

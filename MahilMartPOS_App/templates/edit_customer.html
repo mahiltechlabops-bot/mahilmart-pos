@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Edit Customer</h3>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label>Name</label>
+      <input type="text" name="name" class="form-control" value="{{ customer.name }}" required>
+    </div>
+    <div class="mb-3">
+    <label>Phone</label>
+    <input type="text" name="cell" class="form-control" 
+            value="{{ customer.cell }}" 
+            pattern="^[6-9][0-9]{9}$" 
+            title="Enter a valid 10-digit phone number starting with 6, 7, 8, or 9" 
+            maxlength="10" 
+            inputmode="numeric"
+            required>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="mb-3">
+      <label>Address</label>
+      <input type="text" name="address" class="form-control" value="{{ customer.address }}">
+    </div>
+    <div class="mb-3">
+    <label>Email</label>
+    <input type="email" name="email" class="form-control" 
+            value="{{ customer.email }}" 
+            pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" 
+            title="Enter a valid email address">
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{% url 'customers' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

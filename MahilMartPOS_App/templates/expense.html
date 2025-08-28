@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .form-container {
+        font-family: Arial, sans-serif;
+        max-width: 700px;
+        margin: 20px auto;
+        padding: 30px 25px;
+        --border-radius: 8px;
+        --background-color: #f5f5f5;
+        --box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .form-container h2 {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px 30px;
+    }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    input, select, textarea {
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+   .form-actions {
+    display: flex;
+    justify-content: center; 
+    gap: 20px; 
+    margin-top: 30px;
+    grid-column: 1 / -1;
+}
+
+.btn-category,
+button[type="submit"] {
+    padding: 12px 0;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    width: 160px;           
+    text-align: center;
+}
+
+.btn-category {
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+}
+
+button[type="submit"] {
+    background-color: #007bff;
+    color: white;
+}
+
+</style>
+
+<div class="form-container">
+    <h2>Expense</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-grid">
+
+            <div class="form-group">
+                <label for="id_category">Category</label>
+                {{ form.category }}
+            </div>
+
+            <div id="dynamic-field-container" class="form-group" style="display: none;">
+                <label id="dynamic-label" for="category_detail">Category Detail</label>
+                <input type="text" id="category_detail" name="category_detail" >
+            </div>
+
+            <div class="form-group">
+                <label for="id_datetime">Date & Time</label>
+                {{ form.datetime }}
+
+            </div>
+        
+            <div class="form-group">
+                <label for="id_paid_to">Paid To</label>
+                {{ form.paid_to }}
+            </div>
+            <div class="form-group">
+                <label for="id_paymentmode">Payment Mode</label>
+                {{ form.paymentmode }}
+            </div>
+            <div class="form-group">
+                <label for="id_amount">Amount</label>
+                {{ form.amount }}
+            </div>
+            <div class="form-group">
+                <label for="id_refno">Reference No</label>
+                {{ form.refno }}
+            </div>
+            <div class="form-group">
+                <label for="id_reorderedby">Reordered By</label>
+                {{ form.reorderedby }}
+            </div>
+            <div class="form-group">
+                <label for="id_attachment">Attachment</label>
+                {{ form.attachment }}
+            </div>
+            <div class="form-group">
+                <label for="id_notes">Notes</label>
+                {{ form.notes }}
+            </div>
+        </div>
+       <div class="form-actions">
+    <button type="submit">Save Expense</button>
+        <a href="{% url 'expense_list' %}" class="btn-category">View Expenses</a>
+    </div>
+
+    </form>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dateField = document.getElementById('id_datetime');
+    if (dateField) {
+        const now = new Date();
+        const tzOffset = now.getTimezoneOffset() * 60000;
+        const localTime = new Date(now - tzOffset).toISOString().slice(0, 16);
+        dateField.value = localTime;
+    }
+
+    const categoryField = document.getElementById('id_category');
+    const dynamicContainer = document.getElementById('dynamic-field-container');
+    const dynamicLabel = document.getElementById('dynamic-label');
+    const dynamicInput = document.getElementById('category_detail');
+
+    const categoryMap = {
+        'Staff Salaries':'Staff Salaries',
+        'Water': 'Water Bill',
+        'Internet': 'Internet Bill',
+        'Electricity': 'Electricity Bill',
+        'Rent/Lease': 'Rent/Lease',
+        'Maintenance': 'Maintenance',
+        'Office Supplies': 'Office Supplies',
+        'Software Maintenance': 'Software Maintenance',
+        'Marketing': 'Marketing',
+        'Transport/Delivery': 'Transport/Delivery',
+        'Miscellaneous': 'Miscellaneous'
+    };
+
+    if (categoryField) {
+        categoryField.addEventListener('change', function () {
+            const selected = categoryField.value;
+            if (categoryMap[selected]) {
+                dynamicContainer.style.display = 'flex';
+                dynamicLabel.textContent = categoryMap[selected];
+            } else {
+                dynamicContainer.style.display = 'none';
+                dynamicInput.value = '';
+            }
+        });
+    }
+});
+</script>
+
+
+{% endblock %}
