@@ -364,24 +364,6 @@ class Tax(models.Model):
     def __str__(self):
         return self.tax_name    
     
-class Product(models.Model):
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
-
-    item_name = models.CharField(max_length=255, default="Unknown")
-    code = models.CharField(max_length=100, blank=True, null=True)
-    group = models.CharField(max_length=100, blank=True, null=True)
-    brand = models.CharField(max_length=100, blank=True, null=True)
-    unit = models.CharField(max_length=50, blank=True, null=True)
-    mrp = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    whole_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    whole_rate_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    sale_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    created_at = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-      return f"{self.item.item_name} from {self.supplier.name}"
-    
 class StockAdjustment(models.Model):
     ADJUSTMENT_TYPES = [
         ('add', 'Add Stock'),

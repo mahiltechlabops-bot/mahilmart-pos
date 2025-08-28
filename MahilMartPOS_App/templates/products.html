@@ -48,11 +48,11 @@
         {% for product in items %}
         <tr>
           <td>{{ forloop.counter }}</td>        
-          <td>{{ product.item.item_name }}</td>
-          <td>{{ product.item.code }}</td>
-          <td>{{ product.item.group }}</td>
-          <td>{{ product.item.brand }}</td>
-          <td>{{ product.item.unit }}</td>          
+          <td>{{ product.item_name }}</td>
+          <td>{{ product.code }}</td>
+          <td>{{ product.group }}</td>
+          <td>{{ product.brand }}</td>
+          <td>{{ product.unit }}</td>          
         </tr>
         {% empty %}
         <tr>
