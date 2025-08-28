@@ -212,7 +212,7 @@ def dashboard_view(request):
             'date': bill.date,
             'customer_name': bill.customer.name if bill.customer else 'Walk-in',
             'customer_phone': bill.customer.cell if bill.customer else 'N/A',
-            'sale_amount': total_received + (bill.discount or 0),
+            'sale_amount': bill.total_amount,
             'pending_amount': pending_amount,
             'status': 'Pending' if pending_amount > 0 else 'Completed',
         })
@@ -648,7 +648,7 @@ def get_item_info(request):
     if code:
         item = Item.objects.filter(code__iexact=code).first()
     elif name:
-        item = Item.objects.filter(item_name__iexact=name).first()
+        item = Item.objects.filter(item_name__icontains=name).first()
 
     if not item:
         return JsonResponse({'error': 'Item not found'}, status=404)
@@ -738,6 +738,27 @@ def get_item_info(request):
         'batch_details': merged_batches,
         'all_batch_nos': all_batch_nos
     })
+
+def get_itemname_info(request):
+    """
+    Return item name/code suggestions for autocomplete.
+    """
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'suggestions': []})
+
+    items = Item.objects.filter(item_name__icontains=query).order_by("item_name")[:25]
+
+    suggestions = [
+        {
+            'item_code': i.code,
+            'item_name': i.item_name,
+            'unit': i.unit,
+        }
+        for i in items
+    ]
+
+    return JsonResponse({'suggestions': suggestions})
 
 @access_required(allowed_roles=['superuser'])
 def add_billtype(request):
@@ -850,7 +871,7 @@ def payment_list_view(request):
     to_date = request.GET.get('to_date')
     payment_mode = request.GET.get('payment_mode')
 
-    billings = Billing.objects.select_related('customer').all().order_by('id')
+    billings = Billing.objects.select_related('customer').all().order_by('-id')
 
     # Date filter
     if from_date and to_date:
@@ -1167,6 +1188,15 @@ def convert_quotation_to_order(request, qtn_no):
     total_amount = sum(float(item.get('amount', 0)) for item in items)
     due = total_amount - (advance + paid)
 
+    bill_no = "1"  
+
+    if first_qtn.bill_no and str(first_qtn.bill_no).strip():
+        bill_no = first_qtn.bill_no
+    else:
+        latest_billing = Billing.objects.order_by('-id').first()
+        if latest_billing and latest_billing.bill_no and latest_billing.bill_no.isdigit():
+            bill_no = str(int(latest_billing.bill_no) + 1)
+
     # Create the Order
     order = Order.objects.create(
         customer_name=first_qtn.name,
@@ -1182,7 +1212,8 @@ def convert_quotation_to_order(request, qtn_no):
         due_balance=due,
         payment_type='cash',
         order_status='pending', 
-        qtn_no=qtn_no,       
+        qtn_no=qtn_no,
+        bill_no=bill_no,   
     )
 
     # Create OrderItem records

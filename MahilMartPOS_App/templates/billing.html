@@ -139,6 +139,42 @@
     .delete-row-btn:hover {
         background-color: #c9302c;
     }
+
+    .form-grid .form-group input,
+    .form-grid .form-group select,
+    .form-grid .form-group textarea {
+        width: 85%;
+        padding: 6px;
+        font-size: 14px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 4px;
+    }
+
+    .suggestion-list {
+        position: absolute;
+        background: rgb(219, 212, 212);
+        border: 1px solid #571414;
+        z-index: 1000;
+        max-height: 150px;
+        overflow-y: auto;
+        width: 10%;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        }
+
+        .suggestion-list li {
+        padding: 6px 10px;
+        cursor: pointer;
+        }
+
+        .suggestion-list li:hover {
+        background: #f0f0f0;
+        }
 </style>
 {% endblock %}
 
@@ -187,7 +223,7 @@
                 autocomplete="off">
             </div>
                        
-            <div class="form-group"><label>Phone :</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
+            <div class="form-group"><label>Phone : (default - 9876543210)</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
             <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
             
             <div class="form-group"><label>Join Date :</label><input type="text" name="date_joined" id="date_joined" value="{{ today_date }}" readonly></div>            
@@ -258,8 +294,11 @@
         <div class="footer-controls" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 15px; border-top: 2px solid #ccc;">
 
     <div class="buttons" style="display: flex; gap: 10px;">
-        <button type="button" onclick="submitAsQuotation()">Quotation</button>
-        <a href="{% url 'order_list' %}"><button type="button">Order</button></a>
+        <button type="button" onclick="submitAsQuotation()" tabindex="-1">Quotation</button>
+        <button type="button" onclick="location.href='{% url 'order_list' %}'" tabindex="-1">
+        Order
+        </button>
+
     </div>
 
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 18px; font-weight: bold;">
@@ -267,7 +306,7 @@
         <span class="total-red" style="font-size: 26px; color: red;">0.00</span> 
 
         <label>Received:</label>
-        <input type="number" step="0.01" name="received" readonly
+        <input type="number" step="0.01" name="received" tabindex="-1" readonly 
             style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#d4f8d4; border:2px solid #3cb043; color:#1a4314;">
 
         <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -286,18 +325,18 @@
     </div>
 
         <label>Balance:</label>
-        <input type="number" step="0.01" name="balance" readonly
+        <input type="number" step="0.01" name="balance" tabindex="-1" readonly
             style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#ffe4b3; border:2px solid #e69500; color:#663d00;">
     </div>
 
     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; font-size:16px;">
         <div style="display: flex; align-items: center; gap: 8px;">
             <label for="points">Total Points:</label>
-            <input type="text" id="points" name="points" readonly style="width:100px; text-align:center;">
+            <input type="text" id="points" name="points" tabindex="-1" readonly style="width:100px; text-align:center;">
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
             <label for="total_earned">Today Points:</label>
-            <input type="text" id="total_earned" name="total_earned" readonly style="width:100px; text-align:center;">
+            <input type="text" id="total_earned" name="total_earned" tabindex="-1" readonly style="width:100px; text-align:center;">
         </div>
     </div>
 
@@ -815,9 +854,40 @@ function resetRowInputs(row) {
     }
 
     if (nameInput) {
-        nameInput.addEventListener('blur', () => {
-            if (codeInput && codeInput.value.trim()) return;
-            fetchItemInfo('name', nameInput.value);
+        nameInput.addEventListener('input', () => {
+            const value = nameInput.value.trim();
+            if (value.length < 2) return; // wait until 2+ chars
+
+            fetch(`/ajax/get-itemname-info/?q=${encodeURIComponent(value)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.suggestions) {
+                        let list = document.createElement('ul');
+                        list.className = "suggestion-list";
+
+                        data.suggestions.forEach(s => {
+                            let li = document.createElement('li');
+                            li.textContent = `${s.item_name} (${s.item_code})`;
+                            li.addEventListener('click', () => {
+                                // Fill inputs
+                                codeInput.value = s.item_code;
+                                nameInput.value = s.item_name;
+                                unitInput.value = s.unit;
+
+                                // Fetch full inventory details
+                                fetchItemInfo('code', s.item_code);
+
+                                list.remove();
+                            });
+                            list.appendChild(li);
+                        });
+
+                        // Replace old dropdown if exists
+                        const oldList = nameInput.parentNode.querySelector('.suggestion-list');
+                        if (oldList) oldList.remove();
+                        nameInput.parentNode.appendChild(list);
+                    }
+                });
         });
     }
 }

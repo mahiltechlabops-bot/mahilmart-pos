@@ -133,6 +133,28 @@
 .sale_price {
     -moz-appearance: textfield;
 }
+
+ .suggestion-list {
+        position: absolute;
+        background: rgb(219, 212, 212);
+        border: 1px solid #571414;
+        z-index: 1000;
+        max-height: 150px;
+        overflow-y: auto;
+        width: 10%;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        }
+
+        .suggestion-list li {
+        padding: 6px 10px;
+        cursor: pointer;
+        }
+
+        .suggestion-list li:hover {
+        background: #f0f0f0;
+        }
 </style>
 
 {% endblock %}
@@ -527,6 +549,43 @@ function attachRecalcListeners(row) {
   });
 }
 
+document.addEventListener('input', function (e) {
+  if (e.target.classList.contains('item-name')) {
+    const inputEl = e.target;
+    const row = inputEl.closest('tr');
+    const value = inputEl.value.trim();
+    if (value.length < 2) return;
+
+    fetch(`/ajax/get-itemname-info/?q=${encodeURIComponent(value)}`)
+      .then(response => response.json())
+      .then(data => {
+        let list = document.createElement('ul');
+        list.className = "suggestion-list";
+
+        data.suggestions.forEach(s => {
+          let li = document.createElement('li');
+          li.textContent = `${s.item_name} (${s.item_code})`;
+          li.addEventListener('click', () => {
+            row.querySelector('.item-name').value = s.item_name;
+            row.querySelector('.item-code').value = s.item_code;
+            row.querySelector('.unit').value = s.unit;
+
+            // fetch full details
+            fetchItemDetails(row.querySelector('.item-name'));
+
+            list.remove();
+          });
+          list.appendChild(li);
+        });
+
+        // remove old
+        const oldList = inputEl.parentNode.querySelector('.suggestion-list');
+        if (oldList) oldList.remove();
+        inputEl.parentNode.appendChild(list);
+      });
+  }
+});
+
 function fetchItemDetails(inputEl) {
     const row = inputEl.closest('tr');
     const itemNameInput = row.querySelector('.item-name');
@@ -543,7 +602,7 @@ function fetchItemDetails(inputEl) {
         if (data.error) {
           console.warn("Item not found:", data.error);
           return;
-        }
+        }      
 
         row.querySelector('.item-name').value = data.item_name;
         row.querySelector('.item-code').value = data.code;
