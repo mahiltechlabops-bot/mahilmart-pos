@@ -199,9 +199,9 @@ def dashboard_view(request):
         return (bill.received or Decimal('0')) + payments_total                
 
     # Recent bills    
-    bills_qs = Billing.objects.select_related('customer').order_by('-created_at')
+    recent_bills_qs = bills_qs.select_related('customer').order_by('-created_at')
     recent_bills = []
-    for bill in bills_qs:
+    for bill in recent_bills_qs:
         total_received = calculate_total_received(bill)
         pending_amount = bill.total_amount - total_received
 
@@ -214,6 +214,7 @@ def dashboard_view(request):
             'customer_phone': bill.customer.cell if bill.customer else 'N/A',
             'sale_amount': bill.total_amount,
             'pending_amount': pending_amount,
+            'created_by': bill.created_by,
             'status': 'Pending' if pending_amount > 0 else 'Completed',
         })
 
@@ -1213,7 +1214,7 @@ def convert_quotation_to_order(request, qtn_no):
         payment_type='cash',
         order_status='pending', 
         qtn_no=qtn_no,
-        bill_no=bill_no,   
+        bill_no=bill_no,           
     )
 
     # Create OrderItem records
@@ -1269,7 +1270,8 @@ def convert_quotation_to_order(request, qtn_no):
     points=total_points,
     points_earned=0,
     remarks=f"Converted from Quotation {qtn_no}",
-    status_on="order_bill"
+    status_on="order_bill",
+    created_by=request.user
     )
 
     # Process stock and Billing Items
