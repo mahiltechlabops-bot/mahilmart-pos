@@ -1444,7 +1444,27 @@ def fetch_item_by_code(request):
         })
     except Item.DoesNotExist:
         return JsonResponse({'exists': False})
+    
+@access_required(allowed_roles=['superuser'])
+def items_list(request):
+    query_name = request.GET.get('name', '').strip()
+    query_code = request.GET.get('code', '').strip()
 
+    items = Item.objects.all().order_by('id')
+
+    if query_name:
+        items = items.filter(item_name__icontains=query_name)
+
+    if query_code:
+        items = items.filter(code__icontains=query_code)
+
+    context = {
+        'items': items,
+        'query_name': query_name,
+        'query_code': query_code,
+    }
+    return render(request, 'items_list.html', context) 
+    
 @access_required(allowed_roles=['superuser'])    
 @csrf_exempt
 def check_item_code(request):
@@ -1464,8 +1484,8 @@ def Item_barcode(request):
         whole_price = request.POST.get('whole_price')
         generated_on = request.POST.get('generated_on')
         active = True if request.POST.get('active') == 'on' else False
-        
-        ItemBarcode.objects.create(
+
+        obj = ItemBarcode.objects.create(
             barcode=barcode,
             item_code=item_code,
             item_name=item_name,
@@ -1476,9 +1496,20 @@ def Item_barcode(request):
             generated_on=generated_on,
             active=active
         )
+
+        # If request came from AJAX, return JSON
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({
+                "success": True,
+                "id": obj.id,
+                "barcode": obj.barcode,
+                "item_name": obj.item_name
+            })
+
+        # Normal redirect for full form submit
         return redirect('item_barcode')
-    
-    return render(request,'barcode.html')
+
+    return render(request, 'barcode.html')
 
 @access_required(allowed_roles=['superuser'])
 def Unit_creation(request):
@@ -1488,17 +1519,24 @@ def Unit_creation(request):
         decimals_raw = request.POST.get('decimals')
         UQC = request.POST.get('UQC')
 
-        decimals = None if decimals_raw.strip() == "" else Decimal(decimals_raw)
+        decimals = None if not decimals_raw or decimals_raw.strip() == "" else Decimal(decimals_raw)
 
-        Unit.objects.create(
+        new_unit = Unit.objects.create(
             unit_name=unit_name,
             print_name=print_name,
             decimals=decimals,
             UQC=UQC
         )
-        return redirect('unit_creation')
-    return render(request,'unit.html')
 
+        # If AJAX → return JSON
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "id": new_unit.id, "name": new_unit.unit_name})
+
+        return redirect('unit_creation')
+
+    return render(request, 'unit.html')
+
+@access_required(allowed_roles=['superuser'])
 def Group_creation(request):
     if request.method == 'POST':
         group_name = request.POST.get('group_name')
@@ -1507,15 +1545,31 @@ def Group_creation(request):
         print_name = request.POST.get('print_name')
         commodity = request.POST.get('commodity')
 
-        Group.objects.create(
+        if not group_name:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "error": "Group name is required"}, status=400)
+            return redirect('group_creation')
+
+        group = Group.objects.create(
             group_name=group_name,
             alias_name=alias_name,
             under=under,
             print_name=print_name,
             commodity=commodity
         )
+
+        # If request is AJAX (from modal)
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({
+                "success": True,
+                "id": group.id,
+                "name": group.group_name
+            })
+
+        # Normal form (separate page)
         return redirect('group_creation')
-    return render(request,'group.html')
+
+    return render(request, 'group.html')
 
 @access_required(allowed_roles=['superuser'])
 def Brand_creation(request):
@@ -1525,14 +1579,24 @@ def Brand_creation(request):
         under = request.POST.get('under')
         print_name = request.POST.get('print_name')
 
-        Brand.objects.create(
+        brand = Brand.objects.create(
             brand_name=brand_name,
             alias_name=alias_name,
             under=under,
             print_name=print_name,
         )
+
+        #  If AJAX request, return JSON instead of redirect
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({
+                "success": True,
+                "id": brand.id,
+                "name": brand.brand_name
+            })
+
         return redirect('brand_creation')
-    return render(request,'brand.html')
+
+    return render(request, 'brand.html')
 
 @access_required(allowed_roles=['superuser'])
 def Tax_creation(request):

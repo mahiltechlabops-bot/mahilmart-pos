@@ -250,8 +250,8 @@ class SaleReturnItem(models.Model):
     return_qty = models.DecimalField(max_digits=10, decimal_places=2)
     return_amount = models.DecimalField(max_digits=10, decimal_places=2)       
     
-class Item(models.Model):
-    code = models.CharField(max_length=30)
+class Item(models.Model):  
+    code = models.CharField(max_length=100, unique=True)
     item_name = models.CharField(max_length=50)
     print_name = models.CharField(max_length=50, blank=True, null=True)    
     status = models.CharField(max_length=10)
