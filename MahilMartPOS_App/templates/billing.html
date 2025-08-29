@@ -140,18 +140,32 @@
         background-color: #c9302c;
     }
 
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr); /* 5 equal columns */
+        gap: 10px;
+        align-items: start;
+        grid-auto-rows: min-content; /* rows adjust height to content */
+    }
+
+    /* Place first 5 form groups in first row */
+    .form-grid .form-group:nth-child(-n+5) {
+        grid-row: 1;
+    }
+
+    /* Place the remaining form groups in second row */
+    .form-grid .form-group:nth-child(n+6) {
+        grid-row: 2;
+    }
+
+    /* Make inputs, selects, textareas fill their cells */
     .form-grid .form-group input,
     .form-grid .form-group select,
     .form-grid .form-group textarea {
         width: 85%;
         padding: 6px;
         font-size: 14px;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 4px;
+        box-sizing: border-box;
     }
 
     .suggestion-list {
@@ -192,7 +206,7 @@
             <div class="form-group"><label>Date :</label><input type="text" name="date" value="{{ today_date }}" readonly></div>
             <div class="form-group">
                 <label>Type :</label>
-                <select name="sale_type" style="flex: 1; padding: 6px;">
+                <select name="sale_type" style="padding:6px;">
                     {% for type in bill_types %}
                     <option value="{{ type.billtype }}">{{ type.billtype }}</option>
                     {% endfor %}
@@ -201,7 +215,7 @@
             
             <div class="form-group">
                 <label>Payment mode :</label>
-                <select name="bill_type" style="flex: 1; padding: 6px;">
+                <select name="bill_type" style="padding:6px;">
                     {% for mode in payment_modes %}
                     <option value="{{ mode.mode_name }}">{{ mode.mode_name }}</option>
                     {% endfor %}
@@ -210,20 +224,15 @@
             
             <div class="form-group">
                 <label>Counter :</label>
-                <select name="counter" style="flex: 1; padding: 6px;">
+                <select name="counter" style="padding:6px;">
                     {% for count in counter %}
                     <option value="{{ count.counter_name }}">{{ count.counter_name }}</option>
                     {% endfor %}
                 </select>
             </div>
-
-            <div class="form-group"><label>Email :</label><input type="email" name="email" placeholder="Optional" id="email"
-                pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|net|org|gov|edu|in|co|info|biz)$"
-                title="Enter a valid email address like name@example.com"
-                autocomplete="off">
-            </div>
-                       
+                                   
             <div class="form-group"><label>Phone : (default - 9876543210)</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
+            <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div> 
             <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
             
             <div class="form-group"><label>Join Date :</label><input type="text" name="date_joined" id="date_joined" value="{{ today_date }}" readonly></div>            
@@ -236,11 +245,9 @@
                 <br><br>
                 <button onclick="submitName()" style="padding:8px 20px;">OK</button>
             </div>
-            </div>
-        
-            <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div> 
-             <div class="form-group"><label>Remarks :</label><input type="text" name="remarks" placeholder="Optional"></div>            
+            </div>                               
         </div>
+
         <!-- Item Table -->
         <table class="item-table">
             <thead>
@@ -374,6 +381,7 @@
         const nameInput = document.getElementById('name');
         const modal = document.getElementById('nameModal');
         const modalNameInput = document.getElementById('modalNameInput');
+        const addressInput = document.getElementById('address');
         const pointsInput = document.getElementById('points');
         const totalEarnedInput = document.getElementById('total_earned');
 
@@ -393,12 +401,11 @@
             headers: { "X-Requested-With": "XMLHttpRequest" }
         })
         .then(response => response.json())
-        .then(data => {
+        .then(data => {            
             if (data.name) {
                 nameInput.value = data.name;
-                pointsInput.value = data.points || 0;
-                document.getElementById('email').value = data.email || '';
-                document.getElementById('address').value = data.address || '';
+                addressInput.value = data.customer_address || ''; 
+                pointsInput.value = data.points || 0;                        
                 const joinDateInput = document.getElementById('date_joined');
                 joinDateInput.value = data.date_joined || new Date().toISOString().split('T')[0];
                 joinDateInput.readOnly = !!data.date_joined;
@@ -418,8 +425,7 @@
     function validateForm() {
         const requiredFields = [
             {id: 'name', name: 'Customer Name'},
-            {id: 'cell', name: 'Phone Number'}
-            // {id: 'email', name: 'Email'} # optional
+            {id: 'cell', name: 'Phone Number'}          
         ];
 
         for (const field of requiredFields) {
@@ -1073,7 +1079,7 @@ function resetRowInputs(row) {
 
     // Manually append all required fields (if not automatically included)
     const requiredFields = [
-        'cell', 'email', 'address', 'date_joined',
+        'cell', 'address', 'date_joined',
         'sale_type', 'bill_type', 'counter', 'points', 'total_earned'
     ];
 
