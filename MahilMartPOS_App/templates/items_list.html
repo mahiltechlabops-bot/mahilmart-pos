@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Items List{% endblock %}
+
+{% block content %}
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+    <h2 style="margin: 0;">Items List</h2>
+
+    <div style="margin-bottom: 20px; display:flex; align-items:center; gap:10px;">
+        <form method="get" action="{% url 'items_list' %}" style="display:flex; gap:10px; align-items:center;">
+            <input type="text" name="name" placeholder="Search by Item Name"
+                value="{{ query_name }}" 
+                style="padding:6px; border:1px solid #ccc; border-radius:5px;">
+
+            <input type="text" name="code" placeholder="Search by Code"
+                value="{{ query_code }}" 
+                style="padding:6px; border:1px solid #ccc; border-radius:5px;">
+
+            <button type="submit" 
+                    style="padding:6px 12px; background-color:#007bff; color:white; border:none; border-radius:5px;">
+                Filter
+            </button>
+
+            <a href="{% url 'items_list' %}" 
+            style="padding:6px 12px; background-color:#6c757d; color:white; text-decoration:none; border-radius:5px;">
+                Reset
+            </a>
+        </form>
+    </div>
+
+    <a href="{% url 'items' %}" 
+        style="display: inline-block; padding: 8px 16px; background-color: #007bff; 
+                color: white; text-decoration: none; border-radius: 5px; 
+                font-size: 14px; border: none;">
+            Back
+    </a>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %} 
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Print Name</th>
+            <th>Status</th>
+            <th>Unit</th>        
+            <th>Group</th>
+            <th>Brand</th>
+            <th>Tax %</th>
+            <th>HSN/SAC</th>
+            <th>Use MRP</th>
+            <th>Points</th>
+            <th>Cess Per Qty</th>
+            <th>P. Rate</th>
+            <th>Cost Rate</th>
+            <th>MRP</th>
+            <th>Sale Rate</th>
+            <th>Whole Rate</th>
+            <th>Whole Rate 2</th>
+            <th>Min Stock</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.code }}</td>
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.print_name }}</td>
+            <td>{{ item.status }}</td>            
+            <td>{{ item.unit }}</td>            
+            <td>{{ item.group }}</td>
+            <td>{{ item.brand }}</td>
+            <td>{{ item.tax }}</td>
+            <td>{{ item.HSN_SAC }}</td>
+            <td>{{ item.use_MRP|yesno:"Yes,No" }}</td>
+            <td>{{ item.points }}</td>
+            <td>{{ item.cess_per_qty }}</td>
+            <td>{{ item.P_rate }}</td>
+            <td>{{ item.cost_rate }}</td>
+            <td>{{ item.MRSP }}</td>
+            <td>{{ item.sale_rate }}</td>
+            <td>{{ item.whole_rate }}</td>
+            <td>{{ item.whole_rate_2 }}</td>
+            <td>{{ item.min_stock }}</td>        
+            <td>
+                <button class="btn btn-sm btn-primary" disabled>Edit</button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="22" class="text-center">No items found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

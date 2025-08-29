@@ -78,6 +78,13 @@
         height: 100px;
         margin-bottom: 10px;
     }
+
+    .modal-backdrop {
+    z-index: 1040 !important;
+    }
+    .modal {
+    z-index: 1050 !important;
+    }
 </style>
 
 <h2>Item Creation</h2>
@@ -121,12 +128,13 @@
                     <td>
                         <label for="unit">Unit</label>
                         <select name="unit" id="unit">
-                        <option value="">-- Select Unit --</option>
+                            <option value="">-- Select Unit --</option>
                             {% for u in units %}
                                 <option value="{{ u.id }}">{{ u.unit_name }}</option>
                             {% endfor %}
-                        </select>
+                        </select>                      
                     </td>
+
                     <td>
                         <label for="p_unit">P. Unit</label>
                         <select name="P_unit" id="p_unit">
@@ -141,13 +149,15 @@
                 <tr>
                 <td colspan="2">
                     <label for="group">Group</label>
-                    <select name="group" id="group" required>
+                    <div class="d-flex align-items-center gap-2">
+                        <select name="group" id="group" class="form-select" required>
                         <option value="">-- Select Group --</option>
                         {% for g in groups %}
                             <option value="{{ g.id }}">{{ g.group_name }}</option>
                         {% endfor %}
-                    </select>
-                </td>
+                        </select>                        
+                    </div>
+                    </td>
             </tr>
     
                 <tr>
@@ -158,7 +168,7 @@
                             {% for b in brands %}
                                 <option value="{{ b.id }}">{{ b.brand_name }}</option>
                             {% endfor %}
-                        </select>
+                        </select>                      
                     </td>
                 </tr>
                  <tr>
@@ -171,9 +181,23 @@
                         {% endfor %}
                       </select>
                     </td>
-                </tr>                                    
+                </tr>
+                
+                <tr>
+                    <td colspan="2">
+                        <label for="barcode">Barcode</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <select name="barcode" id="barcode" class="form-select">
+                                <option value="">-- Select Barcode --</option>
+                                {% for b in barcodes %}
+                                    <option value="{{ b.id }}">{{ b.barcode }} - {{ b.item_name }}</option>
+                                {% endfor %}
+                            </select>                           
+                        </div>
+                    </td>
+                </tr>
 
-                <tr><td colspan="2"><label>HSN / SAC</label><input type="text" name="hsn_sac"></td></tr>
+                <tr><td colspan="2"><label>HSN / SAC</label><input type="text" name="hsn_sac" required></td></tr>
                 <tr>
                     <td><label>Use MRP</label>
                         <select name="use_mrp">
@@ -225,28 +249,227 @@
     
     <!-- Action Buttons -->
     <div class="buttons">
-          <a href="{% url 'unit_creation' %}">
-            <button type="button">Unit's</button>
-        </a>
-          <a href="{% url 'group_creation' %}">
-            <button type="button">Group's</button>
-        </a>
-          <a href="{% url 'brand_creation' %}">
-            <button type="button">Brand's</button>
-        </a>          
-        <a href="{% url 'item_barcode' %}">
-            <button type="button">Barcode's</button>
-        </a>
+        <a href="{% url 'items_list' %}" 
+        style="display:inline-block; padding:8px 16px; background-color:#105592; 
+                color:white; text-decoration:none; border:none; border-radius:5px; font-size:14px;">
+            Item Unit's
+        </a>        
+
+         <!-- Button to open modal -->
+        <button type="button" data-bs-toggle="modal" data-bs-target="#unitModal">
+            + Add Unit
+        </button>
+        <button type="button" data-bs-toggle="modal" data-bs-target="#groupModal">
+            + Add Group
+        </button>        
+        <button type="button" data-bs-toggle="modal" data-bs-target="#brandModal">
+            + Add Brand
+        </button>
+        <button type="button" data-bs-toggle="modal" data-bs-target="#barcodeModal">
+            + Add Barcode
+        </button>
+    
         <a href="{% url 'tax_creation' %}">
             <button type="button">Tax</button>
         </a>
-        <div class="btn-container">
-            <button type="submit" id="saveBtn">Save</button>
-            <button type="button" onclick="window.location.href='{% url 'dashboard' %}'">Exit</button>
-            <button type="reset">Reset</button>
+        <div class="btn-container" style="margin-top:15px;">
+            <button type="submit" id="saveBtn" 
+                    style="background-color:#28a745; color:white; padding:8px 16px; 
+                        border:none; border-radius:5px; font-size:14px;">
+                Save
+            </button>
+            
+            <button type="button" onclick="window.location.href='{% url 'dashboard' %}'" 
+                    style="background-color:#dc3545; color:white; padding:8px 16px; 
+                        border:none; border-radius:5px; font-size:14px;">
+                Exit
+            </button>
+            
+            <button type="reset" 
+                    style="background-color:#ffc107; color:black; padding:8px 16px; 
+                        border:none; border-radius:5px; font-size:14px;">
+                Reset
+            </button>
         </div>
     </div>
 </form>
+</div>
+
+<!-- ======= unit creation modal ======= -->
+<div class="modal fade" id="unitModal" tabindex="-1" aria-labelledby="unitModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="unitForm" novalidate>
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="unitModalLabel">Create Unit</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="unit_name">Unit Name</label>
+            <input id="unit_name" type="text" name="unit_name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="print_name">Print Name</label>
+            <input id="print_name" type="text" name="print_name" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="decimals">Decimals</label>
+            <input id="decimals" type="number" step="0.01" name="decimals" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="UQC">UQC</label>
+            <input id="UQC" type="text" name="UQC" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Group Creation Modal -->
+<div class="modal fade" id="groupModal" tabindex="-1" aria-labelledby="groupModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" id="groupModalForm">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="groupModalLabel">Group Creation</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Group Name:</label>
+            <input type="text" name="group_name" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Alias Name:</label>
+            <input type="text" name="alias_name" class="form-control">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Under:</label>
+            <input type="text" name="under" class="form-control">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Print Name:</label>
+            <input type="text" name="print_name" class="form-control">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Commodity:</label>
+            <input type="text" name="commodity" class="form-control">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Brand Creation Modal -->
+<div class="modal fade" id="brandModal" tabindex="-1" aria-labelledby="brandModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="brandModalForm" method="POST">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="brandModalLabel">Brand Creation</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Brand Name</label>
+            <input type="text" name="brand_name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Alias Name</label>
+            <input type="text" name="alias_name" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Under</label>
+            <input type="text" name="under" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Print Name</label>
+            <input type="text" name="print_name" class="form-control">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Barcode creation modal -->
+ <div class="modal fade" id="barcodeModal" tabindex="-1" aria-labelledby="barcodeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="barcodeModalLabel">Create New Barcode</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="barcodeForm" method="POST">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label>Barcode</label>
+            <input type="text" name="barcode" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label>Item Code</label>
+            <input type="text" name="item_code" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label>Item Name</label>
+            <input type="text" name="item_name" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label>Unit</label>
+            <input type="text" name="unit" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label>MRP</label>
+            <input type="number" name="mrp" class="form-control" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label>Sale Price</label>
+            <input type="number" name="sale_price" class="form-control" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label>Whole Price</label>
+            <input type="number" name="whole_price" class="form-control" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label>Generated On</label>
+            <input type="date" name="generated_on" class="form-control">
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="active" id="active" checked>
+            <label class="form-check-label" for="active">Active</label>
+          </div>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -281,23 +504,182 @@ document.getElementById("saveBtn").addEventListener("click", function(event) {
 });
 
 document.getElementById("item_code").addEventListener("blur", function() {
-    let code = this.value;
-    if (code.trim() === "") return;
+    const codeInput = this;
+    const code = codeInput.value.trim();
+    if (code === "") return;
 
     fetch(`/check-item-code/?code=${encodeURIComponent(code)}`)
         .then(response => response.json())
         .then(data => {
             if (data.exists) {
+                // Show warning and block movement
                 document.getElementById("codeAlert").style.display = "inline";
-                this.style.borderColor = "red";
+                codeInput.style.borderColor = "red";
                 document.querySelector("button[type='submit']").disabled = true;
+
+                // Focus back to input
+                setTimeout(() => codeInput.focus(), 0);
+
+                // Block tab key temporarily
+                codeInput.addEventListener('keydown', blockTab, true);
             } else {
+                // Code is unique, allow normal interaction
                 document.getElementById("codeAlert").style.display = "none";
-                this.style.borderColor = "";
+                codeInput.style.borderColor = "";
                 document.querySelector("button[type='submit']").disabled = false;
+
+                // Remove the tab-blocking listener
+                codeInput.removeEventListener('keydown', blockTab, true);
             }
         })
         .catch(error => console.error("Error:", error));
+});
+
+// Function to block tab key when code exists
+function blockTab(e) {
+    if (e.key === "Tab") {
+        e.preventDefault();
+    }
+}
+
+document.getElementById("unitForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    let formData = new FormData(this);
+
+    fetch("{% url 'unit_creation' %}", {
+        method: "POST",
+        headers: { 
+            "X-CSRFToken": "{{ csrf_token }}",
+            "X-Requested-With": "XMLHttpRequest"
+        },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Update both dropdowns (#unit and #p_unit)
+            ["unit", "p_unit"].forEach(id => {
+                let dropdown = document.getElementById(id);
+                if (dropdown) {
+                    let option = document.createElement("option");
+                    option.value = data.id;
+                    option.textContent = data.name;
+                    dropdown.appendChild(option);
+
+                    // auto-select the new unit
+                    option.selected = true;
+                }
+            });
+
+            // Close modal
+            var modal = bootstrap.Modal.getInstance(document.getElementById('unitModal'));
+            modal.hide();
+
+            this.reset();
+        } else {
+            alert("Error creating unit!");
+        }
+    });
+});
+
+document.getElementById("groupModalForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    let formData = new FormData(this);
+
+    fetch("{% url 'group_creation' %}", {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // ✅ Add new option to dropdown
+            let groupSelect = document.getElementById("group");
+            let newOption = document.createElement("option");
+            newOption.value = data.id;
+            newOption.text = data.name;
+            newOption.selected = true;
+            groupSelect.appendChild(newOption);
+           
+            let modal = bootstrap.Modal.getInstance(document.getElementById("groupModal"));
+            modal.hide();
+         
+            document.getElementById("groupModalForm").reset();
+        } else {
+            alert(data.error || "Failed to create group");
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Something went wrong. Please try again.");
+    });
+});
+
+document.getElementById("brandModalForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+
+    fetch("{% url 'brand_creation' %}", {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let brandSelect = document.getElementById("brand"); // your brand dropdown ID
+            let option = document.createElement("option");
+            option.value = data.id;
+            option.text = data.name;
+            option.selected = true;
+            brandSelect.add(option);
+
+            // close modal
+            let modal = bootstrap.Modal.getInstance(document.getElementById("brandModal"));
+            modal.hide();
+
+            this.reset();
+        }
+    })
+    .catch(err => console.error(err));
+});
+
+document.getElementById("barcodeForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    let formData = new FormData(this);
+
+    fetch("{% url 'item_barcode' %}", {
+        method: "POST",
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // add new barcode to dropdown
+            let barcodeSelect = document.getElementById("barcode");
+            let newOption = new Option(`${data.barcode} - ${data.item_name}`, data.id, true, true);
+            barcodeSelect.add(newOption);
+
+            // close modal
+            let modal = bootstrap.Modal.getInstance(document.getElementById("barcodeModal"));
+            modal.hide();
+
+            this.reset();
+        } else {
+            alert("Error creating barcode");
+        }
+    })
+    .catch(err => console.error(err));
 });
 </script>
 {% endblock %}

@@ -250,8 +250,8 @@ class SaleReturnItem(models.Model):
     return_qty = models.DecimalField(max_digits=10, decimal_places=2)
     return_amount = models.DecimalField(max_digits=10, decimal_places=2)       
     
-class Item(models.Model):
-    code = models.CharField(max_length=30)
+class Item(models.Model):  
+    code = models.CharField(max_length=100, unique=True)
     item_name = models.CharField(max_length=50)
     print_name = models.CharField(max_length=50, blank=True, null=True)    
     status = models.CharField(max_length=10)
@@ -260,7 +260,7 @@ class Item(models.Model):
     group = models.CharField(max_length=100, blank=True, null=True)
     brand = models.CharField(max_length=100, blank=True, null=True)
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    HSN_SAC = models.IntegerField(blank=True, null=True)
+    HSN_SAC = models.BigIntegerField(blank=True, null=True, default=0)
     P_rate = models.FloatField()
     cost_rate = models.FloatField()
     MRSP = models.FloatField()
@@ -272,8 +272,8 @@ class Item(models.Model):
     stock_item = models.CharField(max_length=10)
     carry_over = models.CharField(max_length=10)
     manual = models.CharField(max_length=10)
-    points = models.IntegerField()
-    cess_per_qty =  models.IntegerField()
+    points = models.BigIntegerField()
+    cess_per_qty =  models.BigIntegerField()
     picture = models.ImageField()
     barcode = models.CharField(max_length=100)
     other = models.CharField(max_length=100)

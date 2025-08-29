@@ -165,6 +165,9 @@
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
 
      <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'items' %}" class="btn btn-primary btn-sm" target="_blank" style="background-color: #39ac16; color: white;">
+          Item creation
+        </a>
         <a href="{% url 'purchase_items' %}" class="btn btn-primary btn-sm">
           Purchase Payment Details
         </a>
@@ -601,6 +604,7 @@ function fetchItemDetails(inputEl) {
       .then(data => {
         if (data.error) {
           console.warn("Item not found:", data.error);
+          itemCodeInput.focus();
           return;
         }      
 
