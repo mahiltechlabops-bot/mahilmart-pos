@@ -461,11 +461,29 @@ def create_invoice_view(request):
         phone = request.GET.get('phone')
         customer = Customer.objects.filter(cell=phone).first()
 
+        # Debug prints
+        print("Phone requested:", phone)
+        print("Customer object:", customer)
+
+
+         
+        if customer:
+            print("Name:", customer.name)
+            print("Email:", customer.email)
+            print("Address:", customer.address)
+            print("Date Joined:", customer.date_joined)
+        else:
+            print("Customer not found")
+
+        last_billing = Billing.objects.filter(customer=customer).last() if customer else None
+        points = last_billing.points if last_billing else 0
+        print("Points:", points)            
+
         return JsonResponse({
             'name': customer.name if customer else '',
             'points': Billing.objects.filter(customer=customer).last().points if customer and Billing.objects.filter(customer=customer).exists() else 0,
             'email': customer.email if customer else '',
-            'address': customer.address if customer else '',
+            'customer_address': customer.address if customer else '',
             'date_joined': str(customer.date_joined.date()) if customer and customer.date_joined else '',
             'remarks': '',
         })
@@ -1464,6 +1482,18 @@ def items_list(request):
         'query_code': query_code,
     }
     return render(request, 'items_list.html', context) 
+
+@access_required(allowed_roles=['superuser'])  # if you want access control
+def delete_item(request, item_id):
+    item = get_object_or_404(Item, id=item_id)
+
+    if request.method == "POST":
+        item.delete()
+        messages.success(request, f"Item '{item.item_name}' deleted successfully.")
+        return redirect('items_list')
+
+    messages.error(request, "Invalid request method.")
+    return redirect('items_list')
     
 @access_required(allowed_roles=['superuser'])    
 @csrf_exempt
