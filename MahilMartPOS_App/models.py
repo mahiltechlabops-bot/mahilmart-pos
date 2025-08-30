@@ -625,6 +625,38 @@ class PurchaseItem(models.Model):
     def __str__(self):
         return f"{self.purchase.supplier.name} - {self.code} - {self.item_name}"
     
+class DailyPurchasePayment(models.Model):
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="manual_purchases")
+    supplier_name = models.CharField(max_length=255, blank=True)
+    invoice_no = models.CharField(max_length=100, blank=True, null=True)
+    total_purchase_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    balance = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_mode = models.CharField(max_length=50, choices=[('cash', 'Cash'), ('bank', 'Bank Transfer'), ('credit', 'Credit')])
+    payment_rate = models.DecimalField(max_digits=5, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
+    def __str__(self):
+        return f"Purchase from {self.supplier.name} - Total: {self.total_purchase_amount}"
+
+    def calculate_balance(self):        
+        self.balance = self.total_purchase_amount - self.amount_paid
+        self.save()
+
+    def save(self, *args, **kwargs):   
+        if self.total_purchase_amount and self.amount_paid:
+            try:
+                self.payment_rate = (self.amount_paid / self.total_purchase_amount) * 100
+            except ZeroDivisionError:
+                self.payment_rate = 0
+
+        super().save(*args, **kwargs)
+
+        if self.supplier:
+                self.supplier_name = self.supplier.name
+
+        super().save(*args, **kwargs)
+    
 class PurchasePayment(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name="payments")
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="payments",default=1)
