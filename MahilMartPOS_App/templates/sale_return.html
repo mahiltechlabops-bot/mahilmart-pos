@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+{% block extra_css %}
+<style>
+  .modal-backdrop {
+      z-index: 1040 !important;
+  }
+  .modal {
+      z-index: 1050 !important;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <main class="app-content" id="mainContent">
   <div class="container mt-4">
