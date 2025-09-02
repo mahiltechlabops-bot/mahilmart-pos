@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Purchase Payment List{% endblock %}
+
+{% block content %}
+<h2>Daily Purchase Payment List</h2>
+
+<!-- Filter Form -->
+<form method="get" class="row g-3 mb-4">
+    <div class="col-md-3">
+        <label for="startDate" class="form-label"style="color: #007bff; font-weight: bold; font-size: 14px;">Start Date</label>
+        <input type="date" id="startDate" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+    </div>
+    <div class="col-md-3">
+        <label for="endDate" class="form-label"style="color: #007bff; font-weight: bold; font-size: 14px;">End Date</label>
+        <input type="date" id="endDate" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+    </div>
+    <div class="col-md-3">
+        <label for="supplier_name" class="form-label"style="color: #007bff; font-weight: bold; font-size: 14px;">Supplier</label>
+        <input type="text" id="supplier_name" name="supplier_name" class="form-control" value="{{ request.GET.supplier_name }}">
+    </div>
+    <div class="col-md-3">
+        <label for="invoice_no" class="form-label"style="color: #007bff; font-weight: bold; font-size: 14px;">Invoice No</label>
+        <input type="text" id="invoice_no" name="invoice_no" class="form-control" value="{{ request.GET.invoice_no }}">
+    </div>
+    <div class="col-12 text-end mt-2">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{% url 'purchase_payment_list' %}" class="btn btn-secondary" style="background-color: #007bff; color: white;">Reset</a>
+        <a href="{% url 'daily_purchase_payment' %}" class="btn btn-secondary">Back</a>
+    </div>   
+</form>
+
+<h4>Total Amount Paid: {{ total_amount_paid }}</h4>
+<h3>Total Balance: {{ total_balance }}</h3>
+<h3>Payment Rate: {{ payment_rate|floatformat:2 }}%</h3>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>S. No</th>
+            <th>Total Purchase Amount</th>
+            <th>Amount Paid</th>
+            <th>Balance</th>
+            <th>Payment Mode</th>
+            <th>Payment Rate (%)</th>
+            <th>Created At</th>
+            <th>Supplier</th>
+            <th>Invoice No</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for payment in payments %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ payment.total_purchase_amount }}</td>
+            <td>{{ payment.amount_paid }}</td>
+            <td>{{ payment.balance }}</td>
+            <td>{{ payment.payment_mode }}</td>
+            <td>{{ payment.payment_rate }}</td>
+            <td>{{ payment.created_at }}</td>
+            <td>{{ payment.supplier.name }}</td>
+            <td>{{ payment.invoice_no }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8">No purchase payments found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

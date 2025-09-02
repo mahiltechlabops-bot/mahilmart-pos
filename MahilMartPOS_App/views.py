@@ -80,6 +80,7 @@ from .models import (
     SaleReturnItem,
     PurchasePayment,
     PurchaseTracking,
+    DailyPurchasePayment,
 )
 
 def home(request):
@@ -230,9 +231,9 @@ def dashboard_view(request):
     sales_trend = list(sales_trend_qs)
     
     # Top Selling Products          
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
-    
+    start_date_str = request.GET.get('top_start_date')
+    end_date_str = request.GET.get('top_end_date')
+
     if start_date_str and end_date_str:
         top_start_date = parse_date(start_date_str)
         top_end_date = parse_date(end_date_str)
@@ -240,6 +241,12 @@ def dashboard_view(request):
         top_end_date = datetime.today().date()
         top_start_date = top_end_date - timedelta(days=30)
 
+    context = {}         
+    # format for template (input type="date" expects YYYY-MM-DD)
+    context['top_start_date'] = top_start_date.strftime("%Y-%m-%d")
+    context['top_end_date'] = top_end_date.strftime("%Y-%m-%d")
+
+    # also keep using them for queryset filter etc
     top_start_date_str = top_start_date.strftime("%Y-%m-%d") if top_start_date else ""
     top_end_date_str = top_end_date.strftime("%Y-%m-%d") if top_end_date else ""        
 
@@ -2487,8 +2494,108 @@ def fetch_purchase_items(request):
     print("Returning", len(items_data), "items for invoice:", invoice_number)
     return JsonResponse({'items': items_data,  'purchase': purchase_data})
 
-def purchase_tracking(request):
-    # Start with all records
+def daily_purchase_payment_view(request):
+    if request.method == "POST":       
+        
+        supplier_id = request.POST.get('supplierName')
+        supplier = Supplier.objects.get(id=supplier_id)
+        invoice_no = request.POST.get('invoice_number')
+        total_purchase_amount = float(request.POST.get('totalPurchaseAmount'))
+        amount_paid = float(request.POST.get('amountPaid'))
+        balance = float(request.POST.get('balance'))
+        payment_mode = request.POST.get('paymentMode')
+        payment_rate_str = request.POST.get('paymentRate')
+                
+        payment_rate = float(payment_rate_str.replace('%', '')) if payment_rate_str else 0.0           
+
+        # Create a new DailyPurchasePayment record
+        payment_record = DailyPurchasePayment(
+            supplier=supplier,
+            invoice_no=invoice_no,
+            total_purchase_amount=total_purchase_amount,
+            amount_paid=amount_paid,
+            balance=balance,
+            payment_mode=payment_mode,
+            payment_rate=payment_rate           
+        )
+       
+        payment_record.save()
+      
+        return redirect('daily_purchase_payment')
+  
+    suppliers = Supplier.objects.all()
+    return render(request, 'daily_purchase_payment.html', {"suppliers": suppliers})
+
+from datetime import datetime
+from django.utils import timezone
+from django.db.models import Sum
+
+def purchase_payment_list_view(request):
+    payments = DailyPurchasePayment.objects.select_related('supplier').order_by('-created_at')
+
+    # Get filter parameters from GET request
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    supplier_name = request.GET.get('supplier_name')
+    invoice_no = request.GET.get('invoice_no')
+
+    # Set today's date as default if no date is provided
+    if not start_date and not end_date:
+        today = timezone.now().date()
+        start_date = today
+        end_date = today
+
+    # Filter by date range
+    if start_date:
+        try:
+            if isinstance(start_date, str):  # Only convert if it's a string
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+            else:
+                start_date_obj = start_date
+            payments = payments.filter(created_at__date__gte=start_date_obj)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            if isinstance(end_date, str):  # Only convert if it's a string
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            else:
+                end_date_obj = end_date
+            payments = payments.filter(created_at__date__lte=end_date_obj)
+        except ValueError:
+            pass
+
+    # Filter by supplier
+    if supplier_name:
+        payments = payments.filter(supplier__name__icontains=supplier_name)
+
+    # Filter by invoice number (partial match)
+    if invoice_no:
+        payments = payments.filter(invoice_no__icontains=invoice_no)
+
+    # Calculate the total amount paid based on the filters
+    total_amount_paid = payments.aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0   
+      # Calculate the total balance based on the filtered payments (total_purchase_amount - amount_paid)
+    total_balance = payments.aggregate(Sum('balance'))['balance__sum'] or 0
+
+    # Calculate the total payment rate (sum of amounts paid / sum of total purchase amount)
+    total_purchase_amount = payments.aggregate(Sum('total_purchase_amount'))['total_purchase_amount__sum'] or 0
+    if total_purchase_amount > 0:
+        payment_rate = (total_amount_paid / total_purchase_amount) * 100
+    else:
+        payment_rate = 0     
+
+    return render(request, 'purchase_payment_list.html', {
+        'payments': payments,
+        'total_amount_paid': total_amount_paid,
+        'total_balance': total_balance,
+        'payment_rate': payment_rate,
+        'start_date': start_date,
+        'end_date': end_date
+    })
+
+def purchase_tracking(request):  
     purchase_tracking_summary = PurchaseTracking.objects.select_related(
         'purchase', 'purchase__supplier'
     ).order_by('-tracked_at')

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Daily Purchase Information{% endblock %}
+
+{% block content %}
+    <h2>Daily Purchase Information</h2>
+    <div class="mb-3 text-end">
+        <a href="{% url 'purchase_payment_list' %}" class="btn btn-secondary">
+            View Purchase Payment List
+        </a>
+    </div>
+
+    <form id="purchaseForm" method="post" class="container mt-3">
+        {% csrf_token %}
+
+        <!-- Supplier -->
+        <div class="mb-3">
+            <label for="supplierName" class="form-label">Supplier Name:</label>
+            <select id="supplierName" name="supplierName" class="form-control" required>
+                <option value="">-- Select Supplier --</option>
+                {% for supplier in suppliers %}
+                    <option value="{{ supplier.id }}">
+                        {{ supplier.name }} ({{ supplier.supplier_id }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Invoice -->
+        <div class="mb-3">
+            <label for="invoice_number" class="form-label"><strong>Invoice No:</strong></label>
+            <input type="text" id="invoice_number" name="invoice_number" 
+                value="{{ invoice_number }}" class="form-control">
+        </div>
+    
+        <!-- Total Purchase Amount -->
+        <div class="mb-3">
+            <label for="totalPurchaseAmount" class="form-label">Total Purchase Amount:</label>
+            <input type="number" id="totalPurchaseAmount" name="totalPurchaseAmount" 
+                class="form-control" required oninput="calculate()">
+        </div>
+
+        <!-- Amount Paid -->
+        <div class="mb-3">
+            <label for="amountPaid" class="form-label">Current Paid Amount:</label>
+            <input type="number" id="amountPaid" name="amountPaid" 
+                class="form-control" required oninput="calculate()">
+        </div>
+
+        <!-- Balance -->
+        <div class="mb-3">
+            <label for="balance" class="form-label">Balance:</label>
+            <input type="number" id="balance" name="balance" 
+                class="form-control" readonly>
+        </div>
+
+        <!-- Payment Mode -->
+        <div class="mb-3">
+            <label for="paymentMode" class="form-label">Payment Mode:</label>
+            <select id="paymentMode" name="paymentMode" class="form-control">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="credit">Credit</option>
+            </select>
+        </div>
+
+        <!-- Payment Rate -->
+        <div class="mb-3">
+            <label for="paymentRate" class="form-label">Payment Rate:</label>
+            <input type="text" id="paymentRate" name="paymentRate" 
+                class="form-control" readonly>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </form>
+
+    <script>
+        // Function to dynamically calculate balance and payment rate
+        function calculate() {
+            let total = parseFloat(document.getElementById("totalPurchaseAmount").value) || 0;
+            let paid = parseFloat(document.getElementById("amountPaid").value) || 0;
+            let balance = total - paid;
+
+            // Update the balance field
+            document.getElementById("balance").value = balance.toFixed(2);
+
+            // Calculate and update the payment rate
+            let paymentRate = 0;
+            if (total > 0) {
+                paymentRate = (paid / total) * 100;  // Calculate payment rate in percentage
+            }
+            // Display the payment rate with percentage symbol
+            document.getElementById("paymentRate").value = paymentRate.toFixed(2) + "%";  // Display it as a percentage
+        }
+
+        // Update supplier ID when the supplier is selected
+        document.getElementById('supplierName').addEventListener('change', function() {
+            let supplierId = this.value;
+            document.getElementById('supplierId').value = supplierId; // Automatically set Supplier ID
+        });
+    </script>
+{% endblock %}
