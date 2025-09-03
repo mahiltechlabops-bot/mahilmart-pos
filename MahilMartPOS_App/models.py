@@ -465,49 +465,6 @@ class CustomUserManager(BaseUserManager):
         user.is_superuser = True
         user.save(using=self._db)
         return user
-
-class User(AbstractBaseUser, PermissionsMixin):
-    ROLE_CHOICES = (
-        ('ADMIN', 'Admin'),
-        ('CASHIER', 'Cashier'),
-        ('MANAGER', 'Manager'),
-    )
-    STATUS_CHOICES = (
-        ('ACTIVE', 'Active'),
-        ('INACTIVE', 'Inactive'),
-    )
-
-    username = models.CharField(max_length=150, unique=True)
-    email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=10, unique=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
-    can_edit_bill = models.BooleanField(default=False)
-    can_print_previous_bills = models.BooleanField(default=False)
-    dashboard_access = models.BooleanField(default=False)
-
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-
-    # Required by PermissionsMixin
-    groups = models.ManyToManyField(
-        Group,
-        related_name='customuser_set',  # avoid conflict with auth.User
-        blank=True
-    )
-    user_permissions = models.ManyToManyField(
-        Permission,
-        related_name='customuser_set',  # avoid conflict with auth.User
-        blank=True
-    )
-
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['email', 'phone_number']
-
-    def __str__(self):
-        return self.username
     
 class CompanyDetails(models.Model):
     company_name = models.CharField(max_length=255)

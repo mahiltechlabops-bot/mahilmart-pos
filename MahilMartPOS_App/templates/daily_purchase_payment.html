@@ -32,7 +32,7 @@
         <div class="mb-3">
             <label for="invoice_number" class="form-label"><strong>Invoice No:</strong></label>
             <input type="text" id="invoice_number" name="invoice_number" 
-                value="{{ invoice_number }}" class="form-control">
+                value="{{ invoice_number }}" class="form-control" disabled>
         </div>
     
         <!-- Total Purchase Amount -->
@@ -55,6 +55,9 @@
             <input type="number" id="balance" name="balance" 
                 class="form-control" readonly>
         </div>
+
+        <!-- Hidden field to store existing balance -->
+        <input type="hidden" id="existingBalance" value="0">
 
         <!-- Payment Mode -->
         <div class="mb-3">
@@ -80,28 +83,68 @@
     </form>
 
     <script>
-        // Function to dynamically calculate balance and payment rate
-        function calculate() {
-            let total = parseFloat(document.getElementById("totalPurchaseAmount").value) || 0;
-            let paid = parseFloat(document.getElementById("amountPaid").value) || 0;
-            let balance = total - paid;
+    // Function to dynamically calculate balance and payment rate
+    function calculate() {
+        let total = parseFloat(document.getElementById("totalPurchaseAmount").value) || 0;
+        let currentPaid = parseFloat(document.getElementById("amountPaid").value) || 0;
+        let existingBalance = parseFloat(document.getElementById("existingBalance").value) || 0;
 
-            // Update the balance field
-            document.getElementById("balance").value = balance.toFixed(2);
+        let balance;
 
-            // Calculate and update the payment rate
-            let paymentRate = 0;
-            if (total > 0) {
-                paymentRate = (paid / total) * 100;  // Calculate payment rate in percentage
-            }
-            // Display the payment rate with percentage symbol
-            document.getElementById("paymentRate").value = paymentRate.toFixed(2) + "%";  // Display it as a percentage
+        if (existingBalance === 0 || existingBalance === total) {
+            // 🆕 New purchase: simply total - currentPaid
+            balance = total - currentPaid;
+        } else {
+            // 🏦 Existing purchase: reduce based on already paid
+            let alreadyPaid = total - existingBalance;
+            balance = total - (alreadyPaid + currentPaid);
         }
 
-        // Update supplier ID when the supplier is selected
-        document.getElementById('supplierName').addEventListener('change', function() {
-            let supplierId = this.value;
-            document.getElementById('supplierId').value = supplierId; // Automatically set Supplier ID
+        document.getElementById("balance").value = balance.toFixed(2);
+
+        // Payment rate (overall paid / total * 100)
+        let paymentRate = 0;
+        if (total > 0) {
+            let overallPaid = total - balance;
+            paymentRate = (overallPaid / total) * 100;
+        }
+        document.getElementById("paymentRate").value = paymentRate.toFixed(2) + "%";
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const invoiceInput = document.getElementById("invoice_number");
+        const totalPurchaseField = document.getElementById("totalPurchaseAmount");        
+        const balanceField = document.getElementById("balance");
+
+        invoiceInput.addEventListener("blur", function() {
+            let invoiceNo = invoiceInput.value.trim();
+            if (invoiceNo) {
+                fetch(`/get-invoice-details/?invoice_no=${invoiceNo}`)
+                .then(response => response.json())
+                .then(data => {
+                    totalPurchaseField.value = data.total_purchase_amount;                 
+                    balanceField.value = data.balance;
+
+                    // Store existing balance for later calculation
+                    document.getElementById("existingBalance").value = data.balance;
+                });
+            } else {
+                // Reset fields if empty
+                totalPurchaseField.value = 0;             
+                balanceField.value = 0;
+                document.getElementById("existingBalance").value = 0;
+            }
         });
-    </script>
+    });
+
+   document.getElementById("supplierName").addEventListener("change", function() {
+        let invoiceInput = document.getElementById("invoice_number");
+        if (this.value) {
+            invoiceInput.removeAttribute("disabled");  // enable
+        } else {
+            invoiceInput.setAttribute("disabled", true); // disable again
+            invoiceInput.value = ""; // clear invoice
+        }
+    });
+</script>
 {% endblock %}
