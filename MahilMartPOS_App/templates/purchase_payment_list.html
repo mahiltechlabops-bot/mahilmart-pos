@@ -30,9 +30,20 @@
     </div>   
 </form>
 
-<h4>Total Amount Paid: {{ total_amount_paid }}</h4>
-<h3>Total Balance: {{ total_balance }}</h3>
-<h3>Payment Rate: {{ payment_rate|floatformat:2 }}%</h3>
+<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; text-align: left; max-width: 1500px;">
+    <span style="font-size: 1.5rem; font-weight: bold; color: #007bff; margin-right: 15px;">
+        Total Purchase Amount: {{ total_purchase_amount }}
+    </span>
+    <span style="font-size: 1.5rem; font-weight: bold; color: #28a745; margin-right: 15px;">
+        Total Amount Paid: {{ total_amount_paid }}
+    </span>
+    <span style="font-size: 1.5rem; font-weight: bold; color: #dc3545; margin-right: 15px;">
+        Total Balance: {{ total_balance }}
+    </span>
+    <span style="font-size: 1.5rem; font-weight: bold; color: #17a2b8;">
+        Payment Rate: {{ payment_rate|floatformat:2 }}%
+    </span>
+</div>
 
 <table class="table table-bordered table-striped">
     <thead>

@@ -50,6 +50,8 @@ from .decorators import access_required
 from django.urls import reverse
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User, Group
+from django.contrib.sessions.models import Session
 from .models import (
     Supplier,
     Customer,
@@ -59,7 +61,6 @@ from .models import (
     BillType,
     PaymentMode,
     Counter,
-    User,
     Item,
     ItemBarcode,
     Unit,
@@ -148,15 +149,13 @@ def dashboard_view(request):
     # Transaction count (today only)
     transaction_count = bills_qs.filter(created_at__date=today).count()
 
-     # Today's total sales
-    today_sales = bills_qs.filter(date__date=today).annotate(
-        total=F('received') + Abs(F('balance'))
-    ).aggregate(sum_total=Sum('total'))['sum_total'] or 0
+    today_sales = bills_qs.filter(date__date=today).aggregate(
+    sum_total=Sum('items__amount')
+    )['sum_total'] or 0
 
-    # Yesterday's total sales
-    yesterday_sales = bills_qs.filter(date__date=yesterday).annotate(
-        total=F('received') + Abs(F('balance'))
-    ).aggregate(sum_total=Sum('total'))['sum_total'] or 0
+    yesterday_sales = bills_qs.filter(date__date=yesterday).aggregate(
+        sum_total=Sum('items__amount')
+    )['sum_total'] or 0
 
     # Change percentage
     if yesterday_sales > 0:
@@ -315,6 +314,45 @@ def dashboard_view(request):
     )
     top_products = list(top_revenue_qs)
 
+    # Fetch all active users
+    active_users = User.objects.filter(is_active=True)
+
+    # Fetch users by group
+    admins_count = User.objects.filter(groups__name='Admin', is_active=True).count()
+    supervisors_count = User.objects.filter(groups__name='Supervisor', is_active=True).count()
+    cashiers_count = User.objects.filter(groups__name='Cashier', is_active=True).count()
+
+    # Prepare user details for modal
+    sessions = Session.objects.filter(expire_date__gte=timezone.now())
+    session_user_ids = [int(session.get_decoded().get('_auth_user_id')) for session in sessions if session.get_decoded().get('_auth_user_id')]
+
+    user_details = []
+    for user in active_users:
+        # Determine role
+        if user.is_superuser:
+            role = 'Admin'
+        elif user.groups.filter(name='Supervisor').exists():
+            role = 'Supervisor'
+        elif user.groups.filter(name='Cashier').exists():
+            role = 'Cashier'
+        else:
+            role = 'Other'
+
+        # Full name
+        full_name = f"{user.first_name} {user.last_name}".strip() or '-'
+
+        # Currently logged in
+        currently_logged_in = user.id in session_user_ids
+
+        user_details.append({
+            'username': user.username,
+            'full_name': full_name,
+            'role': role,
+            'date_joined': user.date_joined,
+            'last_login': user.last_login,
+            'currently_logged_in': currently_logged_in,
+        })
+
     return render(request, 'dashboard.html', {
         'transaction_count': transaction_count,
         'today_sales': today_sales,
@@ -337,7 +375,11 @@ def dashboard_view(request):
         'sales_trend': sales_trend,
         'top_selling': top_selling,
         'category_sales': category_sales,
-        'top_products': top_products,
+        'top_products': top_products,       
+        'admin_count': admins_count,
+        'supervisor_count': supervisors_count,
+        'cashier_count': cashiers_count,
+        'user_details': user_details,
     })
 
 def generate_report(request):
@@ -2526,69 +2568,73 @@ def daily_purchase_payment_view(request):
     suppliers = Supplier.objects.all()
     return render(request, 'daily_purchase_payment.html', {"suppliers": suppliers})
 
-from datetime import datetime
-from django.utils import timezone
-from django.db.models import Sum
+def get_invoice_details(request):
+    invoice_no = request.GET.get("invoice_no", "").strip()
+    data = {
+        "total_purchase_amount": 0, 
+        "balance": 0
+    }
+
+    if invoice_no:
+        payment = DailyPurchasePayment.objects.filter(invoice_no=invoice_no).order_by('-created_at').first()
+        if payment:
+            data = {
+                "total_purchase_amount": payment.total_purchase_amount,       
+                "balance": payment.balance
+            }
+
+    return JsonResponse(data)
 
 def purchase_payment_list_view(request):
     payments = DailyPurchasePayment.objects.select_related('supplier').order_by('-created_at')
 
     # Get filter parameters from GET request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    supplier_name = request.GET.get('supplier_name')
-    invoice_no = request.GET.get('invoice_no')
+    start_date = (request.GET.get('start_date') or "").strip()
+    end_date = (request.GET.get('end_date') or "").strip()
+    supplier_name = (request.GET.get('supplier_name') or "").strip()
+    invoice_no = (request.GET.get('invoice_no') or "").strip()
 
-    # Set today's date as default if no date is provided
-    if not start_date and not end_date:
-        today = timezone.now().date()
-        start_date = today
-        end_date = today
-
-    # Filter by date range
+    # Date range filter (only if provided)
     if start_date:
         try:
-            if isinstance(start_date, str):  # Only convert if it's a string
-                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-            else:
-                start_date_obj = start_date
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
             payments = payments.filter(created_at__date__gte=start_date_obj)
         except ValueError:
             pass
 
     if end_date:
         try:
-            if isinstance(end_date, str):  # Only convert if it's a string
-                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-            else:
-                end_date_obj = end_date
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
             payments = payments.filter(created_at__date__lte=end_date_obj)
         except ValueError:
             pass
 
-    # Filter by supplier
+    # Supplier filter
     if supplier_name:
         payments = payments.filter(supplier__name__icontains=supplier_name)
 
-    # Filter by invoice number (partial match)
+    # Invoice number filter
     if invoice_no:
         payments = payments.filter(invoice_no__icontains=invoice_no)
 
-    # Calculate the total amount paid based on the filters
-    total_amount_paid = payments.aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0   
-      # Calculate the total balance based on the filtered payments (total_purchase_amount - amount_paid)
-    total_balance = payments.aggregate(Sum('balance'))['balance__sum'] or 0
+    # Calculate totals only on filtered results
+    total_amount_paid = payments.aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+    total_purchase_amount = (payments.values('invoice_no').distinct().aggregate(total=Sum('total_purchase_amount'))['total'] or 0)
+    latest_payment = payments.order_by('-created_at').first()   
+    total_balance = latest_payment.balance if latest_payment else 0      
 
-    # Calculate the total payment rate (sum of amounts paid / sum of total purchase amount)
-    total_purchase_amount = payments.aggregate(Sum('total_purchase_amount'))['total_purchase_amount__sum'] or 0
+    # Calculate payment rate
     if total_purchase_amount > 0:
         payment_rate = (total_amount_paid / total_purchase_amount) * 100
     else:
-        payment_rate = 0     
+        payment_rate = 0
+
+    print("Payments", payments)
 
     return render(request, 'purchase_payment_list.html', {
         'payments': payments,
         'total_amount_paid': total_amount_paid,
+        'total_purchase_amount': total_purchase_amount,
         'total_balance': total_balance,
         'payment_rate': payment_rate,
         'start_date': start_date,
@@ -3356,26 +3402,6 @@ def expense_list(request):
         'category_totals': dict(category_totals),
         'show_totals': bool(from_date or to_date),
     })
-
-@access_required(allowed_roles=['superuser'])
-def user_view(request):
-    if request.method == "POST":
-        data = request.POST
-        user = User.objects.create_user(
-            username=data['username'],
-            email=data['email'],
-            phone_number=data['phone_number'],
-            role=data['role'],
-            status=data['status'],
-            password=data['password']
-        )
-        user.can_edit_bill = 'can_edit_bill' in data
-        user.can_print_previous_bills = 'can_print_previous_bills' in data
-        user.dashboard_access = 'dashboard_access' in data
-        user.save()
-        return redirect('user_list')
-
-    return render(request, 'user.html')
 
 def backup_company_details(instance, backup_dir):
     if not os.path.exists(backup_dir):
