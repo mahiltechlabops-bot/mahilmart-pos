@@ -353,6 +353,91 @@ def dashboard_view(request):
             'currently_logged_in': currently_logged_in,
         })
 
+        bills = Billing.objects.filter(created_at__date=today)
+
+        # Default opening amount
+        opening_amt = 2000
+
+        total_sales = sum(bill.total_amount for bill in bills)
+        credit_bills = bills.filter(bill_type="Credit")
+        todays_credit = credit_bills.aggregate(total=Sum("balance"))["total"] or 0       
+        refunds = SaleReturn.objects.filter(created_at__date=today)
+        sale_refund = refunds.aggregate(total=Sum("total_refund_amount"))["total"] or 0
+        # Credit amount cash received today
+        cash_received = BillingPayment.objects.filter(
+            payment_date__date=today,
+            payment_mode="Cash"
+        ).aggregate(total=Sum("new_payment"))["total"] or 0
+
+        # Credit amount card received today
+        card_received = BillingPayment.objects.filter(
+            payment_date__date=today,
+            payment_mode="Card"
+        ).aggregate(total=Sum("new_payment"))["total"] or 0
+
+        # Received amount cash received today
+        cash_received1 = Billing.objects.filter(
+            created_at__date=today,            
+        ).aggregate(total=Sum("cash_amount"))["total"] or 0
+
+        # Received amount card received today
+        card_received1 = Billing.objects.filter(
+            created_at__date=today,           
+        ).aggregate(total=Sum("card_amount"))["total"] or 0
+
+        received_amt = cash_received1 + card_received1
+        credit_received_amount = cash_received + card_received     
+        closing_amt = opening_amt + received_amt + credit_received_amount - sale_refund       
+
+        # last 30 days
+        one_month_ago = today - timedelta(days=30)
+
+        # Bills last month
+        bills_last_month = Billing.objects.filter(
+            created_at__date__gte=one_month_ago,
+            created_at__date__lte=today
+        )
+
+        total_sales_last_month = sum(bill.total_amount for bill in bills_last_month)
+        credit_bills_last_month = bills_last_month.filter(bill_type__contains="Credit")
+        total_credit_last_month = credit_bills_last_month.aggregate(total=Sum("balance"))["total"] or 0
+        refunds_last_month = SaleReturn.objects.filter(
+            created_at__date__gte=one_month_ago,
+            created_at__date__lte=today
+        )
+        sale_refund_last_month = refunds_last_month.aggregate(total=Sum("total_refund_amount"))["total"] or 0
+        credit_received_amount_last_month = BillingPayment.objects.filter(
+            payment_date__date__gte=one_month_ago,
+            payment_date__date__lte=today
+        )
+        credit_received_amount_last_month1 = credit_received_amount_last_month.aggregate(total=Sum("new_payment"))["total"] or 0
+        received_amt_last_month = sum(bill.received for bill in bills_last_month)
+
+        # Bills fiscal year
+        year = today.year
+
+        # Determine fiscal year start and end
+        if today.month >= 4:
+            fiscal_start = date(year, 4, 1)
+            fiscal_end = date(year + 1, 3, 31)
+        else:
+            fiscal_start = date(year - 1, 4, 1)
+            fiscal_end = date(year, 3, 31)
+
+        bills_fiscal = Billing.objects.filter(created_at__date__gte=fiscal_start, created_at__date__lte=fiscal_end)    
+
+        total_sales_fiscal = sum(bill.total_amount for bill in bills_fiscal)
+        credit_bills_fiscal = bills_fiscal.filter(bill_type__contains="Credit")
+        todays_credit_fiscal = credit_bills_fiscal.aggregate(total=Sum("balance"))["total"] or 0
+        refunds_fiscal = SaleReturn.objects.filter(created_at__date__gte=fiscal_start, created_at__date__lte=fiscal_end)
+        sale_refund_fiscal = refunds_fiscal.aggregate(total=Sum("total_refund_amount"))["total"] or 0
+        credit_received_amount_year = BillingPayment.objects.filter(
+            payment_date__date__gte=fiscal_start,
+            payment_date__date__lte=fiscal_end
+        )
+        credit_received_amount_year1 = credit_received_amount_year.aggregate(total=Sum("new_payment"))["total"] or 0
+        received_amt_fiscal = sum(bill.received for bill in bills_fiscal)
+       
     return render(request, 'dashboard.html', {
         'transaction_count': transaction_count,
         'today_sales': today_sales,
@@ -380,6 +465,26 @@ def dashboard_view(request):
         'supervisor_count': supervisors_count,
         'cashier_count': cashiers_count,
         'user_details': user_details,
+        "opening_amt": opening_amt,
+        "total_sales": total_sales,
+        "todays_credit": todays_credit,
+        "sale_refund": sale_refund,
+        "cash_received": cash_received,
+        "card_received": card_received,
+        "cash_received1": cash_received1,
+        "card_received1": card_received1,
+        "received_amt": received_amt,
+        "closing_amt": closing_amt,       
+        "total_sales_last_month": total_sales_last_month,
+        "total_credit_last_month": total_credit_last_month,
+        "sale_refund_last_month": sale_refund_last_month,
+        "credit_received_amount_last_month1": credit_received_amount_last_month1,
+        "received_amt_last_month": received_amt_last_month,
+        "total_sales_fiscal": total_sales_fiscal,
+        "todays_credit_fiscal": todays_credit_fiscal,
+        "sale_refund_fiscal": sale_refund_fiscal,
+        "credit_received_amount_year1": credit_received_amount_year1,
+        "received_amt_fiscal": received_amt_fiscal,       
     })
 
 def generate_report(request):

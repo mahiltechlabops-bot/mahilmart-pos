@@ -81,6 +81,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
+    {% if user.is_superuser %}
     <div class="card flex-fill shadow-sm p-3 mb-4" style="border-radius: 12px;">
         <div class="card-header bg-light">
             <h4 class="mb-0">Active Users</h4>
@@ -124,90 +125,89 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
-      <div class="card flex-fill shadow-sm p-3 mb-4" style="border-radius: 12px;">
-          <div class="card-header bg-light">
-              <h4 class="mb-0">Today's Summary</h4>
-          </div>
-          <div class="card-body">
-              <div class="row text-center g-2">
-                  <!-- Opening Amount -->
-                  <div class="col-6 col-md-4 col-lg-2">
-                      <div class="p-2 bg-primary text-white rounded shadow-sm">
-                          <i class="bi bi-wallet2 fs-3 mb-1"></i>
-                          <h6 class="mb-1">Opening Amt</h6>
-                          <h5>500</h5>
-                      </div>
-                  </div>
+     <div class="card flex-fill shadow-sm p-3" style="border-radius: 12px;">
+    <div class="card-header bg-light">
+        <h4 class="mb-0">Today's Summary</h4>
+    </div>
+   <div class="card flex-fill shadow-sm p-3 mb-4" style="border-radius: 12px; overflow-x:auto;">
+    <div class="card-header bg-light">
+        <h4 class="mb-0">Today's Summary</h4>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-row flex-nowrap text-center">
 
-                  <!-- Total Sales -->
-                  <div class="col-6 col-md-4 col-lg-2">
-                      <div class="p-2 bg-success text-white rounded shadow-sm">
-                          <i class="bi bi-cart-check fs-3 mb-1"></i>
-                          <h6 class="mb-1">Total Sales</h6>
-                          <h5>100000</h5>
-                      </div>
-                  </div>
+            <!-- Opening Amount -->
+            <div class="p-2 bg-primary text-white rounded shadow-sm me-2" style="min-width: 190px;">
+                <i class="bi bi-wallet2 fs-3 mb-1"></i>
+                <h6 class="mb-1">Opening Amt</h6>
+                <h5>{{ opening_amt }}</h5>
+            </div>
 
-                  <!-- Today's Credit -->
-                  <div class="col-6 col-md-4 col-lg-2">
-                      <div class="p-2 bg-warning text-dark rounded shadow-sm">
-                          <i class="bi bi-credit-card fs-3 mb-1"></i>
-                          <h6 class="mb-1">Today's Credit</h6>
-                          <h5>1000</h5>
-                      </div>
-                  </div>
+            <!-- Total Sales -->
+            <div class="p-2 bg-success text-white rounded shadow-sm me-2" style="min-width: 190px;">
+                <i class="bi bi-cart-check fs-3 mb-1"></i>
+                <h6 class="mb-1">Total Sales</h6>
+                <h5>{{ total_sales }}</h5>
+            </div>
 
-                  <!-- Sale Refund -->
-                  <div class="col-6 col-md-4 col-lg-2">
-                      <div class="p-2 bg-danger text-white rounded shadow-sm">
-                          <i class="bi bi-arrow-counterclockwise fs-3 mb-1"></i>
-                          <h6 class="mb-1">Sale Refund</h6>
-                          <h5>100</h5>
-                      </div>
-                  </div>
+            <!-- Today's Credit -->
+            <div class="p-2 bg-warning text-dark rounded shadow-sm me-2" style="min-width: 190px;">
+                <i class="bi bi-credit-card fs-3 mb-1"></i>
+                <h6 class="mb-1">Today's Credit</h6>
+                <h5>{{ todays_credit }}</h5>
+            </div>
 
-                  <!-- Received Amount -->
-                  <div class="col-6 col-md-4 col-lg-2">
-                      <div class="p-2 bg-info text-white rounded shadow-sm">
-                          <i class="bi bi-cash-stack fs-3 mb-1"></i>
-                          <h6 class="mb-1">Received Amt</h6>
-                          <h5>99000</h5>
-                      </div>
-                  </div>
+            <!-- Sale Refund -->
+            <div class="p-2 bg-danger text-white rounded shadow-sm me-2" style="min-width: 190px;">
+                <i class="bi bi-arrow-counterclockwise fs-3 mb-1"></i>
+                <h6 class="mb-1">Sale Refund</h6>
+                <h5>{{ sale_refund }}</h5>
+            </div>
 
-                  <!-- Closing Amount -->
-                  <div class="col-6 col-md-4 col-lg-2">
-                      <div class="p-2 bg-secondary text-white rounded shadow-sm">
-                          <i class="bi bi-bank fs-3 mb-1"></i>
-                          <h6 class="mb-1">Closing Amt</h6>
-                          <h5>99500</h5>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </div>
-      
+            <!-- Credit Received -->
+            <div class="p-2 bg-danger text-white rounded shadow-sm me-2" style="min-width: 190px;">
+                <i class="bi bi-arrow-counterclockwise fs-3 mb-1"></i>
+                <h6 class="mb-1">Credit Received</h6>
+                <div class="d-flex justify-content-between mt-1">
+                    <span class="badge bg-light text-dark px-2 py-1">Cash: {{ cash_received }}</span>
+                    <span class="badge bg-light text-dark px-2 py-1">Card: {{ card_received }}</span>
+                </div>
+            </div>
+
+            <!-- Received Amount -->
+            <div class="p-2 bg-info text-white rounded shadow-sm me-2" style="min-width: 190px;">
+                <i class="bi bi-cash-stack fs-3 mb-1"></i>
+                <h6 class="mb-1">Received Amt</h6>
+                <div class="d-flex justify-content-between mt-1">
+                    <span class="badge bg-light text-dark px-2 py-1">Cash: {{ cash_received1 }}</span>
+                    <span class="badge bg-light text-dark px-2 py-1">Card: {{ card_received1 }}</span>
+                </div>
+            </div>
+
+            <!-- Closing Amount -->
+            <div class="p-2 bg-secondary text-white rounded shadow-sm" style="min-width: 190px;">
+                <i class="bi bi-bank fs-3 mb-1"></i>
+                <h6 class="mb-1">Closing Amt</h6>
+                <h5>{{ closing_amt }}</h5>
+            </div>
+
+        </div>
+    </div>
+</div>
+     
       <div class="card flex-fill shadow-sm p-3 mb-4" style="border-radius: 12px;">
         <div class="card-header bg-light">
-            <h4 class="mb-0">Monthly Summary</h4>
+            <h4 class="mb-0">Monthly Summary (Last 30 days)</h4>
         </div>
         <div class="card-body">
             <div class="row text-center g-2">
-                <!-- Opening Amount -->
-                <div class="col-6 col-md-4 col-lg-2">
-                    <div class="p-2 bg-primary text-white rounded shadow-sm">
-                        <i class="bi bi-wallet2 fs-3 mb-1"></i>
-                        <h6 class="mb-1">Opening Amt</h6>
-                        <h5>{{ monthly_opening_amount }}</h5>
-                    </div>
-                </div>
-
+                
                 <!-- Total Sales -->
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-4 col-lg-3">
                     <div class="p-2 bg-success text-white rounded shadow-sm">
                         <i class="bi bi-cart-check fs-3 mb-1"></i>
                         <h6 class="mb-1">Total Sales</h6>
-                        <h5>{{ monthly_total_sales }}</h5>
+                        <h5>{{ total_sales_last_month }}</h5>
                     </div>
                 </div>
 
@@ -216,7 +216,7 @@
                     <div class="p-2 bg-warning text-dark rounded shadow-sm">
                         <i class="bi bi-credit-card fs-3 mb-1"></i>
                         <h6 class="mb-1">Credit</h6>
-                        <h5>{{ monthly_credit }}</h5>
+                        <h5>{{ total_credit_last_month }}</h5>
                     </div>
                 </div>
 
@@ -225,27 +225,27 @@
                     <div class="p-2 bg-danger text-white rounded shadow-sm">
                         <i class="bi bi-arrow-counterclockwise fs-3 mb-1"></i>
                         <h6 class="mb-1">Sale Refund</h6>
-                        <h5>{{ monthly_sale_return }}</h5>
+                        <h5>{{ sale_refund_last_month }}</h5>
                     </div>
                 </div>
 
-                <!-- Received Amount -->
+                <!-- Credit Received Amount -->
                 <div class="col-6 col-md-4 col-lg-2">
                     <div class="p-2 bg-info text-white rounded shadow-sm">
                         <i class="bi bi-cash-stack fs-3 mb-1"></i>
-                        <h6 class="mb-1">Received Amt</h6>
-                        <h5>{{ monthly_received_amount }}</h5>
+                        <h6 class="mb-1">Credit Received</h6>
+                        <h5>{{ credit_received_amount_last_month1 }}</h5>
                     </div>
-                </div>
+                </div>   
 
-                <!-- Closing Amount -->
-                <div class="col-6 col-md-4 col-lg-2">
-                    <div class="p-2 bg-secondary text-white rounded shadow-sm">
-                        <i class="bi bi-bank fs-3 mb-1"></i>
-                        <h6 class="mb-1">Closing Amt</h6>
-                        <h5>{{ monthly_closing_amount }}</h5>
+                <!-- Received Amount -->
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="p-2 bg-info text-white rounded shadow-sm">
+                        <i class="bi bi-cash-stack fs-3 mb-1"></i>
+                        <h6 class="mb-1">Received Amt</h6>
+                        <h5>{{ received_amt_last_month }}</h5>
                     </div>
-                </div>
+                </div>               
             </div>
         </div>
     </div>
@@ -256,21 +256,13 @@
     </div>
     <div class="card-body">
         <div class="row text-center g-2">
-            <!-- Opening Amount -->
-            <div class="col-6 col-md-4 col-lg-2">
-                <div class="p-2 bg-primary text-white rounded shadow-sm">
-                    <i class="bi bi-wallet2 fs-3 mb-1"></i>
-                    <h6 class="mb-1">Opening Amt</h6>
-                    <h5>{{ fy_opening_amount }}</h5>
-                </div>
-            </div>
-
+           
             <!-- Total Sales -->
-            <div class="col-6 col-md-4 col-lg-2">
+            <div class="col-6 col-md-4 col-lg-3">
                 <div class="p-2 bg-success text-white rounded shadow-sm">
                     <i class="bi bi-cart-check fs-3 mb-1"></i>
                     <h6 class="mb-1">Total Sales</h6>
-                    <h5>{{ fy_total_sales }}</h5>
+                    <h5>{{ total_sales_fiscal }}</h5>
                 </div>
             </div>
 
@@ -279,7 +271,7 @@
                 <div class="p-2 bg-warning text-dark rounded shadow-sm">
                     <i class="bi bi-credit-card fs-3 mb-1"></i>
                     <h6 class="mb-1">Credit</h6>
-                    <h5>{{ fy_credit }}</h5>
+                    <h5>{{ todays_credit_fiscal }}</h5>
                 </div>
             </div>
 
@@ -288,29 +280,30 @@
                 <div class="p-2 bg-danger text-white rounded shadow-sm">
                     <i class="bi bi-arrow-counterclockwise fs-3 mb-1"></i>
                     <h6 class="mb-1">Sale Refund</h6>
-                    <h5>{{ fy_sale_return }}</h5>
+                    <h5>{{ sale_refund_fiscal }}</h5>
                 </div>
             </div>
-
-            <!-- Received Amount -->
+          
+            <!-- Credit Received -->
             <div class="col-6 col-md-4 col-lg-2">
                 <div class="p-2 bg-info text-white rounded shadow-sm">
                     <i class="bi bi-cash-stack fs-3 mb-1"></i>
-                    <h6 class="mb-1">Received Amt</h6>
-                    <h5>{{ fy_received_amount }}</h5>
+                    <h6 class="mb-1">Credit Received</h6>
+                    <h5>{{ credit_received_amount_year1 }}</h5>
                 </div>
-            </div>
+            </div>    
 
-            <!-- Closing Amount -->
-            <div class="col-6 col-md-4 col-lg-2">
-                <div class="p-2 bg-secondary text-white rounded shadow-sm">
-                    <i class="bi bi-bank fs-3 mb-1"></i>
-                    <h6 class="mb-1">Closing Amt</h6>
-                    <h5>{{ fy_closing_amount }}</h5>
+            <!-- Received Amount -->
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="p-2 bg-info text-white rounded shadow-sm">
+                    <i class="bi bi-cash-stack fs-3 mb-1"></i>
+                    <h6 class="mb-1">Received Amt</h6>
+                    <h5>{{ received_amt_fiscal }}</h5>
                 </div>
-            </div>
+            </div>           
         </div>
     </div>
+     {% endif %}
 </div>
 
   {% if user.is_superuser %}
