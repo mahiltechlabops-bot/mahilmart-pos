@@ -189,6 +189,19 @@
         .suggestion-list li:hover {
         background: #f0f0f0;
         }
+
+        #qty-box-container input#qty-total {
+        width: 40px;                
+        text-align: center;          
+        font-weight: bold;
+        font-size: 14px;
+        color: #111;                 
+        background-color: #f0f0f0; 
+        border: 1px solid #6cb60b;       
+        border-radius: 2px;           
+        padding: 2px 4px;            
+        box-shadow: 1px 1px 3px rgba(0,0,0,0.2); 
+    }
 </style>
 {% endblock %}
 
@@ -282,20 +295,6 @@
             <button type="button" id="addRowBtn">+ Add Item</button>
         </div>
 
-        <!-- Summary Table -->
-       <table class="item-table">
-           <tbody>
-                <tr style="background-color: rgb(206, 238, 238); font-weight: bold; white-space: nowrap;">
-                    <td style="border: 1px solid black; text-align: center; padding: 2px 6px; width: 1%;">
-                        Items (<span id="item-count">0</span>)
-                    </td> 
-                    <td style="border: 1px solid black; text-align: center; padding: 2px 6px; width: 1%;">
-                        Qty: <span id="qty-total">0</span>
-                    </td>                    
-                </tr>
-            </tbody>
-        </table>
-
         <input type="hidden" name="item_data" id="itemDataField">
 
         <div class="footer-controls" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 15px; border-top: 2px solid #ccc;">
@@ -309,6 +308,11 @@
     </div>
 
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 18px; font-weight: bold;">
+
+        <div id="qty-box-container">
+    Qty: <input type="text" id="qty-total" value="0" readonly>
+</div>
+
 
         <span class="total-red" style="font-size: 26px; color: red;">0.00</span> 
 
@@ -526,53 +530,47 @@
         const qtyTotal = document.getElementById('qty-total');
         const totalEarnedInput = document.getElementById('total_earned');
 
-        // Update all calculations
-        function updateCalculations() {
-    let totalAmount = 0;
-    let itemCount = 0;
-    let totalQty = 0;
-
+         function updateCalculations() {
     const rows = itemTableBody.querySelectorAll('tr');
+    let totalQty = 0;
+    let totalAmount = 0;
 
     rows.forEach(row => {
-        const qty = parseFloat(row.querySelector('input[name="qty"]')?.value) || 0;
-        const price = parseFloat(row.querySelector('input[name="sellingprice"]')?.value) || 0;
-        const rowAmount = qty * price;
+        const qty = parseFloat(row.querySelector('input[name="qty"]')?.value || 0);
+        const price = parseFloat(row.querySelector('input[name="sellingprice"]')?.value || 0);
+        const amount = qty * price;
+
         const amountOutput = row.querySelector('.amount-output');
+        if (amountOutput) amountOutput.value = amount.toFixed(2);
 
-        if (qty > 0) {
-            itemCount++;
-            totalQty += qty;
-            totalAmount += rowAmount;
-        }
-
-        if (amountOutput) {
-            amountOutput.value = rowAmount.toFixed(2);
-        }
+        totalQty += qty;
+        totalAmount += amount;
     });
 
-    // --- Get Cash & Card values ---
-    let cash = parseFloat(document.querySelector('input[name="cash_amount"]').value) || 0;
-    let card = parseFloat(document.querySelector('input[name="card_amount"]').value) || 0;
+    // Update total displays
+    const qtyInput = document.getElementById('qty-total');
+    if (qtyInput) qtyInput.value = totalQty;  // <-- use .value for input
 
-    // Received = cash + card
-    let received = cash + card;
+    const totalRed = document.querySelector('.total-red');
+    if (totalRed) totalRed.textContent = totalAmount.toFixed(2);
 
-    // Balance = Total - Received
+    // Update received/balance if you have cash/card inputs
+    const cash = parseFloat(document.querySelector('input[name="cash_amount"]').value || 0);
+    const card = parseFloat(document.querySelector('input[name="card_amount"]').value || 0);
+    const received = cash + card;
     let balance = totalAmount - received;
-    // if (balance < 0) balance = 0;
+    if (balance < 0) balance = 0;
 
-    // Update fields
-    totalText.textContent = totalAmount.toFixed(2);
-    receivedInput.value = received.toFixed(2);
-    balanceInput.value = balance.toFixed(2);
-    itemCountDisplay.textContent = itemCount;
-    qtyTotal.textContent = totalQty;
+    const receivedInput = document.querySelector('input[name="received"]');
+    const balanceInput = document.querySelector('input[name="balance"]');
+    if (receivedInput) receivedInput.value = received.toFixed(2);
+    if (balanceInput) balanceInput.value = balance.toFixed(2);
 
     // Points calculation
-    const todayPoints = totalAmount / 200;
-    totalEarnedInput.value = parseFloat(todayPoints).toFixed(2);
+    const totalEarnedInput = document.querySelector('input[name="total_earned"]');
+    if (totalEarnedInput) totalEarnedInput.value = (totalAmount / 200).toFixed(2);
 }
+
 
 // trigger calculation when user types in cash or card
 document.querySelector('input[name="cash_amount"]').addEventListener('input', updateCalculations);
@@ -614,8 +612,65 @@ receivedInput.addEventListener('input', updateCalculations);
             }
         }
 
+        function attachKeyboardFlow(row) {
+    const codeInput = row.querySelector('input[name="code"]');
+    const nameInput = row.querySelector('input[name="item_name"]');
+    const qtyInput = row.querySelector('input[name="qty"]');
+    const addRowBtn = document.getElementById("addRowBtn");
+
+    // Code → Qty or Item Name
+    if (codeInput) {
+        codeInput.addEventListener("keydown", function (e) {
+            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                e.preventDefault();
+                if (codeInput.value.trim() !== "") {
+                    qtyInput.focus();
+                } else {
+                    nameInput.focus();
+                }
+            }
+        });
+    }
+
+    // Item Name → Qty
+    if (nameInput && qtyInput) {
+        nameInput.addEventListener("keydown", function (e) {
+            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                e.preventDefault();
+                qtyInput.focus();
+            }
+        });
+    }
+
+    // Qty → Add Item button
+    if (qtyInput && addRowBtn) {
+        qtyInput.addEventListener("keydown", function (e) {
+            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                e.preventDefault();
+                addRowBtn.focus();
+            }
+        });
+    }
+}
+
+// Attach listener to Add Item button only once
+document.getElementById("addRowBtn").addEventListener("keydown", function (e) {
+    if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+        e.preventDefault();
+        addNewRow(true); // silent row add
+
+        // Focus new row's code input
+        const rows = document.querySelectorAll("#itemTableBody tr");
+        const lastRow = rows[rows.length - 1];
+        const newCodeInput = lastRow?.querySelector('input[name="code"]');
+        if (newCodeInput) newCodeInput.focus();
+    }
+});
+
+
+
      // Add new row to the table
-async function addNewRow() {
+    async function addNewRow() {
     const lastRow = itemTableBody.querySelector('tr:last-child');
     const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
     let isValid = true;
@@ -713,6 +768,7 @@ async function addNewRow() {
     itemTableBody.appendChild(newRow);
     attachInputListeners(newRow);
     attachDeleteListener(newRow);
+    attachKeyboardFlow(newRow);   
     attachAutoFill(newRow);
     updateSerialNumbers();
     updateCalculations();
@@ -907,6 +963,7 @@ function resetRowInputs(row) {
         if (initialRow) {
             attachInputListeners(initialRow);
             attachDeleteListener(initialRow);
+            attachKeyboardFlow(initialRow);   
             attachAutoFill(initialRow);
             updateSerialNumbers();
             updateCalculations();
@@ -930,16 +987,29 @@ function resetRowInputs(row) {
         });
     });
     
-    function submitBilling() {
+// small helpers
+function q(sel){ return document.querySelector(sel); }
+function gid(id){ return document.getElementById(id); }
+function firstNonEmptyEl(...els){
+  for (const el of els){
+    if (el && typeof el.value !== 'undefined'){
+      const v = String(el.value).trim();
+      if (v) return v;
+    }
+  }
+  return '';
+}
+
+function submitBilling() {
     if (!validateForm()) return;
     if (!validateAllRows()) return;
 
-    collectItemData();
+    const items = collectItemData();
 
-    let balance = parseFloat(document.querySelector('input[name="balance"]').value) || 0;
-    let cash = parseFloat(document.querySelector('input[name="cash_amount"]').value) || 0;
-    let card = parseFloat(document.querySelector('input[name="card_amount"]').value) || 0;
-    let billType = document.querySelector('select[name="bill_type"]').value.trim().toLowerCase();
+    let balance = parseFloat(q('input[name="balance"]').value) || 0;
+    let cash = parseFloat(q('input[name="cash_amount"]').value) || 0;
+    let card = parseFloat(q('input[name="card_amount"]').value) || 0;
+    let billType = q('select[name="bill_type"]').value.trim().toLowerCase();
 
     if (balance > 0) {
         if (billType !== "credit") {
@@ -965,89 +1035,152 @@ function resetRowInputs(row) {
         }
     }
 
-    // Ask for printing before saving
-    // let printBill = confirm("Do you want to print the bill before saving?");
-    // if (printBill) {
-    //     const billData = getBillingInfo(); // Use your helper to get bill data
-    //     const printWindow = window.open('', '_blank', 'width=400,height=600');
+    let printBill = confirm("Do you want to print the bill before saving?");
+    if (printBill) {
+        const billData = getBillingInfo(items);
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
 
-    //     if (printWindow) {
-    //         let html = `
-    //             <html>
-    //             <head>
-    //             <title>Bill Preview</title>
-    //             <style>
-    //                 body { font-family: monospace; font-size: 12px; }
-    //                 h2 { text-align: center; }
-    //                 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    //                 th, td { border: 1px solid #000; padding: 4px; text-align: center; }
-    //             </style>
-    //             </head>
-    //             <body>
-    //                 <h2>Mahil Mart</h2>
-    //                 <h2>No. 123, K.N.Patti, Pincode - 637404</h2>
-    //                 <h2>Contact no: +91 9876543210</h2>                   
-    //                 <p>Bill No: ${billData.bill_no} <br> Date: ${billData.date}</p>
-    //                 <p>Customer: ${billData.customer_name} <br> Address: ${billData.customer_address}</p>
-    //                 <table>
-    //                     <thead>
-    //                         <tr>
-    //                             <th>Sno</th>
-    //                             <th>Item</th>
-    //                             <th>Qty</th>
-    //                             <th>Price</th>
-    //                             <th>Amount</th>
-    //                         </tr>
-    //                     </thead>
-    //                     <tbody>
-    //                         ${billData.items.map((item, idx) => `
-    //                             <tr>
-    //                                 <td>${idx + 1}</td>
-    //                                 <td>${item.item_name}</td>
-    //                                 <td>${item.qty}</td>
-    //                                 <td>${item.sellingprice.toFixed(2)}</td>
-    //                                 <td>${item.amount.toFixed(2)}</td>
-    //                             </tr>
-    //                         `).join('')}
-    //                     </tbody>
-    //                 </table>
-    //                 <p>Total Qty: ${billData.total_qty} <br> Total Amount: ${billData.total_amount.toFixed(2)}</p>
-    //                 <p>Cash Paid: ${billData.cash_paid.toFixed(2)} <br> Balance: ${billData.balance.toFixed(2)}</p>
-    //             </body>
-    //             </html>
-    //         `;
+        if (printWindow) {
+            let html = `
+                <html>
+                <head>
+                <title>Bill Preview</title>
+                <style>
+                    body { font-family: monospace; font-size: 12px; }
+                    h2 { text-align: center; margin: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                    th, td { border: 1px solid #000; padding: 4px; text-align: center; }
+                    .header td { border: none; text-align: left; padding: 2px 0; }
+                    .totals td { border: none; text-align: right; padding: 2px 0; }
+                </style>
+                </head>
+                <body>
+                    <h2>Mahil Mart</h2>
 
-    //         printWindow.document.write(html);
-    //         printWindow.document.close();
-    //         printWindow.focus();
-    //         printWindow.print();
-    //     } else {
-    //         alert("⚠ Popup blocked! Please allow popups to print the bill.");
-    //     }
-    // }
+                    <!-- 🔹 Header Info -->
+                    <table class="header" style="width:100%; margin-bottom:5px;">
+                      <tr>
+                        <td><strong>Bill No:</strong> ${billData.bill_no}</td>
+                        <td style="text-align:right;"><strong>Date:</strong> ${billData.date}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Customer:</strong> ${billData.name}</td>
+                        <td style="text-align:right;"><strong>Phone:</strong> ${billData.phone}</td>
+                      </tr>
+                      <tr>
+                        <td colspan="2"><strong>Address:</strong> ${billData.customer_address}</td>
+                      </tr>
+                    </table>
 
-    // alert("✅ Billing submitted successfully!");
-    document.getElementById('billingForm').submit();
+                    <!-- 🔹 Item Table -->
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Sno</th>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${billData.items.map((item, idx) => `
+                                <tr>
+                                    <td>${idx + 1}</td>
+                                    <td>${item.item_name}</td>
+                                    <td>${item.qty}</td>
+                                    <td>${item.sellingprice.toFixed(2)}</td>
+                                    <td>${item.amount.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+
+                    <!-- 🔹 Totals Section -->
+                    <table class="totals" style="width:100%; margin-bottom:5px; border-collapse: collapse;">
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Total Qty:</strong>${billData.total_qty}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Total Amount:</strong>${billData.total_amount.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Cash:</strong>${billData.cash.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Card:</strong>${billData.card.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Received:</strong>${billData.received.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Balance:</strong>${billData.balance.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Today Points:</strong>${billData.today_points.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left; padding:2px;"><strong>Total Points:</strong>${(billData.old_points + billData.today_points).toFixed(2)}</td>
+                    </tr>
+                    </table>
+
+                        </body>
+                </html>
+            `;
+
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+    }
+
+    alert("✅ Billing submitted successfully!");
+    gid('billingForm').submit();
 }
 
-// Helper function to get billing data (you'll need to implement this based on your form structure)
-// function getBillingInfo() {
-//     // Extract data from your form and return it in the expected format
-//     return {
-//         bill_no: document.querySelector('input[name="bill_no"]').value,
-//         date: document.querySelector('input[name="date"]').value,
-//         customer_name: document.querySelector('input[name="name"]').value,
-//         customer_address: document.querySelector('textarea[name="address"]').value,
-//         customer_vat_tin: '', // You'll need to add this field to your form if needed
-//         items: [], // Extract items from your table
-//         vat_amount: 22.00, // Calculate this based on your items
-//         total_qty: 10, // Calculate this based on your items
-//         total_amount: 572.00, // Calculate this based on your items
-//         cash_paid: 572.00,
-//         cash_tendered: 600.00,
-//         balance: 28.00
-//     };
-// }
+// fetch data
+function getBillingInfo(items) {
+    let total_qty = items.reduce((sum, i) => sum + Number(i.qty || 0), 0);
+    let total_amount = items.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+
+    const name = firstNonEmptyEl(q('input[name="name"]'), gid('cust_name'), gid('name'));
+    const phone = firstNonEmptyEl(q('input[name="cell"]'), gid('cust_cell'), gid('cell'));
+    const address = firstNonEmptyEl(q('textarea[name="address"]'), gid('cust_address'), gid('address'));
+
+    return {
+        bill_no: firstNonEmptyEl(q('input[name="bill_no"]'), gid('bill_no')),
+        date: firstNonEmptyEl(q('input[name="date"]'), gid('date')),
+        name: name,
+        phone: phone,
+        customer_address: address,
+        items: items,
+        total_qty: total_qty,
+        total_amount: total_amount,
+        cash: Number(firstNonEmptyEl(q('input[name="cash_amount"]'), gid('cash_amount'))) || 0,
+        card: Number(firstNonEmptyEl(q('input[name="card_amount"]'), gid('card_amount'))) || 0,
+        received: Number(firstNonEmptyEl(q('input[name="received"]'), gid('received'))) || 0,
+        balance: Number(firstNonEmptyEl(q('input[name="balance"]'), gid('balance'))) || 0,
+        old_points: Number(gid('points')?.value || 0),
+        today_points: Number(gid('total_earned')?.value || 0)
+    };
+}
+
+// customer dropdown update
+document.addEventListener('DOMContentLoaded', function(){
+    const customerSelect = gid('customer');
+    if (!customerSelect) return;
+    customerSelect.addEventListener('change', function(){
+        const opt = this.options[this.selectedIndex];
+        const n = opt?.getAttribute('data-name') || '';
+        const c = opt?.getAttribute('data-cell') || '';
+        const a = opt?.getAttribute('data-address') || '';
+        gid('cust_name') && (gid('cust_name').value = n);
+        gid('cust_cell') && (gid('cust_cell').value = c);
+        gid('cust_address') && (gid('cust_address').value = a);
+    });
+});
+
 
     function submitAsQuotation() {
     const billTypeSelect = document.querySelector('select[name="bill_type"]');

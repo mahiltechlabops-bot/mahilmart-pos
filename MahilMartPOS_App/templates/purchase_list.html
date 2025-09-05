@@ -62,14 +62,31 @@
                             <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Oldest First</option>
                         </select>
                     </div>
+
+                    <!-- Item Name Filter -->
+                    <div>
+                        <label for="item_name" class="form-label fw-bold mb-1">Item Name</label>
+                        <input type="text" name="item_name" id="item_name" class="form-control form-control-sm"
+                            value="{{ item_name }}" placeholder="Enter item name"
+                            onblur="this.form.submit()" />
+                    </div>
+
+                    <!-- Item Code Filter -->
+                    <div>
+                        <label for="item_code" class="form-label fw-bold mb-1">Item Code</label>
+                        <input type="text" name="item_code" id="item_code" class="form-control form-control-sm"
+                            value="{{ request.GET.item_code }}" placeholder="Enter item code"
+                            onblur="this.form.submit()" />
+                    </div>
                 </div>
 
                 <!-- Back Button -->
                 <div class="col-md-3 col-sm-4 d-flex justify-content-end align-items-end">
+                    <a href="{% url 'purchase_list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
                     <button type="button" class="btn btn-secondary btn-sm"
                             onclick="window.location.href='{% url 'purchase' %}'">
                         Back
-                    </button>
+                    </button>                    
                 </div>
             </form>
         </div>
