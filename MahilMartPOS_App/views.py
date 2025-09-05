@@ -2081,14 +2081,19 @@ def sale_return_items_api(request):
     return JsonResponse({'items': items})
     
 def products_view(request):
-    query = request.GET.get('q', '').strip()
+    name_query = request.GET.get('name_query', '').strip()
+    code_query = request.GET.get('code_query', '').strip()
     selected_group = request.GET.get('group', '').strip()
 
     base_queryset = Item.objects.all()
 
-    # Search by item_name
-    if query:
-        base_queryset = base_queryset.filter(item_name__icontains=query)
+    # Search by item name
+    if name_query:
+        base_queryset = base_queryset.filter(item_name__icontains=name_query)
+
+    # Search by item code
+    if code_query:
+        base_queryset = base_queryset.filter(code__icontains=code_query)
 
     # Filter by group
     if selected_group:
@@ -2112,7 +2117,8 @@ def products_view(request):
 
     return render(request, 'products.html', {
         'items': items,
-        'query': query,
+        'name_query': name_query,
+        'code_query': code_query,
         'groups': groups,
         'selected_group': selected_group,
         'product_count': product_count,
@@ -2177,6 +2183,8 @@ def purchase_view(request):
 def purchase_list(request):
     supplier_id = request.GET.get('supplier')
     sort_order = request.GET.get('sort', 'desc')
+    item_code = request.GET.get('item_code', '').strip()
+    item_name = request.GET.get('item_name', '').strip()
 
     purchases = PurchaseItem.objects.all()
 
@@ -2192,11 +2200,21 @@ def purchase_list(request):
     else:
         purchases = purchases.order_by('-id')  # Latest first
 
+    # Filter by item code
+    if item_code:
+        purchases = purchases.filter(code__icontains=item_code)
+
+    # Filter by item name
+    if item_name:
+        purchases = purchases.filter(item_name__icontains=item_name)        
+
     context = {
         'purchases': purchases,
         'supplier_ids': PurchaseItem.objects.values_list('supplier_id', flat=True).distinct(),
         'selected_supplier': supplier_id,
         'sort_order': sort_order,
+        'item_code': item_code,
+        'item_name': item_name,
     }
     return render(request, 'purchase_list.html', context)
 
