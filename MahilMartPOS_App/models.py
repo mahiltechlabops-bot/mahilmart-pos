@@ -281,21 +281,6 @@ class Item(models.Model):
     def __str__(self):
         return self.item_name
     
-class ItemBarcode(models.Model):
-    barcode = models.CharField(max_length=100, unique=True)
-    item_code = models.CharField(max_length=50)
-    item_name = models.CharField(max_length=100, blank=True, null=True)
-    unit = models.CharField(max_length=20)
-    mrp = models.DecimalField(max_digits=10, decimal_places=2)
-    sale_price = models.DecimalField(max_digits=10, decimal_places=2)
-    whole_price = models.DecimalField(max_digits=10, decimal_places=2)
-    whole_price1 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    generated_on = models.DateTimeField(auto_now_add=True)
-    active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.barcode} - {self.item_name or self.item_code}"
-
 class Unit(models.Model):
     unit_name = models.CharField(max_length=50)
     print_name = models.CharField(max_length=50)
@@ -706,3 +691,14 @@ class Inventory(models.Model):
 
     def __str__(self):
         return f"{self.item_name} - {self.code}"        
+
+# models.py
+class BarcodeLabelSize(models.Model):
+    name = models.CharField(max_length=50, unique=True)   
+    width_mm = models.PositiveIntegerField()
+    height_mm = models.PositiveIntegerField()
+    per_row = models.PositiveIntegerField(default=1)
+    per_column = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.name} ({self.width_mm}x{self.height_mm} mm)"
