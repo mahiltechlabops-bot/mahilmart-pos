@@ -264,3 +264,12 @@ class CounterForm(forms.ModelForm):
             'counter_id': forms.NumberInput(attrs={'placeholder': 'Enter ID'}),
             'counter_name': forms.TextInput(attrs={'placeholder': 'Enter Counter Name'}),
         }
+
+# forms.py
+from django import forms
+from .models import BarcodeLabelSize
+
+class BarcodeLabelSizeForm(forms.ModelForm):
+    class Meta:
+        model = BarcodeLabelSize
+        fields = ["name", "width_mm", "height_mm", "per_row", "per_column"]

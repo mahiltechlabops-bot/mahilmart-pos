@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load barcode_filters %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Barcode Print Preview</h2>
+
+    <div class="d-flex flex-wrap">
+        {% for item in barcode_items %}
+            {% for i in item.stickers|make_list %}
+            <div style="width:35mm; height:22mm; border:1px solid #000; margin:2mm; text-align:center; font-size:8pt;">
+                <div>{{ item.item_name|truncatechars:12 }}</div>
+                <div>{{ item.code }}</div>
+                <div>MRP: {{ item.mrp }} | Sale: {{ item.sale_rate }}</div>
+                <div>Wholesale1: {{ item.wholesale1 }} | Wholesale2: {{ item.wholesale2 }}</div>
+                <div>Purchase: {{ item.purchase_date }} | Exp: {{ item.expiry_date }}</div>
+                <img src="data:image/png;base64,{{ item.barcode_data|safe|b64encode }}" style="height:12mm; margin-top:2px;">
+            </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    <br><br><br><br><br>
+
+    <div class="d-flex justify-content-between mt-3">
+        <button class="btn btn-secondary" onclick="window.history.back()">Back</button>
+        <button class="btn btn-success" onclick="window.print()">Print Stickers</button>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 2500px;">
+    <h2>Print Barcode - Multiple Items</h2>
+    <form method="POST" action="{% url 'print_barcode' %}">
+        {% csrf_token %}
+
+         <table class="table table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Item Name</th>
+                    <th>MRP</th>
+                    <th>Sale Rate</th>
+                    <th>Purchase Date</th>
+                    <th>Expiry Date</th>
+                    <th>Batch</th>
+                    <th>Qty / Stickers</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="items-container">
+                <tr class="item-row">
+                    <td><input type="text" name="code" class="form-control item-code" placeholder="Item Code" required></td>
+                    <td><input type="text" name="item_name" class="form-control item-name" placeholder="Item Name" required></td>
+                    <td><input type="number" step="0.01" name="mrp" class="form-control"></td>
+                    <td><input type="number" step="0.01" name="sale_rate" class="form-control"></td>
+                    <td><input type="date" name="purchase_date" class="form-control"></td>
+                    <td><input type="date" name="expiry_date" class="form-control"></td>
+                    <td><input type="text" name="batch_no" class="form-control" placeholder="Batch No"></td>
+                    <td><input type="number" name="stickers" class="form-control"></td>
+                    <td class="d-flex align-items-center">
+                        <button type="button" class="btn btn-danger remove-row">Remove</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-secondary mt-3" onclick="addItemRow()">Add Another Item</button>
+        <button type="submit" class="btn btn-primary mt-3">Print Barcode</button>
+        <button type="button" class="btn btn-secondary mt-3" onclick="window.history.back()">Back</button>
+    </form>
+</div>
+
+<script>
+// Add new row
+function addItemRow() {
+    const container = document.getElementById('items-container');
+    const firstRow = document.querySelector('.item-row');
+    const newRow = firstRow.cloneNode(true);
+
+    // Reset inputs
+    newRow.querySelectorAll('input').forEach(input => input.value = '');
+    // Remove suggestion lists
+    const oldList = newRow.querySelector('.suggestion-list');
+    if (oldList) oldList.remove();
+
+    container.appendChild(newRow);
+}
+
+// Remove row
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-row')) {
+        const row = e.target.closest('.item-row');
+        if (document.querySelectorAll('.item-row').length > 1) {
+            row.remove();
+        }
+    }
+});
+
+// Fetch item details when code or name is filled
+document.addEventListener("input", function(e) {
+    if (e.target.name === "code" || e.target.name === "item_name") {
+        const row = e.target.closest(".item-row");
+        const code = row.querySelector('input[name="code"]').value.trim();
+        const name = row.querySelector('input[name="item_name"]').value.trim();
+
+        if (code || name) {
+            fetch(`/fetch-item-details/?code=${code}&name=${name}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.error) {
+                        row.querySelector('input[name="code"]').value = data.code;
+                        row.querySelector('input[name="item_name"]').value = data.item_name;
+
+                        // Use first batch for details
+                        if (data.batches.length > 0) {
+                            const firstBatch = data.batches[0];
+                            row.querySelector('input[name="mrp"]').value = firstBatch.mrp || "";
+                            row.querySelector('input[name="sale_rate"]').value = firstBatch.sale_rate || "";
+                            row.querySelector('input[name="batch_no"]').value = firstBatch.batch_no || "";
+                            row.querySelector('input[name="purchase_date"]').value = firstBatch.purchased_at || "";
+                            row.querySelector('input[name="expiry_date"]').value = firstBatch.expiry_at || "";
+                        }
+
+                        // Restrict stickers input
+                        let stickersInput = row.querySelector('input[name="stickers"]');
+                        stickersInput.setAttribute("max", data.total_qty);
+
+                        // If current value > max, reset to max
+                        if (parseInt(stickersInput.value) > data.total_qty) {
+                            stickersInput.value = data.total_qty;
+                        }
+                    }
+                });
+        }
+    }
+});
+
+// Validate stickers typing
+document.addEventListener("input", function(e) {
+    if (e.target.name === "stickers") {
+        let input = e.target;
+        let max = parseInt(input.getAttribute("max")) || 0;
+        let val = parseInt(input.value) || 0;
+        if (val > max) {
+            alert(` ⚠️ Only ${max} stickers allowed for this item.`);
+            input.value = max;
+        } else if (val < 1) {
+            input.value = 0;
+        }
+    }
+});
+
+// Autocomplete item_name (partial match)
+document.addEventListener('input', function (e) {
+    if (!e.target.classList.contains('item-name')) return;
+
+    const inputEl = e.target;
+    const row = inputEl.closest('.item-row');
+    const value = inputEl.value.trim();
+    if (value.length < 2) return;
+
+    fetch(`/ajax/get-itemname1-info/?q=${encodeURIComponent(value)}`)
+        .then(res => res.json())
+        .then(data => {
+            console.log('Fetched data:', data); // Debug
+
+            let list = document.createElement('ul');
+            list.className = "suggestion-list list-group position-absolute w-100";
+            list.style.zIndex = "1000";
+
+            data.suggestions.forEach(s => {
+                let li = document.createElement('li');
+                li.className = "list-group-item list-group-item-action";
+                li.textContent = `${s.item_name} (${s.item_code})`;
+
+                li.addEventListener('click', () => {
+                    // Fill item and code
+                    row.querySelector('.item-name').value = s.item_name;
+                    row.querySelector('.item-code').value = s.item_code;
+
+                    // Fill first batch details
+                    const firstBatch = s.batches[0];
+                    row.querySelector('input[name="mrp"]').value = firstBatch.mrp || "";
+                    row.querySelector('input[name="sale_rate"]').value = firstBatch.sale_rate || "";
+                    row.querySelector('input[name="batch_no"]').value = firstBatch.batch_no || "";
+                    row.querySelector('input[name="purchase_date"]').value = firstBatch.purchased_at || "";
+                    row.querySelector('input[name="expiry_date"]').value = firstBatch.expiry_at || "";
+
+                    // Limit stickers
+                    const stickersInput = row.querySelector('input[name="stickers"]');
+                    stickersInput.max = s.total_qty;
+                    if (stickersInput.value > s.total_qty) {
+                        stickersInput.value = s.total_qty;
+                        alert(`⚠️ Only ${s.total_qty} stickers allowed for this item.`);
+                    }
+
+                    // Remove suggestion list after selection
+                    list.remove();
+                });
+
+                list.appendChild(li);
+            });
+
+            // Remove old suggestions and append new
+            const oldList = inputEl.parentNode.querySelector('.suggestion-list');
+            if (oldList) oldList.remove();
+            inputEl.parentNode.appendChild(list);
+        });
+});
+</script>
+{% endblock %}

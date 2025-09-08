@@ -52,6 +52,10 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User, Group
 from django.contrib.sessions.models import Session
+from django.http import HttpResponse
+import io
+from barcode import Code128
+from barcode.writer import ImageWriter
 from .models import (
     Supplier,
     Customer,
@@ -61,8 +65,7 @@ from .models import (
     BillType,
     PaymentMode,
     Counter,
-    Item,
-    ItemBarcode,
+    Item,  
     Unit,
     Group,
     Brand,
@@ -1549,6 +1552,10 @@ def item_creation(request):
         whole_rate_2 = request.POST.get('whole_rate2') or 0
         min_stock = request.POST.get('min_stock') or 0
 
+        barcode = request.POST.get('barcode') or ''
+        if not barcode and brand and brand.brand_name.lower() == 'mahil':
+            barcode = f"890M{code}"
+
         # Create the item
         Item.objects.create(
             code=code,
@@ -1570,7 +1577,8 @@ def item_creation(request):
             sale_rate=sale_rate,
             whole_rate=whole_rate,
             whole_rate_2=whole_rate_2,
-            min_stock=min_stock
+            min_stock=min_stock,
+            barcode=barcode
         )
         messages.success(request, "Saved successfully!")
         return redirect('items')
@@ -1656,44 +1664,147 @@ def check_item_code(request):
     exists = Item.objects.filter(code=code).exists()
     return JsonResponse({"exists": exists})    
 
-@access_required(allowed_roles=['superuser'])
-def Item_barcode(request):
-    if request.method == 'POST':
-        barcode = request.POST.get('barcode')
-        item_code = request.POST.get('item_code')
-        item_name = request.POST.get('item_name')
-        unit = request.POST.get('unit')
-        mrp = request.POST.get('mrp')
-        sale_price = request.POST.get('sale_price')
-        whole_price = request.POST.get('whole_price')
-        generated_on = request.POST.get('generated_on')
-        active = True if request.POST.get('active') == 'on' else False
+def print_barcode(request):
+    if request.method == "POST":
+        # Collect all items
+        codes = request.POST.getlist('code')
+        names = request.POST.getlist('item_name')
+        mrps = request.POST.getlist('mrp')
+        sale_rates = request.POST.getlist('sale_rate')
+        batch_no = request.POST.getlist('batch_no')       
+        purchase_dates = request.POST.getlist('purchase_date')
+        expiry_dates = request.POST.getlist('expiry_date')
+        stickers_list = request.POST.getlist('stickers')
 
-        obj = ItemBarcode.objects.create(
-            barcode=barcode,
-            item_code=item_code,
-            item_name=item_name,
-            unit=unit,
-            mrp=mrp,
-            sale_price=sale_price,
-            whole_price=whole_price,
-            generated_on=generated_on,
-            active=active
-        )
+        barcode_items = []
 
-        # If request came from AJAX, return JSON
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse({
-                "success": True,
-                "id": obj.id,
-                "barcode": obj.barcode,
-                "item_name": obj.item_name
+        for i in range(len(codes)):
+            code = codes[i]
+            item_name = names[i]
+            mrp = mrps[i]
+            sale_rate = sale_rates[i]
+            batch_no = batch_no[i]
+            purchase_date = purchase_dates[i]
+            expiry_date = expiry_dates[i]
+            stickers = int(stickers_list[i] or 1)
+
+            # Generate barcode image
+            barcode_io = io.BytesIO()
+            barcode_image = Code128(code, writer=ImageWriter())
+            barcode_image.write(barcode_io)
+            barcode_data = barcode_io.getvalue()
+
+            barcode_items.append({
+                "code": code,
+                "item_name": item_name,
+                "mrp": mrp,
+                "sale_rate": sale_rate,
+                "batch_no": batch_no,               
+                "purchase_date": purchase_date,
+                "expiry_date": expiry_date,
+                "stickers": stickers,
+                "barcode_data": barcode_data.hex()
             })
 
-        # Normal redirect for full form submit
-        return redirect('item_barcode')
+        context = {"barcode_items": barcode_items}
+        return render(request, "print_barcode_preview.html", context)
 
-    return render(request, 'barcode.html')
+    return render(request, "print_barcode.html")
+
+def fetch_item_details(request):
+    code = request.GET.get("code")
+    name = request.GET.get("name")
+
+    try:
+        # Find Item
+        if code:
+            item = Item.objects.get(code=code)
+        elif name:
+            item = Item.objects.get(item_name__iexact=name)
+        else:
+            return JsonResponse({"error": "No code or name provided"}, status=400)
+
+        # All in-stock batches
+        batches = (
+            Inventory.objects.filter(item=item, status="in_stock")
+            .order_by("-purchased_at")
+        )
+
+        if not batches.exists():
+            # Item exists but no stock available
+            return JsonResponse({
+                "code": item.code,
+                "item_name": item.item_name,
+                "total_qty": 0,
+                "batches": [],
+            })
+
+        # Calculate total available quantity
+        total_qty = sum(b.quantity for b in batches if b.quantity)
+
+        # Return batch-wise + total info
+        batch_list = []
+        for b in batches:
+            batch_list.append({
+                "batch_no": b.batch_no,
+                "mrp": float(b.mrp_price) if b.mrp_price else None,
+                "sale_rate": float(b.sale_price) if b.sale_price else None,
+                "purchased_at": b.purchased_at.strftime("%Y-%m-%d") if b.purchased_at else None,
+                "expiry_at": b.expiry_date.strftime("%Y-%m-%d") if b.expiry_date else None,
+                "quantity": b.quantity,
+            })
+
+        return JsonResponse({
+            "code": item.code,
+            "item_name": item.item_name,
+            "total_qty": total_qty,
+            "batches": batch_list,
+        })
+
+    except Item.DoesNotExist:
+        return JsonResponse({"error": "Item not found"}, status=404)
+    
+def get_itemname1_info(request):
+    """
+    Return item suggestions based on inventory (in-stock) for autocomplete.
+    """
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'suggestions': []})
+
+    # Get all inventory items matching query and in-stock
+    inventories = (
+        Inventory.objects.filter(status='in_stock')
+        .filter(item__item_name__icontains=query)
+        .select_related('item')
+        .order_by('item__item_name')[:50]  # increase limit if needed
+    )
+
+    # Aggregate by item to avoid duplicates
+    item_dict = {}
+    for inv in inventories:
+        code = inv.item.code
+        if code not in item_dict:
+            item_dict[code] = {
+                'item_code': inv.item.code,
+                'item_name': inv.item.item_name,
+                'unit': inv.item.unit,
+                'total_qty': 0,
+                'batches': []
+            }
+
+        item_dict[code]['total_qty'] += inv.quantity if inv.quantity else 0
+        item_dict[code]['batches'].append({
+            'batch_no': inv.batch_no,
+            'mrp': float(inv.mrp_price) if inv.mrp_price else None,
+            'sale_rate': float(inv.sale_rate) if inv.sale_rate else None,
+            'purchased_at': inv.purchased_at.strftime("%Y-%m-%d") if inv.purchased_at else None,
+            'expiry_at': inv.expiry_date.strftime("%Y-%m-%d") if inv.expiry_date else None,
+            'quantity': inv.quantity,
+        })
+
+    suggestions = list(item_dict.values())
+    return JsonResponse({'suggestions': suggestions})
 
 @access_required(allowed_roles=['superuser'])
 def Unit_creation(request):
@@ -2123,6 +2234,49 @@ def products_view(request):
         'selected_group': selected_group,
         'product_count': product_count,
     })
+
+
+
+# views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import BarcodeLabelSize
+from .forms import BarcodeLabelSizeForm
+
+def label_size_list(request):
+    sizes = BarcodeLabelSize.objects.all()
+    return render(request, "label_size_list.html", {"sizes": sizes})
+
+def label_size_create(request):
+    if request.method == "POST":
+        form = BarcodeLabelSizeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("label_size_list")
+    else:
+        form = BarcodeLabelSizeForm()
+    return render(request, "label_size_form.html", {"form": form})
+
+def label_size_edit(request, pk):
+    size = get_object_or_404(BarcodeLabelSize, pk=pk)
+    if request.method == "POST":
+        form = BarcodeLabelSizeForm(request.POST, instance=size)
+        if form.is_valid():
+            form.save()
+            return redirect("label_size_list")
+    else:
+        form = BarcodeLabelSizeForm(instance=size)
+    return render(request, "label_size_form.html", {"form": form})
+
+def label_size_delete(request, pk):
+    size = get_object_or_404(BarcodeLabelSize, pk=pk)
+    size.delete()
+    return redirect("label_size_list")
+
+
+
+
+
+
 
 @access_required(allowed_roles=['superuser'])
 def purchase_view(request):
