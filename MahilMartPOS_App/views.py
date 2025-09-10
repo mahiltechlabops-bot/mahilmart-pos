@@ -1664,52 +1664,101 @@ def check_item_code(request):
     exists = Item.objects.filter(code=code).exists()
     return JsonResponse({"exists": exists})    
 
+from django.shortcuts import render, redirect
+from django.contrib import messages
+import win32print
+
+def build_label(item, x_offset=0, y_offset=0):
+    return f"""SIZE 35 mm,22 mm
+GAP 3 mm,0 mm
+TEXT {30 + x_offset},{30 + y_offset},"0",0,12,12,"MahilMart"
+TEXT {30 + x_offset},{70 + y_offset},"0",0,10,10,"{item['name']}"
+TEXT {30 + x_offset},{110 + y_offset},"0",0,10,10,"MRP: {item['mrp']}  Sale: {item['sale']}"
+BARCODE {30 + x_offset},{150 + y_offset},"39",120,1,0,4,6,"{item['barcode']}"
+PRINT 1
+"""
+
 def print_barcode(request):
     if request.method == "POST":
-        # Collect all items
-        codes = request.POST.getlist('code')
-        names = request.POST.getlist('item_name')
-        mrps = request.POST.getlist('mrp')
-        sale_rates = request.POST.getlist('sale_rate')
-        batch_no = request.POST.getlist('batch_no')       
-        purchase_dates = request.POST.getlist('purchase_date')
-        expiry_dates = request.POST.getlist('expiry_date')
-        stickers_list = request.POST.getlist('stickers')
+        # Collect items from form
+        codes = request.POST.getlist("code")
+        names = request.POST.getlist("item_name")
+        mrps = request.POST.getlist("mrp")
+        sales = request.POST.getlist("sale_rate")
+        batches = request.POST.getlist("batch_no")
+        expirys = request.POST.getlist("expiry_date")
+        stickers_qty = request.POST.getlist("stickers")
 
-        barcode_items = []
-
+        items = []
         for i in range(len(codes)):
-            code = codes[i]
-            item_name = names[i]
-            mrp = mrps[i]
-            sale_rate = sale_rates[i]
-            batch_no = batch_no[i]
-            purchase_date = purchase_dates[i]
-            expiry_date = expiry_dates[i]
-            stickers = int(stickers_list[i] or 1)
+            try:
+                qty = int(stickers_qty[i])
+            except (ValueError, TypeError):
+                qty = 1
 
-            # Generate barcode image
-            barcode_io = io.BytesIO()
-            barcode_image = Code128(code, writer=ImageWriter())
-            barcode_image.write(barcode_io)
-            barcode_data = barcode_io.getvalue()
+            # Fetch barcode from Item table
+            try:
+                item_obj = Item.objects.get(code=codes[i].strip())
+                barcode_value = item_obj.barcode  # e.g., 890M1029
+                item_name = item_obj.item_name
+            except Item.DoesNotExist:
+                barcode_value = codes[i].strip()  # fallback
+                item_name = names[i].strip()
 
-            barcode_items.append({
-                "code": code,
-                "item_name": item_name,
-                "mrp": mrp,
-                "sale_rate": sale_rate,
-                "batch_no": batch_no,               
-                "purchase_date": purchase_date,
-                "expiry_date": expiry_date,
-                "stickers": stickers,
-                "barcode_data": barcode_data.hex()
+            items.append({
+                "name": item_name,
+                "barcode": barcode_value,
+                "mrp": mrps[i].strip(),
+                "sale": sales[i].strip(),
+                "batch": batches[i].strip(),
+                "expiry": expirys[i].strip(),
+                "qty": max(qty, 1),
             })
 
-        context = {"barcode_items": barcode_items}
-        return render(request, "print_barcode_preview.html", context)
+        import win32print
+        printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)
+        for p in printers:
+            print(p[2])
 
-    return render(request, "print_barcode.html")
+        # ⚠️ Use correct printer name from Windows Control Panel
+        printer_name = "SNBC TVSE LP 46 NEO BPLE"
+
+        # Build ZPL command string for all items
+        raw_text = ""
+        for i, item in enumerate(items):
+            row = i // 3
+            col = i % 3
+            label_width = 280
+            gap = 10
+            x_offset = (2 - col) * (label_width + gap)
+
+            y_offset = row * 250
+            for _ in range(item["qty"]):
+                raw_text += build_label(item, x_offset=x_offset, y_offset=y_offset)
+
+        raw_bytes = raw_text.encode("ascii")
+
+        # Send to printer
+        try:
+            hprinter = win32print.OpenPrinter(printer_name)
+            try:
+                hjob = win32print.StartDocPrinter(hprinter, 1, ("Label Print Job", None, "RAW"))
+                win32print.StartPagePrinter(hprinter)
+                win32print.WritePrinter(hprinter, raw_bytes)
+                win32print.EndPagePrinter(hprinter)
+                win32print.EndDocPrinter(hprinter)
+            finally:
+                win32print.ClosePrinter(hprinter)
+
+            messages.success(request, "Barcodes printed successfully!")
+
+        except Exception as e:
+            messages.error(request, f"Printing failed: {e}")
+
+        return redirect("print_barcode")
+
+    # GET request: show form
+    return render(request, "print_barcode.html")   
 
 def fetch_item_details(request):
     code = request.GET.get("code")
@@ -1735,6 +1784,7 @@ def fetch_item_details(request):
             return JsonResponse({
                 "code": item.code,
                 "item_name": item.item_name,
+                "barcode": item.barcode,
                 "total_qty": 0,
                 "batches": [],
             })
@@ -1766,45 +1816,42 @@ def fetch_item_details(request):
     
 def get_itemname1_info(request):
     """
-    Return item suggestions based on inventory (in-stock) for autocomplete.
+    Return item suggestions with batch information for autocomplete (partial search).
     """
-    query = request.GET.get('q', '').strip()
+    query = request.GET.get("q", "").strip()
     if not query:
-        return JsonResponse({'suggestions': []})
+        return JsonResponse({"suggestions": []})
 
-    # Get all inventory items matching query and in-stock
+    # Search directly in Inventory.item_name (not item__item_name)
     inventories = (
-        Inventory.objects.filter(status='in_stock')
-        .filter(item__item_name__icontains=query)
-        .select_related('item')
-        .order_by('item__item_name')[:50]  # increase limit if needed
+        Inventory.objects.filter(status="in_stock", item__item_name__icontains=query)
+        .order_by("item_name")[:25]
     )
 
-    # Aggregate by item to avoid duplicates
     item_dict = {}
     for inv in inventories:
-        code = inv.item.code
+        code = inv.code  # code is in Inventory table
         if code not in item_dict:
             item_dict[code] = {
-                'item_code': inv.item.code,
-                'item_name': inv.item.item_name,
-                'unit': inv.item.unit,
-                'total_qty': 0,
-                'batches': []
+                "item_code": inv.item.code,
+                "item_name": inv.item.item_name,
+                "barcode": inv.item.barcode,
+                "unit": inv.unit,
+                "total_qty": 0,
+                "batches": []
             }
 
-        item_dict[code]['total_qty'] += inv.quantity if inv.quantity else 0
-        item_dict[code]['batches'].append({
-            'batch_no': inv.batch_no,
-            'mrp': float(inv.mrp_price) if inv.mrp_price else None,
-            'sale_rate': float(inv.sale_rate) if inv.sale_rate else None,
-            'purchased_at': inv.purchased_at.strftime("%Y-%m-%d") if inv.purchased_at else None,
-            'expiry_at': inv.expiry_date.strftime("%Y-%m-%d") if inv.expiry_date else None,
-            'quantity': inv.quantity,
+        item_dict[code]["total_qty"] += inv.quantity or 0
+        item_dict[code]["batches"].append({
+            "batch_no": inv.batch_no,
+            "mrp": float(inv.mrp_price) if inv.mrp_price else None,
+            "sale_rate": float(inv.sale_price) if inv.sale_price else None,
+            "purchased_at": inv.purchased_at.strftime("%Y-%m-%d") if inv.purchased_at else None,
+            "expiry_at": inv.expiry_date.strftime("%Y-%m-%d") if inv.expiry_date else None,
+            "quantity": inv.quantity,
         })
 
-    suggestions = list(item_dict.values())
-    return JsonResponse({'suggestions': suggestions})
+    return JsonResponse({"suggestions": list(item_dict.values())})
 
 @access_required(allowed_roles=['superuser'])
 def Unit_creation(request):

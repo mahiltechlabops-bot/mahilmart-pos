@@ -6,7 +6,19 @@
     <form method="POST" action="{% url 'print_barcode' %}">
         {% csrf_token %}
 
-         <table class="table table-bordered">
+        <!-- Barcode Size Selection -->
+        <div class="form-group mb-3">
+            <label for="label_size"><strong>Select Barcode Label Size</strong></label>
+            <select name="label_size" id="label_size" class="form-control w-25" required>
+                <option value="">-- Choose Size --</option>
+                <option value="35x22">Small (35 × 22 mm)</option>
+                <option value="50x40">Medium (50 × 40 mm)</option>
+                <option value="70x35">Large (70 × 35 mm)</option>
+            </select>
+        </div>
+
+        <!-- Items Table -->
+        <table class="table table-bordered">
             <thead class="thead-light">
                 <tr>
                     <th>Code</th>
@@ -33,9 +45,12 @@
                     <td class="d-flex align-items-center">
                         <button type="button" class="btn btn-danger remove-row">Remove</button>
                     </td>
+                    <input type="hidden" name="barcode" class="barcode-input">
                 </tr>
             </tbody>
         </table>
+
+        <!-- Buttons -->
         <button type="button" class="btn btn-secondary mt-3" onclick="addItemRow()">Add Another Item</button>
         <button type="submit" class="btn btn-primary mt-3">Print Barcode</button>
         <button type="button" class="btn btn-secondary mt-3" onclick="window.history.back()">Back</button>
@@ -123,59 +138,56 @@ document.addEventListener("input", function(e) {
 });
 
 // Autocomplete item_name (partial match)
-document.addEventListener('input', function (e) {
-    if (!e.target.classList.contains('item-name')) return;
+document.addEventListener("input", function(e) {
+    if (!e.target.classList.contains("item-name")) return;
 
     const inputEl = e.target;
-    const row = inputEl.closest('.item-row');
+    const row = inputEl.closest(".item-row");
     const value = inputEl.value.trim();
-    if (value.length < 2) return;
+    if (value.length < 2) return; // only start searching after 2 chars
 
     fetch(`/ajax/get-itemname1-info/?q=${encodeURIComponent(value)}`)
         .then(res => res.json())
         .then(data => {
-            console.log('Fetched data:', data); // Debug
+            // Remove old suggestions first
+            const oldList = inputEl.parentNode.querySelector(".suggestion-list");
+            if (oldList) oldList.remove();
 
-            let list = document.createElement('ul');
+            if (!data.suggestions || data.suggestions.length === 0) return;
+
+            let list = document.createElement("ul");
             list.className = "suggestion-list list-group position-absolute w-100";
             list.style.zIndex = "1000";
 
             data.suggestions.forEach(s => {
-                let li = document.createElement('li');
+                let li = document.createElement("li");
                 li.className = "list-group-item list-group-item-action";
                 li.textContent = `${s.item_name} (${s.item_code})`;
 
-                li.addEventListener('click', () => {
-                    // Fill item and code
-                    row.querySelector('.item-name').value = s.item_name;
-                    row.querySelector('.item-code').value = s.item_code;
+                li.addEventListener("click", () => {
+                    row.querySelector(".item-name").value = s.item_name;
+                    row.querySelector(".item-code").value = s.item_code;
+                    row.querySelector(".barcode-input").value = s.barcode;
+                    row.dataset.barcode = s.barcode;
 
-                    // Fill first batch details
-                    const firstBatch = s.batches[0];
-                    row.querySelector('input[name="mrp"]').value = firstBatch.mrp || "";
-                    row.querySelector('input[name="sale_rate"]').value = firstBatch.sale_rate || "";
-                    row.querySelector('input[name="batch_no"]').value = firstBatch.batch_no || "";
-                    row.querySelector('input[name="purchase_date"]').value = firstBatch.purchased_at || "";
-                    row.querySelector('input[name="expiry_date"]').value = firstBatch.expiry_at || "";
-
-                    // Limit stickers
-                    const stickersInput = row.querySelector('input[name="stickers"]');
-                    stickersInput.max = s.total_qty;
-                    if (stickersInput.value > s.total_qty) {
-                        stickersInput.value = s.total_qty;
-                        alert(`⚠️ Only ${s.total_qty} stickers allowed for this item.`);
+                    if (s.batches.length > 0) {
+                        const b = s.batches[0];
+                        row.querySelector('input[name="mrp"]').value = b.mrp || "";
+                        row.querySelector('input[name="sale_rate"]').value = b.sale_rate || "";
+                        row.querySelector('input[name="batch_no"]').value = b.batch_no || "";
+                        row.querySelector('input[name="purchase_date"]').value = b.purchased_at || "";
+                        row.querySelector('input[name="expiry_date"]').value = b.expiry_at || "";
                     }
 
-                    // Remove suggestion list after selection
-                    list.remove();
+                    const stickersInput = row.querySelector('input[name="stickers"]');
+                    stickersInput.max = s.total_qty || 0;
+
+                    list.remove(); // close suggestion list
                 });
 
                 list.appendChild(li);
             });
 
-            // Remove old suggestions and append new
-            const oldList = inputEl.parentNode.querySelector('.suggestion-list');
-            if (oldList) oldList.remove();
             inputEl.parentNode.appendChild(list);
         });
 });
