@@ -1664,23 +1664,130 @@ def check_item_code(request):
     exists = Item.objects.filter(code=code).exists()
     return JsonResponse({"exists": exists})    
 
+# from django.shortcuts import render, redirect
+# from django.contrib import messages
+# import win32print
+# import re
+
+# def build_label(item):
+#     """
+#     Build one 35x22 mm label with text and barcode.
+#     """
+#     # Clean barcode for Code39
+#     barcode_clean = re.sub(r'[^A-Z0-9\-\.\ \$\/\+\%]', '', str(item['barcode']).upper())
+
+#     return f"""SIZE 35 mm,22 mm
+# GAP 3 mm,0 mm
+# TEXT 30,20,"0",0,12,12,"MahilMart"
+# TEXT 30,55,"0",0,10,10,"{item['name']}"
+# TEXT 30,85,"0",0,10,10,"MRP:{item['mrp']} Sale:{item['sale']}"
+# BARCODE 30,115,"39",50,1,0,2,4,"{barcode_clean}"
+# PRINT 1
+# """
+
+# def print_barcode(request):
+#     if request.method == "POST":
+#         codes = request.POST.getlist("code")
+#         names = request.POST.getlist("item_name")
+#         mrps = request.POST.getlist("mrp")
+#         sales = request.POST.getlist("sale_rate")
+#         batches = request.POST.getlist("batch_no")
+#         expirys = request.POST.getlist("expiry_date")
+#         stickers_qty = request.POST.getlist("stickers")
+
+#         items = []
+#         for i in range(len(codes)):
+#             # Number of stickers for this item
+#             try:
+#                 qty = max(int(stickers_qty[i]), 1)
+#             except (ValueError, TypeError):
+#                 qty = 1
+
+#             # Fetch item from database or fallback
+#             try:
+#                 item_obj = Item.objects.get(code=codes[i].strip())
+#                 barcode_value = item_obj.barcode
+#                 item_name = item_obj.item_name
+#             except Item.DoesNotExist:
+#                 barcode_value = codes[i].strip()
+#                 item_name = names[i].strip()
+
+#             # Add each sticker as separate label
+#             for _ in range(qty):
+#                 items.append({
+#                     "name": item_name,
+#                     "barcode": barcode_value,
+#                     "mrp": mrps[i].strip(),
+#                     "sale": sales[i].strip(),
+#                     "batch": batches[i].strip(),
+#                     "expiry": expirys[i].strip(),
+#                 })
+
+#         # Build TSPL command for all labels
+#         raw_text = ""
+#         for item in items:
+#             raw_text += build_label(item)
+
+#         print("----- Generated TSPL Code -----")
+#         print(raw_text)
+#         print("----- End TSPL Code -----")            
+
+#         # Encode to bytes
+#         raw_bytes = raw_text.encode("ascii")
+
+#         # Send to printer
+#         printer_name = "SNBC TVSE LP 46 NEO BPLE"  # change if needed
+#         try:
+#             hprinter = win32print.OpenPrinter(printer_name)
+#             try:
+#                 hjob = win32print.StartDocPrinter(hprinter, 1, ("Label Print Job", None, "RAW"))
+#                 win32print.StartPagePrinter(hprinter)
+#                 win32print.WritePrinter(hprinter, raw_bytes)
+#                 win32print.EndPagePrinter(hprinter)
+#                 win32print.EndDocPrinter(hprinter)
+#             finally:
+#                 win32print.ClosePrinter(hprinter)
+
+#             messages.success(request, "Barcodes printed successfully!")
+#         except Exception as e:
+#             messages.error(request, f"Printing failed: {e}")
+
+#         return redirect("print_barcode")
+
+#     # GET request: show form
+#     return render(request, "print_barcode.html")
+
 from django.shortcuts import render, redirect
 from django.contrib import messages
 import win32print
+import re
 
-def build_label(item, x_offset=0, y_offset=0):
-    return f"""SIZE 35 mm,22 mm
-GAP 3 mm,0 mm
-TEXT {30 + x_offset},{30 + y_offset},"0",0,12,12,"MahilMart"
-TEXT {30 + x_offset},{70 + y_offset},"0",0,10,10,"{item['name']}"
-TEXT {30 + x_offset},{110 + y_offset},"0",0,10,10,"MRP: {item['mrp']}  Sale: {item['sale']}"
-BARCODE {30 + x_offset},{150 + y_offset},"39",120,1,0,4,6,"{item['barcode']}"
-PRINT 1
+def build_label(item, x_offset=0, y_offset=0, layout=None):
+    """
+    Build one label with text and barcode at given offsets.
+    `layout` determines text sizes and barcode size based on label size.
+    """
+    barcode_clean = re.sub(r'[^A-Z0-9\-\.\ \$\/\+\%]', '', str(item['barcode']).upper())
+
+    if layout is None:
+        layout = {
+            "text_x": 30,
+            "text_y": [20, 55, 85],
+            "font_size": [12, 10, 10],
+            "barcode_x": 30,
+            "barcode_y": 115,
+            "barcode_height": 50,
+        }
+
+    return f"""TEXT {layout['text_x'] + x_offset},{layout['text_y'][0] + y_offset},"0",0,{layout['font_size'][0]},{layout['font_size'][0]},"MahilMart"
+TEXT {layout['text_x'] + x_offset},{layout['text_y'][1] + y_offset},"0",0,{layout['font_size'][1]},{layout['font_size'][1]},"{item['name']}"
+TEXT {layout['text_x'] + x_offset},{layout['text_y'][2] + y_offset},"0",0,{layout['font_size'][2]},{layout['font_size'][2]},"MRP:{item['mrp']} Sale:{item['sale']}"
+BARCODE {layout['barcode_x'] + x_offset},{layout['barcode_y'] + y_offset},"39",{layout['barcode_height']},1,0,2,4,"{barcode_clean}"
 """
 
 def print_barcode(request):
     if request.method == "POST":
-        # Collect items from form
+        label_size = request.POST.get("label_size", "35x22")
         codes = request.POST.getlist("code")
         names = request.POST.getlist("item_name")
         mrps = request.POST.getlist("mrp")
@@ -1689,60 +1796,103 @@ def print_barcode(request):
         expirys = request.POST.getlist("expiry_date")
         stickers_qty = request.POST.getlist("stickers")
 
+        # Layout mapping with barcode_x added
+        layout_map = {
+            "35x22": {
+                "label_width": 280,
+                "label_height": 250,
+                "labels_per_row": 3,
+                "text_x": 30,
+                "text_y": [20, 55, 85],
+                "font_size": [12, 10, 10],
+                "barcode_x": 30,
+                "barcode_y": 115,
+                "barcode_height": 50
+            },
+            "50x40": {
+                "label_width": 400,
+                "label_height": 300,
+                "labels_per_row": 2,
+                "text_x": 30,
+                "text_y": [20, 65, 110],
+                "font_size": [14, 12, 12],
+                "barcode_x": 30,
+                "barcode_y": 150,
+                "barcode_height": 70
+            },
+            "70x35": {
+                "label_width": 500,
+                "label_height": 250,
+                "labels_per_row": 1,
+                "text_x": 30,
+                "text_y": [20, 55, 85],
+                "font_size": [16, 14, 14],
+                "barcode_x": 30,
+                "barcode_y": 120,
+                "barcode_height": 90
+            },
+        }
+
+        layout = layout_map.get(label_size, layout_map["35x22"])
+        label_width = layout["label_width"]
+        label_height = layout["label_height"]
+        labels_per_row = layout["labels_per_row"]
+
         items = []
         for i in range(len(codes)):
             try:
-                qty = int(stickers_qty[i])
+                qty = max(int(stickers_qty[i]), 1)
             except (ValueError, TypeError):
                 qty = 1
 
-            # Fetch barcode from Item table
             try:
                 item_obj = Item.objects.get(code=codes[i].strip())
-                barcode_value = item_obj.barcode  # e.g., 890M1029
+                barcode_value = item_obj.barcode
                 item_name = item_obj.item_name
             except Item.DoesNotExist:
-                barcode_value = codes[i].strip()  # fallback
+                barcode_value = codes[i].strip()
                 item_name = names[i].strip()
 
-            items.append({
-                "name": item_name,
-                "barcode": barcode_value,
-                "mrp": mrps[i].strip(),
-                "sale": sales[i].strip(),
-                "batch": batches[i].strip(),
-                "expiry": expirys[i].strip(),
-                "qty": max(qty, 1),
-            })
+            for _ in range(qty):
+                items.append({
+                    "name": item_name,
+                    "barcode": barcode_value,
+                    "mrp": mrps[i].strip(),
+                    "sale": sales[i].strip(),
+                })
 
-        import win32print
-        printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)
-        for p in printers:
-            print(p[2])
+        # Build TSPL command
+        raw_text = f"SIZE {label_size.replace('x', ' mm,')} mm\nGAP 3 mm,0 mm\nCLS\n"
 
-        # ⚠️ Use correct printer name from Windows Control Panel
-        printer_name = "SNBC TVSE LP 46 NEO BPLE"
+        for idx, item in enumerate(items):
+            row = idx // labels_per_row
+            col = idx % labels_per_row
+            x_offset = col * label_width
+            y_offset = row * label_height
+            raw_text += build_label(item, x_offset, y_offset, layout)
 
-        # Build ZPL command string for all items
-        raw_text = ""
-        for i, item in enumerate(items):
-            row = i // 3
-            col = i % 3
-            label_width = 280
-            gap = 10
-            x_offset = (2 - col) * (label_width + gap)
+            print("----- FULL TSPL COMMAND -----")
+            print(raw_text)
+            print("-----------------------------")
 
-            y_offset = row * 250
-            for _ in range(item["qty"]):
-                raw_text += build_label(item, x_offset=x_offset, y_offset=y_offset)
+            # --- DEBUG: layout information ---
+            print(f"Label {idx + 1}:")
+            print(f"  Row: {row}, Column: {col}")
+            print(f"  x_offset: {x_offset}, y_offset: {y_offset}")
+            print(f"  Text positions (Y): {layout['text_y']}")
+            print(f"  Font sizes: {layout['font_size']}")
+            print(f"  Barcode position: x={layout['barcode_x']}, y={layout['barcode_y']}, height={layout['barcode_height']}")
+            print("-" * 50)
 
+        raw_text += "PRINT 1\n"
+
+        # Encode and send to printer
         raw_bytes = raw_text.encode("ascii")
-
-        # Send to printer
+        printer_name = "SNBC TVSE LP 46 NEO BPLE"
         try:
             hprinter = win32print.OpenPrinter(printer_name)
             try:
-                hjob = win32print.StartDocPrinter(hprinter, 1, ("Label Print Job", None, "RAW"))
+                win32print.StartDocPrinter(hprinter, 1, ("Label Print Job", None, "RAW"))
                 win32print.StartPagePrinter(hprinter)
                 win32print.WritePrinter(hprinter, raw_bytes)
                 win32print.EndPagePrinter(hprinter)
@@ -1751,14 +1901,12 @@ def print_barcode(request):
                 win32print.ClosePrinter(hprinter)
 
             messages.success(request, "Barcodes printed successfully!")
-
         except Exception as e:
             messages.error(request, f"Printing failed: {e}")
 
         return redirect("print_barcode")
 
-    # GET request: show form
-    return render(request, "print_barcode.html")   
+    return render(request, "print_barcode.html")
 
 def fetch_item_details(request):
     code = request.GET.get("code")

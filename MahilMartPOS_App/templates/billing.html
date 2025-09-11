@@ -279,9 +279,9 @@
             <tbody id="itemTableBody">
                 <tr style="height: 25px;">
                     <td style="padding: 2px;"><input type="number" name="sno" class="table-input" readonly></td>
-                    <td style="padding: 2px;"><input type="text" name="code" class="table-input"></td>
-                    <td style="padding: 2px;"><input type="text" name="item_name" class="table-input"></td>
-                    <td style="padding: 2px;"><input type="text" name="unit" class="table-input"></td>
+                    <td style="padding: 2px;"><input type="text" name="code" class="table-input" autocomplete="off"></td>
+                    <td style="padding: 2px;"><input type="text" name="item_name" class="table-input" autocomplete="off"></td>
+                    <td style="padding: 2px;"><input type="text" name="unit" class="table-input" autocomplete="off"></td>
                     <td style="padding: 2px;"><input type="number" name="qty" class="table-input" step="any"></td>
                     <td style="padding: 2px;"><input type="number" name="mrsp" class="table-input" readonly></td>
                     <td style="padding: 2px;"><input type="number" name="sellingprice" class="table-input" readonly></td>
@@ -559,7 +559,7 @@
     const card = parseFloat(document.querySelector('input[name="card_amount"]').value || 0);
     const received = cash + card;
     let balance = totalAmount - received;
-    if (balance < 0) balance = 0;
+    // if (balance < 0) balance = 0;
 
     const receivedInput = document.querySelector('input[name="received"]');
     const balanceInput = document.querySelector('input[name="balance"]');
@@ -818,6 +818,7 @@ function resetRowInputs(row) {
                     alert("Item not found!");
                     codeInput.value = '';
                     nameInput.value = '';
+                    codeInput.focus();
                     return;
                 }
 
