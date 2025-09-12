@@ -17,6 +17,10 @@
             </select>
         </div>
 
+          <h4 id="label_message" style="color: darkred; margin-top: 10px;">
+            [1 sticker (Small - 35*22) = 3 labels] || [1 sticker (Medium - 50*40) = 2 labels] || [1 sticker (Large - 70*35) = 1 label]
+          </h4>
+
         <!-- Items Table -->
         <table class="table table-bordered">
             <thead class="thead-light">
@@ -35,7 +39,7 @@
             <tbody id="items-container">
                 <tr class="item-row">
                     <td><input type="text" name="code" class="form-control item-code" placeholder="Item Code" required></td>
-                    <td><input type="text" name="item_name" class="form-control item-name" placeholder="Item Name" required></td>
+                    <td><input type="text" name="item_name" class="form-control item-name" placeholder="Item Name" required autocomplete="off"></td>
                     <td><input type="number" step="0.01" name="mrp" class="form-control"></td>
                     <td><input type="number" step="0.01" name="sale_rate" class="form-control"></td>
                     <td><input type="date" name="purchase_date" class="form-control"></td>
