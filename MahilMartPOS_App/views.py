@@ -988,48 +988,70 @@ def billing_edit(request, pk):
     )
 
     # Calculate total already paid from BillingPayment
-    total_paid = (bill.received or Decimal('0')) + (payments['total_paid'] or Decimal('0'))
-    balance_amount = bill.total_amount - total_paid
+    total_paid = bill.received or Decimal('0')
 
-    balance_amount = bill.total_amount - total_paid
+    # FIXED: Discount apply as percentage
+    discounted_total = (bill.total_amount or Decimal('0')) - (
+        (bill.total_amount or Decimal('0')) * (bill.discount or Decimal('0')) / 100
+    )
+
+    balance_amount = discounted_total - total_paid
 
     if request.method == "POST":
         form = BillingForm(request.POST, instance=bill)
         new_payment = request.POST.get("new_payment")
+        payment_mode = request.POST.get("payment_mode", "Cash")
 
         if form.is_valid():
             if new_payment and float(new_payment) > 0:
-                try:
-                    new_payment_decimal = Decimal(new_payment)
-                except:
-                    new_payment_decimal = Decimal('0')
+                new_payment_decimal = Decimal(new_payment)
+                total_paid_before = total_paid
 
+                # Create BillingPayment
                 BillingPayment.objects.create(
                     billing=bill,
                     customer=bill.customer,
                     total_amount=bill.total_amount,
-                    already_paid=total_paid,
+                    already_paid=total_paid_before,
                     new_payment=new_payment_decimal,
-                    balance=bill.total_amount - (total_paid + new_payment_decimal),
+                    balance=discounted_total - (total_paid_before + new_payment_decimal),
                     payment_date=timezone.now(),
-                    payment_mode=request.POST.get("payment_mode", "Cash")
+                    payment_mode=payment_mode
                 )
+
+                # Update Billing amounts based on payment mode
+                if payment_mode == "Cash":
+                    bill.cash_amount = (bill.cash_amount or Decimal('0')) + new_payment_decimal
+                elif payment_mode == "Card":
+                    bill.card_amount = (bill.card_amount or Decimal('0')) + new_payment_decimal
+                elif payment_mode == "Online":
+                    bill.online_amount = (bill.online_amount or Decimal('0')) + new_payment_decimal
+
+                # Update total received
+                bill.received = (bill.received or Decimal('0')) + new_payment_decimal
+                if bill.received >= bill.total_amount:
+                        cash_amt = bill.cash_amount or Decimal('0')
+                        card_amt = bill.card_amount or Decimal('0')
+
+                        if cash_amt > 0 and card_amt > 0:
+                            bill.bill_type = "Both Cash & Card"
+                        elif cash_amt > 0 and card_amt == 0:
+                            bill.bill_type = "Cash"
+                        elif card_amt > 0 and cash_amt == 0:
+                            bill.bill_type = "Card"
+                        else:
+                            bill.bill_type = "Cash"  
+
+                bill.save()
 
                 try:
                     order = Order.objects.get(bill_no=bill.bill_no)
-                    total_advance = total_paid + new_payment_decimal
-                    order.advance = total_advance
-                    order.due_balance = bill.total_amount - total_advance
-
-                    if order.due_balance <= 0:
-                        order.order_status = 'completed'
-                    else:
-                        order.order_status = 'pending'
-
+                    order.advance = bill.received
+                    order.due_balance = bill.total_amount - bill.received
+                    order.order_status = 'completed' if order.due_balance <= 0 else 'pending'
                     order.save()
                 except Order.DoesNotExist:
                     pass
-
             else:
                 form.save()
 
@@ -1041,7 +1063,8 @@ def billing_edit(request, pk):
         "form": form,
         "bill": bill,
         "total_paid": total_paid,
-        "balance_amount": balance_amount
+        "balance_amount": balance_amount,
+        "discounted_total": discounted_total
     })
 
 @access_required(allowed_roles=['superuser'])
@@ -1052,38 +1075,60 @@ def payment_list_view(request):
 
     billings = Billing.objects.select_related('customer').all().order_by('-id')
 
-    # Date filter
     if from_date and to_date:
-        try:
-            from_date_obj = datetime.datetime.strptime(from_date, '%Y-%m-%d')
-            to_date_obj = datetime.datetime.strptime(to_date, '%Y-%m-%d')
-            start_dt = datetime.datetime.combine(from_date_obj.date(), datetime.time.min)
-            end_dt = datetime.datetime.combine(to_date_obj.date(), datetime.time.max)
-            billings = billings.filter(date__range=(start_dt, end_dt))
-        except Exception as e:
-            print("Date Filter Error:", e)
+        billings = billings.filter(date__date__gte=from_date, date__date__lte=to_date)
+    elif from_date:
+        billings = billings.filter(date__date__gte=from_date)
+    elif to_date:
+        billings = billings.filter(date__date__lte=to_date)
 
     # Payment mode filter
     if payment_mode and payment_mode != 'all':
         billings = billings.filter(bill_type__iexact=payment_mode)
 
-    # Annotate total_received, balance_amount, and payment_status
     for bill in billings:
+        # Aggregated payments
         payments = BillingPayment.objects.filter(billing=bill).aggregate(
             total_paid=Sum('new_payment')
         )
-        total_received = (bill.received or 0) + (payments['total_paid'] or 0)
-        balance_amount = bill.total_amount - total_received
 
+        # Normalize values to Decimal
+        total_amount = bill.total_amount or Decimal("0")
+        discount = bill.discount or Decimal("0")
+        total_received = bill.received or Decimal("0")
+
+        # Handle cash/card split safely
+        cash_paid = Decimal("0")
+        card_paid = Decimal("0")
+
+        if bill.bill_type == "Cash":
+            cash_paid = bill.cash_amount or total_received
+        elif bill.bill_type == "Card":
+            card_paid = bill.card_amount or total_received
+        elif bill.bill_type == "Both Cash & Card":
+            cash_paid = bill.cash_amount or Decimal("0")
+            card_paid = bill.card_amount or Decimal("0")
+        elif bill.bill_type == "Credit":
+            cash_paid = bill.cash_amount or Decimal("0")
+            card_paid = bill.card_amount or Decimal("0")
+
+        # Apply discount correctly with Decimal
+        discounted_total = total_amount - (total_amount * discount / Decimal("100"))
+        balance_amount = discounted_total - total_received
+
+        # Attach computed values to bill
         bill.total_received = total_received
         bill.balance_amount = balance_amount
+        bill.cash_paid = cash_paid
+        bill.card_paid = card_paid
+        bill.display_total_amount = discounted_total
 
-        # Precompute status
+        # Determine payment status
         if bill.bill_type.lower() == 'credit':
             if total_received == 0:
                 bill.payment_status = 'Unpaid'
                 bill.status_class = 'status-unpaid'
-            elif total_received < bill.total_amount:
+            elif total_received < total_amount:
                 bill.payment_status = 'Partially Paid'
                 bill.status_class = 'status-partial'
             else:
@@ -1093,11 +1138,23 @@ def payment_list_view(request):
             bill.payment_status = 'Paid'
             bill.status_class = 'status-paid'
 
+    # Totals across all bills
+    total_amount = sum((b.total_amount or Decimal("0")) for b in billings)
+    total_paid = sum((b.total_received or Decimal("0")) for b in billings)
+    total_balance = sum((b.balance_amount or Decimal("0")) for b in billings)
+    total_cash = sum((b.cash_paid or Decimal("0")) for b in billings)
+    total_card = sum((b.card_paid or Decimal("0")) for b in billings)
+
     return render(request, 'payments.html', {
         'billings': billings,
         'from_date': from_date,
         'to_date': to_date,
         'payment_mode': payment_mode,
+        'total_paid': total_paid,
+        'total_balance': total_balance,
+        'total_cash': total_cash,
+        'total_card': total_card,
+        'total_amount': total_amount
     })
 
 @access_required(allowed_roles=['superuser'])
