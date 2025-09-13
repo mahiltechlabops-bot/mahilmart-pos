@@ -279,9 +279,9 @@
             <tbody id="itemTableBody">
                 <tr style="height: 25px;">
                     <td style="padding: 2px;"><input type="number" name="sno" class="table-input" readonly></td>
-                    <td style="padding: 2px;"><input type="text" name="code" class="table-input" autocomplete="off"></td>
-                    <td style="padding: 2px;"><input type="text" name="item_name" class="table-input" autocomplete="off"></td>
-                    <td style="padding: 2px;"><input type="text" name="unit" class="table-input" autocomplete="off"></td>
+                    <td style="padding: 2px;"><input type="text" name="code" class="table-input"></td>
+                    <td style="padding: 2px;"><input type="text" name="item_name" class="table-input"></td>
+                    <td style="padding: 2px;"><input type="text" name="unit" class="table-input"></td>
                     <td style="padding: 2px;"><input type="number" name="qty" class="table-input" step="any"></td>
                     <td style="padding: 2px;"><input type="number" name="mrsp" class="table-input" readonly></td>
                     <td style="padding: 2px;"><input type="number" name="sellingprice" class="table-input" readonly></td>
@@ -307,13 +307,15 @@
 
     </div>
 
-    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 18px; font-weight: bold;">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 18px; font-weight: bold;">
 
         <div id="qty-box-container">
-    Qty: <input type="text" id="qty-total" value="0" readonly>
-</div>
+            Qty: <input type="text" id="qty-total" value="0" readonly>
+        </div>
 
-
+       <div id="discount-box-container">
+        Discount: <input type="number" id="discount" name="discount" style="width: 40px;" min="0" max="100"> %
+    </div>
         <span class="total-red" style="font-size: 26px; color: red;">0.00</span> 
 
         <label>Received:</label>
@@ -351,11 +353,11 @@
         </div>
     </div>
 
-    <div class="buttons" style="display: flex; gap: 10px;">
-        <button type="button" id="saveBtn" onclick="submitBilling()">Save</button>
-        <button type="button" onclick="location.reload()">Reset</button>
-        <a href="{% url 'dashboard' %}"><button type="button">Exit</button></a>
-    </div>
+   <div class="buttons" 
+     style="display: flex; justify-content: flex-end; gap: 10px; width: 100%; margin-top: 10px;">
+    <button type="button" id="saveBtn" onclick="submitBilling()">Save</button>
+    <button type="button" onclick="location.reload()">Reset</button>   
+</div>
 
 </div>
 
@@ -374,6 +376,7 @@
 
 {% block extra_js %}
 <script>
+
     // Global variables
     const itemTableBody = document.getElementById('itemTableBody');
     let prevRow = null; // Track previous row for delete operation
@@ -546,20 +549,24 @@
         totalQty += qty;
         totalAmount += amount;
     });
+    
+    const discountInput = document.getElementById('discount');
+    const discountPercent = parseFloat(discountInput?.value || 0);
+    const totalAfterDiscount = totalAmount - (totalAmount * discountPercent / 100);
 
     // Update total displays
     const qtyInput = document.getElementById('qty-total');
     if (qtyInput) qtyInput.value = totalQty;  // <-- use .value for input
 
     const totalRed = document.querySelector('.total-red');
-    if (totalRed) totalRed.textContent = totalAmount.toFixed(2);
+    if (totalRed) totalRed.textContent = totalAfterDiscount.toFixed(2); 
 
     // Update received/balance if you have cash/card inputs
     const cash = parseFloat(document.querySelector('input[name="cash_amount"]').value || 0);
     const card = parseFloat(document.querySelector('input[name="card_amount"]').value || 0);
     const received = cash + card;
-    let balance = totalAmount - received;
-    // if (balance < 0) balance = 0;
+    let balance = totalAfterDiscount - received; // <-- subtract received from discounted total
+    if (balance < 0) balance = 0;
 
     const receivedInput = document.querySelector('input[name="received"]');
     const balanceInput = document.querySelector('input[name="balance"]');
@@ -568,8 +575,11 @@
 
     // Points calculation
     const totalEarnedInput = document.querySelector('input[name="total_earned"]');
-    if (totalEarnedInput) totalEarnedInput.value = (totalAmount / 200).toFixed(2);
+    if (totalEarnedInput) totalEarnedInput.value = (totalAfterDiscount  / 200).toFixed(2);
 }
+
+document.getElementById('discount').addEventListener('input', updateCalculations);
+
 
 
 // trigger calculation when user types in cash or card
@@ -1035,123 +1045,185 @@ function submitBilling() {
             return;
         }
     }
+        let printBill = confirm("Do you want to print the bill before saving?");
+        if (printBill) {
+            const billData = getBillingInfo(items);
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
 
-    let printBill = confirm("Do you want to print the bill before saving?");
-    if (printBill) {
-        const billData = getBillingInfo(items);
-        const printWindow = window.open('', '_blank', 'width=400,height=600');
-
-        if (printWindow) {
-            let html = `
+            if (printWindow) {
+                let html = `
                 <html>
                 <head>
                 <title>Bill Preview</title>
                 <style>
-                    body { font-family: monospace; font-size: 12px; }
-                    h2 { text-align: center; margin: 0; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-                    th, td { border: 1px solid #000; padding: 4px; text-align: center; }
-                    .header td { border: none; text-align: left; padding: 2px 0; }
-                    .totals td { border: none; text-align: right; padding: 2px 0; }
+                    @media print {
+                    @page {
+                    size: 79mm auto; 
+                    margin: 0;
+                    }
+                    body {
+                    width: 79mm; 
+                    }
+                    }
+                    body { 
+                    font-family: monospace; 
+                    font-size: 12px; 
+                    }
+                    h2 { 
+                    text-align: center; 
+                    margin: 0; 
+                    white-space: pre-line; 
+                    }
+                    table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 5px; 
+                    }
+                    td { 
+                    padding: 2px; 
+                    }
+                    .line { 
+                    border-top: 1px dashed #000; 
+                    margin: 4px 0; 
+                    }
                 </style>
                 </head>
                 <body>
-                    <h2>Mahil Mart</h2>
-
-                    <!-- 🔹 Header Info -->
-                    <table class="header" style="width:100%; margin-bottom:5px;">
-                      <tr>
-                        <td><strong>Bill No:</strong> ${billData.bill_no}</td>
-                        <td style="text-align:right;"><strong>Date:</strong> ${billData.date}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>Customer:</strong> ${billData.name}</td>
-                        <td style="text-align:right;"><strong>Phone:</strong> ${billData.phone}</td>
-                      </tr>
-                      <tr>
-                        <td colspan="2"><strong>Address:</strong> ${billData.customer_address}</td>
-                      </tr>
-                    </table>
-
-                    <!-- 🔹 Item Table -->
+                    <h2>MAHIL SUPERMARKET
+                        S.F NO:20/3F1, Thirumalaipatty Pirivu,
+                        Kalappanaickenpatti Namakkal-637406
+                        GSTIN : 33ABUFM8212B1ZD
+                        Phone : 9361950855
+                        </h2>
+                        
+                        <div class="line"></div>
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Sno</th>
-                                <th>Item</th>
-                                <th>Qty</th>
-                                <th>Price</th>
-                                <th>Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${billData.items.map((item, idx) => `
-                                <tr>
-                                    <td>${idx + 1}</td>
-                                    <td>${item.item_name}</td>
-                                    <td>${item.qty}</td>
-                                    <td>${item.sellingprice.toFixed(2)}</td>
-                                    <td>${item.amount.toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-
-                    <!-- 🔹 Totals Section -->
-                    <table class="totals" style="width:100%; margin-bottom:5px; border-collapse: collapse;">
                     <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Total Qty:</strong>${billData.total_qty}</td>
+                        <td>B.No : ${billData.bill_no}</td>
+                        <td style="text-align:right;">Date : ${billData.date}</td>
                     </tr>
                     <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Total Amount:</strong>${billData.total_amount.toFixed(2)}</td>
+                        <td>To : ${billData.name}</td>
+                        <td style="text-align:right;">Time : ${billData.time}</td>
                     </tr>
                     <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Cash:</strong>${billData.cash.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Card:</strong>${billData.card.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Received:</strong>${billData.received.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Balance:</strong>${billData.balance.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Today Points:</strong>${billData.today_points.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                        <td style="text-align:left; padding:2px;"><strong>Total Points:</strong>${(billData.old_points + billData.today_points).toFixed(2)}</td>
+                        <td>  Mobile : ${billData.phone}</td>
                     </tr>
                     </table>
+                    <div class="line"></div>
 
-                        </body>
+                    <table>
+                    <tr>
+                        <td><strong>ITEM NAME</strong></td>
+                        <td><strong>QTY</strong></td>
+                        <td><strong>MRP</strong></td>
+                        <td><strong>RATE</strong></td>
+                        <td><strong>AMOUNT</strong></td>
+                    </tr>
+                    ${billData.items.map((item, idx) => `
+                        <tr>
+                        <td>${item.item_name}</td>
+                        <td>${item.qty}</td>
+                        <td>${item.mrsp.toFixed(2)}</td>
+                        <td>${item.sellingprice.toFixed(2)}</td>
+                        <td>${item.amount.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                    </table>
+
+                    <div class="line"></div>
+                    <table>
+                    <tr>
+                        <td>Qty : ${billData.total_qty}</td>
+                        <td style="text-align:right;">Total Amt : ${billData.total_amount.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Items : ${billData.items.length}</td>
+                        </tr>
+                    </table>
+
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td colspan="2">Net Amt : ${billData.total_amount.toFixed(2)}</td>
+                    </tr>
+                    </table>
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td colspan="2">Payment Mode - ${billData.payment_mode} ${billData.total_amount.toFixed(2)}</td>
+                    </tr>
+                    </table>
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td>Balance Amt : ${billData.balance.toFixed(2)}</td>
+                    </tr>
+                     </table>
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td>Total MRP : ${billData.total_mrsp.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Discount : ${(billData.total_mrsp - billData.total_amount).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Today Points : ${billData.today_points.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Points : ${(billData.old_points + billData.today_points).toFixed(2)}</td>
+                    </tr>
+                    </table>
+                    <div class="line"></div>
+                </body>
                 </html>
-            `;
+                `;
 
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
+                printWindow.document.write(html);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+            }
         }
-    }
 
-    alert("✅ Billing submitted successfully!");
-    gid('billingForm').submit();
-}
+        alert("✅ Billing submitted successfully!");
+        gid('billingForm').submit();
+
+        }
 
 // fetch data
 function getBillingInfo(items) {
     let total_qty = items.reduce((sum, i) => sum + Number(i.qty || 0), 0);
     let total_amount = items.reduce((sum, i) => sum + Number(i.amount || 0), 0);
 
+    let total_mrsp = items.reduce((sum, i) => sum + (Number(i.mrsp || 0) * Number(i.qty || 0)), 0);
+
     const name = firstNonEmptyEl(q('input[name="name"]'), gid('cust_name'), gid('name'));
     const phone = firstNonEmptyEl(q('input[name="cell"]'), gid('cust_cell'), gid('cell'));
     const address = firstNonEmptyEl(q('textarea[name="address"]'), gid('cust_address'), gid('address'));
 
+    const now = new Date(); // current date and time
+    const formattedDate = now.toLocaleDateString(); // e.g., 9/8/2025
+    const formattedTime = now.toLocaleTimeString();
+
+    let cash = Number(firstNonEmptyEl(q('input[name="cash_amount"]'), gid('cash_amount'))) || 0;
+    let card = Number(firstNonEmptyEl(q('input[name="card_amount"]'), gid('card_amount'))) || 0;
+
+    // 🔹 Payment Mode decide
+    let payment_mode = "Credit";
+    if (cash > 0 && card > 0) {
+        payment_mode = "Cash + Card";
+    } else if (cash > 0) {
+        payment_mode = "Cash";
+    } else if (card > 0) {
+        payment_mode = "Card";
+    }
+
     return {
         bill_no: firstNonEmptyEl(q('input[name="bill_no"]'), gid('bill_no')),
         date: firstNonEmptyEl(q('input[name="date"]'), gid('date')),
+        time: formattedTime, 
         name: name,
         phone: phone,
         customer_address: address,
@@ -1160,10 +1232,11 @@ function getBillingInfo(items) {
         total_amount: total_amount,
         cash: Number(firstNonEmptyEl(q('input[name="cash_amount"]'), gid('cash_amount'))) || 0,
         card: Number(firstNonEmptyEl(q('input[name="card_amount"]'), gid('card_amount'))) || 0,
-        received: Number(firstNonEmptyEl(q('input[name="received"]'), gid('received'))) || 0,
         balance: Number(firstNonEmptyEl(q('input[name="balance"]'), gid('balance'))) || 0,
         old_points: Number(gid('points')?.value || 0),
-        today_points: Number(gid('total_earned')?.value || 0)
+        today_points: Number(gid('total_earned')?.value || 0),
+        payment_mode: payment_mode ,
+        total_mrsp:total_mrsp
     };
 }
 

@@ -60,8 +60,10 @@
 
     .payment-dashboard th, 
     .payment-dashboard td {
-        padding: 10px;
+        padding: 6px 8px;
         text-align: center;
+        font-size: 15px;  
+        
     }
 
     .payment-dashboard thead th {
@@ -120,6 +122,11 @@
 .modal {
     z-index: 1050 !important;
 }   
+td {
+    white-space: nowrap;
+}
+
+
 </style>
 
 <div class="payment-dashboard">
@@ -146,9 +153,24 @@
                         <option value="Both Cash & Card"{% if payment_mode == 'Both Cash & Card' %}selected{% endif %}>Both Cash & Card</option>
                     </select>
                     <button type="submit">Filter</button>
+                     <a href="{% url 'payment_list' %}" 
+                   style="padding: 8px 16px; background-color: #dc3545; color: white; 
+                          border-radius: 4px; font-weight: 600; text-decoration: none;">
+                   Reset
+                </a>
                 </div>
             </div>
         </form>
+
+        <!-- Overall Summary Info Bar -->
+        <div style="padding:10px; margin-bottom:15px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:5px; font-weight:bold;">
+            Total Amount: ₹ {{ total_amount|floatformat:2 }} &nbsp; || &nbsp;
+            Cash: ₹ {{ total_cash|floatformat:2 }} &nbsp; || &nbsp;
+            Card: ₹ {{ total_card|floatformat:2 }} &nbsp; || &nbsp;
+            Paid: ₹ {{ total_paid|floatformat:2 }} &nbsp; || &nbsp;
+            Balance: ₹ {{ total_balance|floatformat:2 }}
+        </div>
+
     </div>
     <table>
         <thead>
@@ -161,8 +183,11 @@
                 <th>Cashier</th>
                 <th>Payment Mode</th>
                 <th>Total Amount</th>
+                <th>Discount</th>
+                <th>Cash Amount</th>
+                 <th>Card Amount</th>
                 <th>Amount Paid</th>
-                <th>Balance</th>
+                <th>Credit</th>
                 <th>Status</th>
                 <th>Action</th>
                 <th>Payments</th>
@@ -178,7 +203,23 @@
                 <td>{{ bill.date|date:"d-m-Y h:i A" }}</td>
                 <td>{{ bill.counter }}</td>
                 <td>{{ bill.bill_type }}</td>
-                <td>{{ bill.total_amount }}</td>
+                <td>{{ bill.display_total_amount }}</td>
+                <td>{{ bill.discount }}</td>
+                {% if bill.bill_type == "Both Cash & Card" %}
+                <td>{{ bill.cash_paid }}</td>
+                <td>{{ bill.card_paid }}</td>
+                    {% elif bill.bill_type == "Cash" %}
+                        <td>{{ bill.cash_paid }}</td>
+                        <td>0</td>
+                    {% elif bill.bill_type == "Card" %}
+                        <td>0</td>
+                        <td>{{ bill.card_paid }}</td>
+                    {% elif bill.bill_type == "Credit" %}
+                        <td>{{ bill.cash_paid }}</td>
+                        <td>{{ bill.card_paid }}</td>
+                    {% else %}
+                        <td colspan="2">-</td>
+                    {% endif %}
                 <td>{{ bill.total_received }}</td>
                 <td>
                     {% if bill.balance_amount > 0 %}
@@ -238,6 +279,7 @@
             <tr><td colspan="8">No billing records found.</td></tr>
             {% endfor %}
         </tbody>
+
     </table>
 </div>
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
