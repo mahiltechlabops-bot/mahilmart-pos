@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome | MahilMart POS</title>
+
+  <!-- Bootstrap & FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f4f6f9, #e2ecf3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .app-header {
+      background-color: #2e3b4e;
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .login-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.8s ease-in-out;
+      position: relative;
+    }
+
+    .logo-circle {
+      background-color: #2e3b4e;
+      color: white;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 20px;
+      animation: bounce 1.5s infinite ease-in-out;
+    }
+
+    .welcome-text {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .welcome-text h2 {
+      font-size: 2rem;
+      color: #2e3b4e;
+      margin-bottom: 8px;
+    }
+
+    .welcome-text p {
+      font-size: 1rem;
+      color: #555;
+    }
+
+    .login-form {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 420px;
+      animation: slideUp 0.8s ease;
+    }
+
+    .login-form h3 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2e3b4e;
+    }
+
+    .login-form label {
+      font-weight: 500;
+      margin-top: 10px;
+    }
+
+    .login-form input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
+    }
+
+    .checkbox-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .login-form button {
+      width: 100%;
+      padding: 12px;
+      background-color: #2e3b4e;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      transition: all 0.3s ease-in-out;
+    }
+
+    .login-form button:hover {
+      background-color: #1c2532;
+      transform: scale(1.02);
+    }
+
+    .error {
+      color: red;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .content-footer {
+      background-color: #2e3b4e;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+
+    a {
+      color: #2e3b4e;
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @media (max-width: 500px) {
+      .login-form {
+        padding: 20px;
+      }
+
+      .logo-circle {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+      }
+    }
+
+    .checkbox-container {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.checkbox-container label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.checkbox-container input[type="checkbox"] {
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #333;
+  display: inline-block;
+  position: relative;
+}
+
+.checkbox-container input[type="checkbox"] {
+  appearance: checkbox;
+}
+
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  MahilMart POS
+</header>
+
+<div class="login-container">
+  <div class="logo-circle">
+    <i class="fas fa-store"></i>
+  </div>
+
+  <div class="welcome-text">
+    <h2 id="greeting">Welcome</h2>
+  </div>
+
+  <div class="login-form">
+    <h3>Sign In</h3>
+    <form method="post">
+      {% csrf_token %}
+      <label for="username">Username</label>
+      <input type="text" name="username" id="username" required value="{{ username|default:'' }}">
+
+      <label for="password">Password</label>
+      <input type="password" name="password" id="password" required>
+
+      <div class="checkbox-container">
+        <label><input type="checkbox" onclick="togglePassword()"> Show Password</label>
+      </div>
+
+      <button type="submit">Login</button>
+
+      {% if error %}
+      <p class="error">{{ error }}</p>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<footer class="content-footer d-flex justify-content-between">
+  <div>MahilMart Pro v1.0.0</div>
+  <div>© 2025 SuperMart Solutions Inc.</div>
+</footer>
+
+<script>
+  function togglePassword() {
+    const pwd = document.getElementById("password");
+    pwd.type = pwd.type === "password" ? "text" : "password";
+  }
+
+  // Dynamic greeting
+  const greetingText = document.getElementById("greeting");
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    greetingText.innerText = "Good Morning ☀️";
+  } else if (hour < 15) {
+    greetingText.innerText = "Good Afternoon 🌤️";
+  } else {
+    greetingText.innerText = "Good Evening 🌙";
+  }
+</script>
+</body>
+</html>
