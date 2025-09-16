@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Daily Purchase Information{% endblock %}
+
+{% block content %}
+    <h2>Daily Purchase Information</h2>
+    <div class="mb-3 text-end">
+        <a href="{% url 'purchase_payment_list' %}" class="btn btn-secondary">
+            View Purchase Payment List
+        </a>
+        <a href="{% url 'daily_purchase_payment' %}" class="btn btn-secondary" style="background-color: #007bff; color: white;">Reset</a>
+        <a href="{% url 'purchase' %}" class="btn btn-secondary">Back</a>
+    </div>
+
+    <form id="purchaseForm" method="post" class="container mt-3">
+        {% csrf_token %}
+
+        <!-- Supplier -->
+        <div class="mb-3">
+            <label for="supplierName" class="form-label">Supplier Name:</label>
+            <select id="supplierName" name="supplierName" class="form-control" required>
+                <option value="">-- Select Supplier --</option>
+                {% for supplier in suppliers %}
+                    <option value="{{ supplier.id }}">
+                        {{ supplier.name }} ({{ supplier.supplier_id }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Invoice -->
+        <div class="mb-3">
+            <label for="invoice_number" class="form-label"><strong>Invoice No:</strong></label>
+            <input type="text" id="invoice_number" name="invoice_number" 
+                value="{{ invoice_number }}" class="form-control" disabled>
+        </div>
+    
+        <!-- Total Purchase Amount -->
+        <div class="mb-3">
+            <label for="totalPurchaseAmount" class="form-label">Total Purchase Amount:</label>
+            <input type="number" id="totalPurchaseAmount" name="totalPurchaseAmount" 
+                class="form-control" required oninput="calculate()">
+        </div>
+
+        <!-- Amount Paid -->
+        <div class="mb-3">
+            <label for="amountPaid" class="form-label">Current Paid Amount:</label>
+            <input type="number" id="amountPaid" name="amountPaid" 
+                class="form-control" required oninput="calculate()">
+        </div>
+
+        <!-- Balance -->
+        <div class="mb-3">
+            <label for="balance" class="form-label">Balance:</label>
+            <input type="number" id="balance" name="balance" 
+                class="form-control" readonly>
+        </div>
+
+        <!-- Hidden field to store existing balance -->
+        <input type="hidden" id="existingBalance" value="0">
+
+        <!-- Payment Mode -->
+        <div class="mb-3">
+            <label for="paymentMode" class="form-label">Payment Mode:</label>
+            <select id="paymentMode" name="paymentMode" class="form-control">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="credit">Credit</option>
+            </select>
+        </div>
+
+        <!-- Payment Rate -->
+        <div class="mb-3">
+            <label for="paymentRate" class="form-label">Payment Rate:</label>
+            <input type="text" id="paymentRate" name="paymentRate" 
+                class="form-control" readonly>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </form>
+
+    <script>
+    // Function to dynamically calculate balance and payment rate
+    function calculate() {
+        let total = parseFloat(document.getElementById("totalPurchaseAmount").value) || 0;
+        let currentPaid = parseFloat(document.getElementById("amountPaid").value) || 0;
+        let existingBalance = parseFloat(document.getElementById("existingBalance").value) || 0;
+
+        let balance;
+
+        if (existingBalance === 0 || existingBalance === total) {
+            // 🆕 New purchase: simply total - currentPaid
+            balance = total - currentPaid;
+        } else {
+            // 🏦 Existing purchase: reduce based on already paid
+            let alreadyPaid = total - existingBalance;
+            balance = total - (alreadyPaid + currentPaid);
+        }
+
+        document.getElementById("balance").value = balance.toFixed(2);
+
+        // Payment rate (overall paid / total * 100)
+        let paymentRate = 0;
+        if (total > 0) {
+            let overallPaid = total - balance;
+            paymentRate = (overallPaid / total) * 100;
+        }
+        document.getElementById("paymentRate").value = paymentRate.toFixed(2) + "%";
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const invoiceInput = document.getElementById("invoice_number");
+        const totalPurchaseField = document.getElementById("totalPurchaseAmount");        
+        const balanceField = document.getElementById("balance");
+
+        invoiceInput.addEventListener("blur", function() {
+            let invoiceNo = invoiceInput.value.trim();
+            if (invoiceNo) {
+                fetch(`/get-invoice-details/?invoice_no=${invoiceNo}`)
+                .then(response => response.json())
+                .then(data => {
+                    totalPurchaseField.value = data.total_purchase_amount;                 
+                    balanceField.value = data.balance;
+
+                    // Store existing balance for later calculation
+                    document.getElementById("existingBalance").value = data.balance;
+                });
+            } else {
+                // Reset fields if empty
+                totalPurchaseField.value = 0;             
+                balanceField.value = 0;
+                document.getElementById("existingBalance").value = 0;
+            }
+        });
+    });
+
+   document.getElementById("supplierName").addEventListener("change", function() {
+        let invoiceInput = document.getElementById("invoice_number");
+        if (this.value) {
+            invoiceInput.removeAttribute("disabled");  // enable
+        } else {
+            invoiceInput.setAttribute("disabled", true); // disable again
+            invoiceInput.value = ""; // clear invoice
+        }
+    });
+</script>
+{% endblock %}

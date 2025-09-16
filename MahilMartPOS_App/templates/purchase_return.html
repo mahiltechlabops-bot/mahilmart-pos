@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Purchase Return{% endblock %}
+
+{% block style %}
+<style>
+  .form-container {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 900px;
+    margin: 20px auto;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  }
+
+  .form-control {
+    width: 100%;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+
+  table th, table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+
+  .btn {
+    padding: 6px 10px;
+    margin-top: 5px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .btn-success { background-color: #28a745; color: white; }
+  .btn-primary { background-color: #007bff; color: white; }
+  .btn-danger { background-color: #dc3545; color: white; }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm" style="max-width: 1500px; margin: auto;">
+  <div class="form-container" style="padding: 1.5rem; background: white; border-radius: 0.5rem; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.1);">
+    <h2 style="margin-bottom: 1.25rem; font-size: 1.5rem;">Purchase Return</h2>
+
+    <form id="purchaseReturnForm" method="post">
+      {% csrf_token %}
+
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label for="vendor" style="display: block; margin-bottom: 0.375rem; font-weight: 500; font-size: 0.95rem;">Vendor</label>
+        <select id="vendor" name="vendor" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required>
+          <option value="">-- Select Vendor --</option>
+          {% for supplier in suppliers %}
+            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label for="invoice" style="display: block; margin-bottom: 0.375rem; font-weight: 500; font-size: 0.95rem;">Reference Invoice</label>
+        <input type="text" name="invoice" id="invoice" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label for="returnDate" style="display: block; margin-bottom: 0.375rem; font-weight: 500; font-size: 0.95rem;">Return Date</label>
+        <input type="date" name="returnDate" id="returnDate" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required>
+      </div>
+
+      <h4 style="margin-bottom: 0.875rem; font-size: 1.15rem;">Items to Return</h4>
+      <div class="table-responsive">
+        <table class="table table-bordered" id="itemsTable" style="margin-bottom: 1.25rem;">
+          <thead>
+            <tr>
+              <th style="padding: 0.75rem; font-size: 0.95rem;">Product Id</th>
+              <th style="padding: 0.75rem; font-size: 0.95rem;">Product</th>
+              <th style="padding: 0.75rem; font-size: 0.95rem;">Qty</th>
+              <th style="padding: 0.75rem; font-size: 0.95rem;">Unit Price</th>
+              <th style="padding: 0.75rem; font-size: 0.95rem;">Reason</th>
+              <th style="padding: 0.75rem; font-size: 0.95rem;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody">
+            <tr>
+              <td style="padding: 0.5rem;"><input type="text" name="product id[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required></td>
+              <td style="padding: 0.5rem;"><input type="text" name="product[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required></td>
+              <td style="padding: 0.5rem;"><input type="number" name="quantity[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" min="1" required></td>
+              <td style="padding: 0.5rem;"><input type="number" name="unitPrice[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" step="0.01" required></td>
+              <td style="padding: 0.5rem;">
+                <select name="reason[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required>
+                  <option value="damaged">Damaged</option>
+                  <option value="expired">Expired</option>
+                  <option value="wrong_item">Wrong Item</option>
+                  <option value="excess_stock">Excess Stock</option>
+                </select>
+              </td>
+              <td style="padding: 0.5rem; vertical-align: middle;">
+                <button type="button" class="btn btn-danger remove-btn" style="padding: 0.375rem 0.75rem; font-size: 0.95rem;">Remove</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <button type="button" class="btn btn-primary" id="addItemBtn" style="padding: 0.5rem 1rem; font-size: 0.95rem; margin-bottom: 1.25rem;">+ Add Item</button>
+
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label for="remarks" style="display: block; margin-bottom: 0.375rem; font-weight: 500; font-size: 0.95rem;">Remarks</label>
+        <textarea name="remarks" id="remarks" rows="3" class="form-control" style="padding: 0.5rem 0.75rem; font-size: 0.95rem;"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-success" style="padding: 0.5rem 1rem; font-size: 0.95rem; width: 100%;">Submit Return</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add item functionality
+    document.getElementById('addItemBtn').addEventListener('click', function() {
+      const tbody = document.getElementById('itemsBody');
+      const newRow = document.createElement('tr');
+      
+      newRow.innerHTML = `
+        <td style="padding: 0.5rem;"><input type="text" name="product[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required></td>
+        <td style="padding: 0.5rem;"><input type="number" name="quantity[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" min="1" required></td>
+        <td style="padding: 0.5rem;"><input type="number" name="unitPrice[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" step="0.01" required></td>
+        <td style="padding: 0.5rem;">
+          <select name="reason[]" class="form-control" style="padding: 0.5rem 0.75rem; height: auto; font-size: 0.95rem;" required>
+            <option value="damaged">Damaged</option>
+            <option value="expired">Expired</option>
+            <option value="wrong_item">Wrong Item</option>
+            <option value="excess_stock">Excess Stock</option>
+          </select>
+        </td>
+        <td style="padding: 0.5rem; vertical-align: middle;">
+          <button type="button" class="btn btn-danger remove-btn" style="padding: 0.375rem 0.75rem; font-size: 0.95rem;">Remove</button>
+        </td>
+      `;
+      
+      tbody.appendChild(newRow);
+    });
+
+    // Remove item functionality
+    document.getElementById('itemsBody').addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-btn')) {
+        if (document.querySelectorAll('#itemsBody tr').length > 1) {
+          e.target.closest('tr').remove();
+        } else {
+          alert('You must keep at least one item in the return.');
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

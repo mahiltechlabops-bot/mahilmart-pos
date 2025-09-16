@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier|default:"Add" }} Supplier{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>{{ supplier|default:"Add New" }} Supplier</h2>
+  <form method="POST">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Supplier ID</label>
+      <input type="text" name="supplier_id" class="form-control" required value="{{ supplier.supplier_id|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Supplier Name</label>
+      <input type="text" name="name" class="form-control" required value="{{ supplier.name|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Contact Person</label>
+      <input type="text" name="contact_person" class="form-control" value="{{ supplier.contact_person|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Phone</label>
+      <input type="tel" name="phone" class="form-control" pattern="[6-9]{1}[0-9]{9}" maxlength="10" required value="{{ supplier.phone|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" name="email" class="form-control" value="{{ supplier.email|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Address</label>
+      <textarea name="address" class="form-control" rows="3">{{ supplier.address|default:'' }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">GSTIN Number</label>
+      <input type="text" name="gst_number" class="form-control" value="{{ supplier.gst_number|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">FSSAI Number</label>
+      <input type="text" name="fssai_number" class="form-control" value="{{ supplier.fssai_number|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">PAN Number</label>
+      <input type="text" name="pan_number" class="form-control" value="{{ supplier.pan_number|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Credit Terms</label>
+      <input type="text" name="credit_terms" class="form-control" value="{{ supplier.credit_terms|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Opening Balance</label>
+      <input type="number" name="opening_balance" class="form-control" step="0.01" value="{{ supplier.opening_balance|default:0 }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Bank Name</label>
+      <input type="text" name="bank_name" class="form-control" value="{{ supplier.bank_name|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Account Number</label>
+      <input type="text" name="account_number" class="form-control" value="{{ supplier.account_number|default:'' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">IFSC Code</label>
+      <input type="text" name="ifsc_code" class="form-control" value="{{ supplier.ifsc_code|default:'' }}">
+    </div>
+
+   <div class="mb-3">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-control" required>
+        <option value="Active" selected>Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Notes</label>
+      <textarea name="notes" class="form-control" rows="3">{{ supplier.notes|default:'' }}</textarea>
+    </div>   
+
+    <button type="submit" class="btn btn-primary">Save Supplier</button>
+    <a href="{% url 'suppliers' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

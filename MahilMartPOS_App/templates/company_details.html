@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Company Details{% endblock %}
+
+{% block content %}
+<style>
+  .form-container {
+    max-width: 900px;
+    margin: auto;
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  }
+
+  h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: 600;
+  }
+
+  .form-section-title {
+    font-weight: bold;
+    font-size: 18px;
+    color: #2882e2;
+    margin-top: 30px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+  }
+
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  .form-group label {
+    margin-bottom: 0;
+    font-weight: 500;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+
+  .btn-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    gap: 10px;
+  }
+
+  .btn-custom {
+    flex: 1;
+    padding: 12px;
+    font-weight: bold;
+    border-radius: 6px;
+    border: none;
+  }
+
+  .btn-save { background-color: #0d0e0e; color: white; }
+  .btn-exit { background-color: #f58691; color: white; text-align: center; }
+</style>
+
+<div class="form-container">
+  <h2>Company Details</h2>
+  <form method="POST">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    {% for field in form %}
+      {% for error in field.errors %}
+      <div class="alert alert-danger">
+        {{ field.label }}: {{ error }}
+      </div>
+      {% endfor %}
+    {% endfor %}
+
+    <!-- Basic Info -->
+    <div class="form-section-title">Basic Company Information</div>
+    <div class="row">
+      <div class="col-md-6 form-group"><label>Company Name</label>{{ form.company_name }}</div>
+      <div class="col-md-6 form-group"><label>Print Name</label>{{ form.print_name }}</div>
+      <div class="col-md-6 form-group">
+        <label>Address</label>
+        <textarea name="address" id="id_address" class="form-control" rows="1" style="height: 38px; resize: none;">{{ form.address.value|default_if_none:"" }}</textarea>
+      </div>
+      <div class="col-md-6 form-group"><label>Pin Code</label>{{ form.pincode }}</div>
+      <div class="col-md-6 form-group"><label>State</label>{{ form.state }}</div>
+      <div class="col-md-6 form-group"><label>Country</label>{{ form.country }}</div>
+      <div class="col-md-6 form-group"><label>Phone</label>{{ form.phone }}</div>
+      <div class="col-md-6 form-group"><label>Mobile</label>{{ form.mobile }}</div>
+      <div class="col-md-6 form-group"><label>Email</label>{{ form.email }}</div>
+      <div class="col-md-6 form-group"><label>Website</label>{{ form.website }}</div>
+    </div>
+
+    <!-- Legal & Tax -->
+    <div class="form-section-title">Legal & Tax</div>
+    <div class="row">
+      <div class="col-md-6 form-group"><label>GSTIN/UIN</label>{{ form.gstin }}</div>
+      <div class="col-md-6 form-group"><label>GST Type</label>{{ form.gst_type }}</div>
+      <div class="col-md-6 form-group"><label>PAN No</label>{{ form.pan_no }}</div>
+      <div class="col-md-6 form-group"><label>TIN No</label>{{ form.tin_no }}</div>
+      <div class="col-md-6 form-group"><label>CST No</label>{{ form.cst_no }}</div>
+      <div class="col-md-6 form-group"><label>FSSAI No</label>{{ form.fssai_no }}</div>
+      <div class="col-md-6 form-group"><label>Trade License No</label>{{ form.trade_license_no }}</div>
+      <div class="col-md-6 form-group"><label>Year From</label>{{ form.year_from }}</div>
+      <div class="col-md-6 form-group"><label>Year To</label>{{ form.year_to }}</div>
+    </div>
+
+    <!-- Bank -->
+    <div class="form-section-title">Bank & Finance</div>
+    <div class="row">
+      <div class="col-md-6 form-group"><label>Bank Name</label>{{ form.bank_name }}</div>
+      <div class="col-md-6 form-group"><label>Account Number</label>{{ form.account_no }}</div>
+      <div class="col-md-6 form-group"><label>IFSC Code</label>{{ form.ifsc_code }}</div>
+      <div class="col-md-6 form-group"><label>UPI ID</label>{{ form.upi_id }}</div>
+      <div class="col-md-6 form-group"><label>Invoice Prefix</label>{{ form.invoice_prefix }}</div>
+      <div class="col-md-6 form-group"><label>Invoice Start Number</label>{{ form.invoice_start_num }}</div>
+      <div class="col-md-6 form-group"><label>Default Tax Rate</label>{{ form.default_tax_rate }}</div>
+    </div>
+
+    <!-- System -->
+    <div class="form-section-title">Security & System</div>
+    <div class="row">
+      <div class="col-md-6 form-group"><label>Admin Password</label>{{ form.admin_password }}</div>
+      <div class="col-md-6 form-group"><label>Daily Backup Path</label>{{ form.daily_backup_path }}</div>
+      <div class="col-md-6 form-group"><label>Confirm Password</label>{{ form.confirm_password }}</div>
+      <div class="col-md-6 form-group">
+        <div class="form-check mt-3">
+          <input class="form-check-input" type="checkbox" name="auto_backup" id="id_auto_backup" {% if form.auto_backup.value %}checked{% endif %}>
+          <label class="form-check-label" for="id_auto_backup">Auto Backup</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="force_password_change" id="id_force_password_change" {% if form.force_password_change.value %}checked{% endif %}>
+          <label class="form-check-label" for="id_force_password_change">Force Password Change</label>
+        </div>
+      </div>
+      <div class="col-md-6 form-group"><label>Auto Logout (mins)</label>{{ form.auto_logout_minutes }}</div>
+      <div class="col-md-6 form-group"><label>Default Printer</label>{{ form.printer_name }}</div>
+    </div>
+
+    <!-- Other Settings -->
+    <div class="form-section-title">Other Settings</div>
+    <div class="row">
+      <div class="col-md-6 form-group"><label>Opening Time</label>{{ form.opening_time }}</div>
+      <div class="col-md-6 form-group"><label>Closing Time</label>{{ form.closing_time }}</div>
+      <div class="col-md-6 form-group"><label for="id_is_sunday_open">Is Sunday Open</label><select name="is_sunday_open" class="form-control" id="id_is_sunday_open"><option value="Open">Open/Closed</option></select></div>
+      <div class="col-md-6 form-group"><label>Account Code</label>{{ form.account_code }}</div>
+      <div class="col-md-6 form-group"><label>Barcode Prefix</label>{{ form.barcode_prefix }}</div>
+      <div class="col-md-6 form-group"><label>Support Contact</label>{{ form.support_contact }}</div>
+      <div class="col-md-6 form-group"><label>Social Links</label>{{ form.social_links }}</div>
+    </div>
+
+    <div class="btn-group">
+        <button type="submit" name="action" value="save" class="btn btn-custom btn-save">Save</button>
+        <a href="{% url 'view_company_details' %}" class="btn btn-info no-hover-change" >Show Details</a>
+        <a href="{% url 'dashboard' %}" class="btn btn-custom btn-exit">Exit</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
+</script>
+{% endblock %}

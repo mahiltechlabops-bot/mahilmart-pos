@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Details{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+
+  <!-- Header with button -->
+  <div class="row mb-4 align-items-center">
+    <div class="col">
+      <h2 class="mb-0" style="color: #770b0b;"><i class="bi bi-people-fill"></i> Customer Details</h2>
+      <small class="text-muted">Manage all registered and billing-derived customers</small>
+    </div>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+    <!-- Labels (left side) -->
+   <div class="col-auto">
+      <span class="badge bg-primary shadow-lg px-4 py-3 fs-5">
+        Total Customers: {{ total_customers }}
+      </span>
+      <span class="badge bg-success shadow-lg px-4 py-3 fs-5">
+        Billing Customers: {{ total_billing_customers }}
+      </span>
+      <span class="badge bg-warning text-dark shadow-lg px-4 py-3 fs-5">
+        Manual Entry: {{ total_manual_customers }}
+      </span>
+    </div>
+
+    <!-- Add Customer Button (right side) -->
+    <div class="col-auto">
+      <a href="{% url 'add_customer' %}" class="btn btn-success shadow-sm">
+        <i class="bi bi-plus-circle"></i> Add Customer
+      </a>
+    </div>
+</div>
+
+  </div>
+
+<form method="get" id="filterForm" class="row g-2 mb-4">
+  <div class="col-auto">
+    <label class="form-label" style="color: #770b0b;">Start Date</label>
+    <input type="date" id="startDate" name="start" value="{{ start_date }}" class="form-control">
+  </div>
+  <div class="col-auto">
+    <label class="form-label" style="color: #770b0b">End Date</label>
+    <input type="date" id="endDate" name="end" value="{{ end_date }}" class="form-control">
+  </div>
+  <div class="col-auto">
+    <label class="form-label" style="color: #770b0b">Phone Number</label>
+    <input type="text" name="phone" value="{{ phone|default_if_none:'' }}" placeholder="Enter phone number" class="form-control">
+  </div>
+  <div class="col-auto align-self-end">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-filter"></i> Filter
+    </button>
+    <a href="{% url 'customers' %}" class="btn btn-secondary">
+      Reset
+    </a>
+  </div>
+</form>
+
+  <!-- Registered Customers -->
+  <div class="card shadow-sm mb-5">
+    <div class="card-header bg-primary text-white">
+      <strong>Customer Table Entries</strong>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>S.No.</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Email</th>
+            <th>Date Joined</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customer_entries %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ c.name }}</td>
+            <td>{{ c.cell }}</td>
+            <td>{{ c.address|default:"-" }}</td>
+            <td>{{ c.email|default:"-" }}</td>
+            <td>{{ c.date_joined|date:"Y-m-d" }}</td>
+            <td>             
+              <a href="{% url 'edit_customer' c.id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-square"></i> Edit
+              </button>
+            </td> 
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">
+              No customer records found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Billing Customers -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-secondary text-white">
+      <strong>Billing-Derived Customer Entries</strong>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>S.No.</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Email</th>
+            <th>Date Joined</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in billing_customers %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ b.name }}</td>
+            <td>{{ b.cell }}</td>
+            <td>{{ b.address|default:"-" }}</td>
+            <td>{{ b.email|default:"-" }}</td>
+            <td>{{ b.date_joined|date:"Y-m-d" }}</td>
+            <td>             
+              <a href="{% url 'edit_customer' b.id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-square"></i> Edit
+              </button>
+            </td>            
+           </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">
+              No billing records found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  document.getElementById("filterForm").addEventListener("submit", function (e) {
+    const start = document.getElementById("startDate").value;
+    const end = document.getElementById("endDate").value;
+
+    if (start && end && end < start) {
+      e.preventDefault();
+      alert("⚠️ End date must be greater than or equal to Start date.");
+    }
+  });
+
+   window.addEventListener("keydown", function(e) {
+    if (e.key === "F5") {
+      e.preventDefault();
+      window.location.href = "{% url 'customers' %}"; // reset on F5
+    }
+  });
+</script>
+{% endblock %}

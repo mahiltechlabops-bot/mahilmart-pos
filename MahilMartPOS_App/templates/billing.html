@@ -1,0 +1,1345 @@
+{% extends 'base.html' %}
+{% block title %}Sales Creation{% endblock %} 
+
+{% block style %}
+<style>
+    body {
+        background-color: #f0f4f8;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .sales-page {
+        padding: 15px;
+    }
+
+    .sales-page .main-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .sales-page .title {
+        text-align: center;
+        font-size: 26px;
+        color: #333;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    /* Compact form header */
+    .sales-page .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        background: #f9f9f9;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+
+    .sales-page .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sales-page .form-group label {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 3px;
+        color: #555;
+    }
+
+    .sales-page .form-group input,
+    .sales-page .form-group textarea,
+    .sales-page .form-group select {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+    /* Table Styling */
+    .sales-page .item-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #fff;
+        margin-bottom: 10px;
+    }
+
+    .sales-page .item-table th,
+    .sales-page .item-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+        font-size: 13px;
+    }
+
+    .sales-page .item-table th {
+        background-color: #e1f7f7;
+        font-weight: 600;
+    }
+
+    .sales-page .table-input {
+        width: 100%;
+        border: none;
+        padding: 5px;
+        background-color: transparent;
+        font-size: 13px;
+    }
+
+    /* Footer Controls */
+    .footer-controls {
+        background-color: #f5f9fa;
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .total-red {
+        color: #d9534f;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .total-blue {
+        color: #0275d8;
+        font-size: 16px;
+    }
+
+    button,
+    input[type="submit"],
+    input[type="button"] {
+        padding: 6px 14px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        background-color: #0275d8;
+        color: white;
+        transition: background 0.2s ease-in-out;
+        font-size: 14px;
+    }
+
+    button:hover {
+        background-color: #025aa5;
+    }
+
+    .delete-row-btn {
+        background-color: #d9534f;
+    }
+
+    .delete-row-btn:hover {
+        background-color: #c9302c;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr); /* 5 equal columns */
+        gap: 10px;
+        align-items: start;
+        grid-auto-rows: min-content; /* rows adjust height to content */
+    }
+
+    /* Place first 5 form groups in first row */
+    .form-grid .form-group:nth-child(-n+5) {
+        grid-row: 1;
+    }
+
+    /* Place the remaining form groups in second row */
+    .form-grid .form-group:nth-child(n+6) {
+        grid-row: 2;
+    }
+
+    /* Make inputs, selects, textareas fill their cells */
+    .form-grid .form-group input,
+    .form-grid .form-group select,
+    .form-grid .form-group textarea {
+        width: 85%;
+        padding: 6px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+    .suggestion-list {
+        position: absolute;
+        background: rgb(219, 212, 212);
+        border: 1px solid #571414;
+        z-index: 1000;
+        max-height: 150px;
+        overflow-y: auto;
+        width: 10%;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        }
+
+        .suggestion-list li {
+        padding: 6px 10px;
+        cursor: pointer;
+        }
+
+        .suggestion-list li:hover {
+        background: #f0f0f0;
+        }
+
+        #qty-box-container input#qty-total {
+        width: 40px;                
+        text-align: center;          
+        font-weight: bold;
+        font-size: 14px;
+        color: #111;                 
+        background-color: #f0f0f0; 
+        border: 1px solid #6cb60b;       
+        border-radius: 2px;           
+        padding: 2px 4px;            
+        box-shadow: 1px 1px 3px rgba(0,0,0,0.2); 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sales-page">
+<div class="main-container">
+    <div class="title" style="margin-top: -25px;">Sales Creation</div>
+    <form id="billingForm" method="POST" action="{% url 'billing' %}">
+
+        {% csrf_token %}       
+
+        <div class="form-grid">
+            <div class="form-group"><label>To :</label><input type="text" name="to" value="Cash Sales"></div>
+            <div class="form-group"><label>Bill No :</label><input type="text" name="bill_no" value="{{ bill_no }}" readonly></div>
+            <div class="form-group"><label>Date :</label><input type="text" name="date" value="{{ today_date }}" readonly></div>
+            <div class="form-group">
+                <label>Type :</label>
+                <select name="sale_type" style="padding:6px;">
+                    {% for type in bill_types %}
+                    <option value="{{ type.billtype }}">{{ type.billtype }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Payment mode :</label>
+                <select name="bill_type" style="padding:6px;">
+                    {% for mode in payment_modes %}
+                    <option value="{{ mode.mode_name }}">{{ mode.mode_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Counter :</label>
+                <select name="counter" style="padding:6px;">
+                    {% for count in counter %}
+                    <option value="{{ count.counter_name }}">{{ count.counter_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+                                   
+            <div class="form-group"><label>Phone : (default - 9876543210)</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
+            <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div> 
+            <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
+            
+            <div class="form-group"><label>Join Date :</label><input type="text" name="date_joined" id="date_joined" value="{{ today_date }}" readonly></div>            
+            <div id="nameModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background-color: rgba(0,0,0,0.4); justify-content:center; align-items:center; z-index:1000;">
+            
+            <div style="background-color:#fff; padding:20px; border-radius:8px; width:300px; text-align:center;">
+                <h3 style="margin-bottom:10px;">Enter the Name</h3>
+                <input type="text" id="modalNameInput"  name="name" placeholder="Type name here" style="width:90%; padding:8px;">
+                <br><br>
+                <button onclick="submitName()" style="padding:8px 20px;">OK</button>
+            </div>
+            </div>                               
+        </div>
+
+        <!-- Item Table -->
+        <table class="item-table">
+            <thead>
+                <tr style="height: 25px;">
+                    <th style="padding: 2px;">Sno</th>
+                    <th style="padding: 2px;">Code</th>
+                    <th style="padding: 2px;">Item Name</th>
+                    <th style="padding: 2px;">Unit</th>
+                    <th style="padding: 2px;">Qty</th>
+                    <th style="padding: 2px;">MRP</th>
+                    <th style="padding: 2px;">Sellprice</th>
+                    <th style="padding: 2px;">Amount</th>
+                    <th style="padding: 2px;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="itemTableBody">
+                <tr style="height: 25px;">
+                    <td style="padding: 2px;"><input type="number" name="sno" class="table-input" readonly></td>
+                    <td style="padding: 2px;"><input type="text" name="code" class="table-input"></td>
+                    <td style="padding: 2px;"><input type="text" name="item_name" class="table-input"></td>
+                    <td style="padding: 2px;"><input type="text" name="unit" class="table-input"></td>
+                    <td style="padding: 2px;"><input type="number" name="qty" class="table-input" step="any"></td>
+                    <td style="padding: 2px;"><input type="number" name="mrsp" class="table-input" readonly></td>
+                    <td style="padding: 2px;"><input type="number" name="sellingprice" class="table-input" readonly></td>
+                    <td style="padding: 2px;"><input type="text" class="table-input amount-output" value="0.00" readonly></td>
+                    <td style="padding: 2px;"><button type="button" class="delete-row-btn">Delete</button></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="text-align: left; margin: 10px;">
+            <button type="button" id="addRowBtn">+ Add Item</button>
+        </div>
+
+        <input type="hidden" name="item_data" id="itemDataField">
+
+        <div class="footer-controls" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 15px; border-top: 2px solid #ccc;">
+
+    <div class="buttons" style="display: flex; gap: 10px;">
+        <button type="button" onclick="submitAsQuotation()" tabindex="-1">Quotation</button>
+        <button type="button" onclick="location.href='{% url 'order_list' %}'" tabindex="-1">
+        Order
+        </button>
+
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 18px; font-weight: bold;">
+
+        <div id="qty-box-container">
+            Qty: <input type="text" id="qty-total" value="0" readonly>
+        </div>
+
+       <div id="discount-box-container">
+        Discount: <input type="number" id="discount" name="discount" style="width: 40px;" min="0" max="100"> %
+    </div>
+        <span class="total-red" style="font-size: 26px; color: red;">0.00</span> 
+
+        <label>Received:</label>
+        <input type="number" step="0.01" name="received" tabindex="-1" readonly 
+            style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#d4f8d4; border:2px solid #3cb043; color:#1a4314;">
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div>
+            <label>Cash:</label>
+            <input type="number" step="0.01" name="cash_amount" min="0"
+                oninput="if(this.value < 0) this.value = 0;"
+                style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#e6f7ff; border:2px solid #3399ff; color:#003366;">
+        </div>
+        <div>
+            <label>Card:</label>
+            <input type="number" step="0.01" name="card_amount" min="0"
+                oninput="if(this.value < 0) this.value = 0;"
+                style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#fff0f5; border:2px solid #cc3366; color:#660033;">
+        </div>
+    </div>
+
+        <label>Balance:</label>
+        <input type="number" step="0.01" name="balance" tabindex="-1" readonly
+            style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#ffe4b3; border:2px solid #e69500; color:#663d00;">
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; font-size:16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="points">Total Points:</label>
+            <input type="text" id="points" name="points" tabindex="-1" readonly style="width:100px; text-align:center;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="total_earned">Today Points:</label>
+            <input type="text" id="total_earned" name="total_earned" tabindex="-1" readonly style="width:100px; text-align:center;">
+        </div>
+    </div>
+
+   <div class="buttons" 
+     style="display: flex; justify-content: flex-end; gap: 10px; width: 100%; margin-top: 10px;">
+    <button type="button" id="saveBtn" onclick="submitBilling()">Save</button>
+    <button type="button" onclick="location.reload()">Reset</button>   
+</div>
+
+</div>
+
+    <input type="hidden" id="company_name" value="{{ company.company_name }}">
+    <input type="hidden" id="company_address" value="{{ company.address }}">
+    <input type="hidden" id="company_gstin" value="{{ company.gstin }}">
+    <input type="hidden" id="company_phone" value="{{ company.phone }}">
+    <input type="hidden" id="company_website" value="{{ company.website }}">
+
+    </form>
+</div>
+</div>
+{% endblock %}
+
+{% if messages %}
+    {% for message in messages %}
+        <script>
+            alert("{{ message }}");
+        </script>
+    {% endfor %}
+{% endif %}
+
+{% block extra_js %}
+<script>
+
+    // Global variables
+    const itemTableBody = document.getElementById('itemTableBody');
+    let prevRow = null; // Track previous row for delete operation
+
+    // Main initialization when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const cellInput = document.getElementById('cell');
+        const nameInput = document.getElementById('name');
+        const modal = document.getElementById('nameModal');
+        const modalNameInput = document.getElementById('modalNameInput');
+        const addressInput = document.getElementById('address');
+        const pointsInput = document.getElementById('points');
+        const totalEarnedInput = document.getElementById('total_earned');
+
+        // Handle customer autofill based on cell number
+        cellInput.addEventListener('blur', function () {
+        const phone = cellInput.value.trim();
+
+        // Only allow exactly 10 digits
+        if (!/^\d{10}$/.test(phone)) {            
+            cellInput.focus();
+            return;
+        }
+
+        // Now safe to send request to backend
+        fetch(`?phone=${encodeURIComponent(phone)}`, {
+            method: "GET",
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(response => response.json())
+        .then(data => {            
+            if (data.name) {
+                nameInput.value = data.name;
+                addressInput.value = data.customer_address || ''; 
+                pointsInput.value = data.points || 0;                        
+                const joinDateInput = document.getElementById('date_joined');
+                joinDateInput.value = data.date_joined || new Date().toISOString().split('T')[0];
+                joinDateInput.readOnly = !!data.date_joined;
+            } else {
+                modal.style.display = 'flex';
+                modalNameInput.value = '';
+                modalNameInput.focus();
+            }
+        });
+    });
+
+        // Initialize table and calculations
+        initializeTable();
+    });
+
+    // Validate form fields
+    function validateForm() {
+        const requiredFields = [
+            {id: 'name', name: 'Customer Name'},
+            {id: 'cell', name: 'Phone Number'}          
+        ];
+
+        for (const field of requiredFields) {
+            const element = document.getElementById(field.id);
+            if (!element || !element.value.trim()) {
+                alert(`${field.name} is required`);
+                element?.focus();
+                return false;
+            }
+        }
+        return true;
+    }
+
+  function validateAllRows() {
+    const rows = document.querySelectorAll('#itemTableBody tr');
+
+    if (rows.length === 0) {
+        alert("Please add at least one item row before submitting.");
+        return false;
+    }
+
+    for (let index = 0; index < rows.length; index++) {
+        const row = rows[index];
+
+        const requiredFields = [
+            { name: "code", label: "Code" },
+            { name: "item_name", label: "Item Name" },
+            { name: "unit", label: "Unit" },
+            { name: "qty", label: "Qty" },
+            { name: "mrsp", label: "MRP" },
+            { name: "sellingprice", label: "Sell Price" },
+            { name: "amount", label: "Amount", selector: ".amount-output" }
+        ];
+
+        for (const field of requiredFields) {
+            const input = field.selector
+                ? row.querySelector(field.selector)
+                : row.querySelector(`input[name="${field.name}"]`);
+
+            const value = input?.value?.trim() || "";
+
+            const isNumeric = ["qty", "mrsp", "sellingprice", "amount"].includes(field.name);
+            const isValid = isNumeric ? parseFloat(value) > 0 : value !== "";
+
+            if (!isValid) {
+                alert(`Row ${index + 1}: "${field.label}" is required and must be greater than 0.`);
+                input?.focus();
+                input?.classList.add("input-error");
+                return false;
+            } else {
+                input?.classList.remove("input-error");
+            }
+        }
+    }
+
+    return true;
+}
+
+    // Collect item data from table
+    function collectItemData() {
+        const rows = document.querySelectorAll('#itemTableBody tr');
+        const items = [];
+
+        rows.forEach(row => {
+            const item = {
+                sno: row.querySelector('input[name="sno"]')?.value || "",
+                code: row.querySelector('input[name="code"]')?.value || "",
+                item_name: row.querySelector('input[name="item_name"]')?.value || "",
+                unit: row.querySelector('input[name="unit"]')?.value || "",
+                qty: parseFloat(row.querySelector('input[name="qty"]')?.value) || 0,
+                mrsp: parseFloat(row.querySelector('input[name="mrsp"]')?.value) || 0,
+                sellingprice: parseFloat(row.querySelector('input[name="sellingprice"]')?.value) || 0,
+                amount: parseFloat(row.querySelector('.amount-output')?.value) || 0
+            };
+            items.push(item);
+        });
+
+        document.getElementById('itemDataField').value = JSON.stringify(items);
+        return items;
+    }
+
+    // Modal submit action
+    function submitName() {
+        const enteredName = document.getElementById('modalNameInput').value.trim();
+        if (enteredName !== '') {
+            document.getElementById('name').value = enteredName;
+            document.getElementById('nameModal').style.display = 'none';
+        }
+    }
+
+    // Initialize table functionality
+    function initializeTable() {
+        const addRowBtn = document.getElementById('addRowBtn');
+        const receivedInput = document.querySelector('input[name="received"]');
+        const balanceInput = document.querySelector('input[name="balance"]');
+        const totalText = document.querySelector('.total-red');
+        const itemCountDisplay = document.getElementById('item-count');
+        const qtyTotal = document.getElementById('qty-total');
+        const totalEarnedInput = document.getElementById('total_earned');
+
+         function updateCalculations() {
+    const rows = itemTableBody.querySelectorAll('tr');
+    let totalQty = 0;
+    let totalAmount = 0;
+
+    rows.forEach(row => {
+        const qty = parseFloat(row.querySelector('input[name="qty"]')?.value || 0);
+        const price = parseFloat(row.querySelector('input[name="sellingprice"]')?.value || 0);
+        const amount = qty * price;
+
+        const amountOutput = row.querySelector('.amount-output');
+        if (amountOutput) amountOutput.value = amount.toFixed(2);
+
+        totalQty += qty;
+        totalAmount += amount;
+    });
+    
+    const discountInput = document.getElementById('discount');
+    const discountPercent = parseFloat(discountInput?.value || 0);
+    const totalAfterDiscount = totalAmount - (totalAmount * discountPercent / 100);
+
+    // Update total displays
+    const qtyInput = document.getElementById('qty-total');
+    if (qtyInput) qtyInput.value = totalQty;  // <-- use .value for input
+
+    const totalRed = document.querySelector('.total-red');
+    if (totalRed) totalRed.textContent = totalAfterDiscount.toFixed(2); 
+
+    // Update received/balance if you have cash/card inputs
+    const cash = parseFloat(document.querySelector('input[name="cash_amount"]').value || 0);
+    const card = parseFloat(document.querySelector('input[name="card_amount"]').value || 0);
+    const received = cash + card;
+    let balance = totalAfterDiscount - received; // <-- subtract received from discounted total
+    // if (balance < 0) balance = 0;
+
+    const receivedInput = document.querySelector('input[name="received"]');
+    const balanceInput = document.querySelector('input[name="balance"]');
+    if (receivedInput) receivedInput.value = received.toFixed(2);
+    if (balanceInput) balanceInput.value = balance.toFixed(2);
+
+    // Points calculation      
+    const amountForOnePoint = {{ amount_for_one_point|floatformat:2 }};
+    const totalEarnedInput = document.querySelector('input[name="total_earned"]');
+    if (totalEarnedInput) {
+        totalEarnedInput.value = (totalAfterDiscount / amountForOnePoint).toFixed(2);
+    }
+}
+
+document.getElementById('discount').addEventListener('input', updateCalculations);
+
+
+
+// trigger calculation when user types in cash or card
+document.querySelector('input[name="cash_amount"]').addEventListener('input', updateCalculations);
+document.querySelector('input[name="card_amount"]').addEventListener('input', updateCalculations);
+
+// also trigger when items change
+receivedInput.addEventListener('input', updateCalculations);
+
+        // Add input listeners to a row
+        function attachInputListeners(row) {
+            const qtyInput = row.querySelector('input[name="qty"]');
+            const sellingInput = row.querySelector('input[name="sellingprice"]');
+
+            if (qtyInput) qtyInput.addEventListener('input', updateCalculations);
+            if (sellingInput) sellingInput.addEventListener('input', updateCalculations);
+        }
+
+        // Add delete listener to a row
+        function attachDeleteListener(row) {
+            const deleteBtn = row.querySelector('.delete-row-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    const totalRows = itemTableBody.querySelectorAll('tr').length;
+                    if (totalRows <= 1) {
+                        alert("At least one row must be present.");
+                        return;
+                    }
+
+                    prevRow = row.previousElementSibling || row.nextElementSibling;
+                    row.remove();
+                    updateSerialNumbers();
+                    updateCalculations();
+
+                    if (prevRow) {
+                        const codeInput = prevRow.querySelector('input[name="code"]');
+                        if (codeInput) codeInput.focus();
+                    }
+                });
+            }
+        }
+
+        function attachKeyboardFlow(row) {
+    const codeInput = row.querySelector('input[name="code"]');
+    const nameInput = row.querySelector('input[name="item_name"]');
+    const qtyInput = row.querySelector('input[name="qty"]');
+    const addRowBtn = document.getElementById("addRowBtn");
+
+    // Code → Qty or Item Name
+    if (codeInput) {
+        codeInput.addEventListener("keydown", function (e) {
+            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                e.preventDefault();
+                if (codeInput.value.trim() !== "") {
+                    qtyInput.focus();
+                } else {
+                    nameInput.focus();
+                }
+            }
+        });
+    }
+
+    // Item Name → Qty
+    if (nameInput && qtyInput) {
+        nameInput.addEventListener("keydown", function (e) {
+            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                e.preventDefault();
+                qtyInput.focus();
+            }
+        });
+    }
+
+    // Qty → Add Item button
+    if (qtyInput && addRowBtn) {
+        qtyInput.addEventListener("keydown", function (e) {
+            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                e.preventDefault();
+                addRowBtn.focus();
+            }
+        });
+    }
+}
+
+// Attach listener to Add Item button only once
+document.getElementById("addRowBtn").addEventListener("keydown", function (e) {
+    if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+        e.preventDefault();
+        addNewRow(true); // silent row add
+
+        // Focus new row's code input
+        const rows = document.querySelectorAll("#itemTableBody tr");
+        const lastRow = rows[rows.length - 1];
+        const newCodeInput = lastRow?.querySelector('input[name="code"]');
+        if (newCodeInput) newCodeInput.focus();
+    }
+});
+
+
+
+     // Add new row to the table
+    async function addNewRow() {
+    const lastRow = itemTableBody.querySelector('tr:last-child');
+    const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
+    let isValid = true;
+
+    // Validate required fields
+    requiredFields.forEach(field => {
+        const input = lastRow.querySelector(`input[name="${field}"]`);
+        if (!input || !input.value.trim()) {
+            input?.classList.add('input-error');
+            isValid = false;
+        } else {
+            input.classList.remove('input-error');
+        }
+    });
+
+    if (!isValid) {
+        alert("Please fill all required fields (Code, Item Name, Qty, Selling Price) before adding a new item.");
+        lastRow.querySelector('.input-error')?.focus();
+        return;
+    }
+
+    const code = lastRow.querySelector('input[name="code"]').value.trim();
+    const itemName = lastRow.querySelector('input[name="item_name"]').value.trim();
+    const unit = lastRow.querySelector('input[name="unit"]').value.trim();
+    const qty = parseFloat(lastRow.querySelector('input[name="qty"]').value || 0);
+    const sellPrice = parseFloat(lastRow.querySelector('input[name="sellingprice"]').value || 0);
+
+    // Check for duplicates
+    const rows = itemTableBody.querySelectorAll('tr');
+    for (let row of rows) {
+        if (row === lastRow) continue;
+
+        const rowCode = row.querySelector('input[name="code"]')?.value.trim();
+        const rowItemName = row.querySelector('input[name="item_name"]')?.value.trim();
+        const rowUnit = row.querySelector('input[name="unit"]')?.value.trim();
+
+        if (rowCode === code && rowItemName === itemName && rowUnit === unit) {
+            const existingQtyInput = row.querySelector('input[name="qty"]');
+            const existingQty = parseFloat(existingQtyInput.value || 0);
+            const newQty = existingQty + qty; // Append first
+
+            try {
+                const response = await fetch(`/ajax/get-item-info/?code=${encodeURIComponent(code)}`);
+                if (!response.ok) throw new Error("Failed to fetch available quantity");
+
+                const data = await response.json();
+                const availableQty = parseFloat(data.total_available) || 0;
+
+                if (newQty > availableQty) {
+                    alert(`⚠️ Only ${availableQty} units available. You tried to add ${newQty}.`);
+                    lastRow.querySelector('input[name="qty"]').focus();
+                    return;
+                }
+
+                // If valid, update merged quantity
+                existingQtyInput.value = newQty;
+                row.querySelector('.amount-output').value = (newQty * sellPrice).toFixed(2);
+
+                // Clear last row
+                lastRow.remove();
+                lastRow.querySelectorAll('input').forEach(input => {
+                    if (input.type === 'number' || input.type === 'text') {
+                        input.value = '';
+                    }
+                });
+                lastRow.querySelector('.amount-output').value = '0.00';
+                lastRow.querySelector('input[name="code"]').focus();
+                updateSerialNumbers();
+                updateCalculations();
+                return;
+
+            } catch (error) {
+                console.error("Error fetching available quantity:", error);
+                alert("Error checking available quantity. Please try again.");
+                return;
+            }
+        }
+    }
+
+    // If no duplicate found, create a new row
+    const newRow = document.createElement('tr');
+    newRow.style.height = "25px";
+    newRow.innerHTML = `
+        <td style="padding:2px;"><input type="number" name="sno" class="table-input" readonly></td>
+        <td style="padding:2px;"><input type="text" name="code" class="table-input"></td>
+        <td style="padding:2px;"><input type="text" name="item_name" class="table-input"></td>
+        <td style="padding:2px;"><input type="text" name="unit" class="table-input"></td>
+        <td style="padding:2px;"><input type="number" name="qty" class="table-input" value="1"></td>
+        <td style="padding:2px;"><input type="number" name="mrsp" class="table-input" readonly></td>
+        <td style="padding:2px;"><input type="number" name="sellingprice" class="table-input" readonly></td>
+        <td style="padding:2px;"><input type="text" class="table-input amount-output" value="0.00" readonly></td>
+        <td style="padding:2px;"><button type="button" class="delete-row-btn">Delete</button></td>
+    `;
+
+    itemTableBody.appendChild(newRow);
+    attachInputListeners(newRow);
+    attachDeleteListener(newRow);
+    attachKeyboardFlow(newRow);   
+    attachAutoFill(newRow);
+    updateSerialNumbers();
+    updateCalculations();
+
+    newRow.querySelector('input[name="code"]').focus();
+}
+
+function resetRowInputs(row) {
+    row.querySelectorAll('input').forEach(input => {
+        if (input.name === 'sno' || input.classList.contains('amount-output')) {
+            input.value = input.classList.contains('amount-output') ? '0.00' : '';
+        } else {
+            input.value = '';
+        }
+    });
+}
+
+        // Update serial numbers in the table
+        function updateSerialNumbers() {
+            const rows = itemTableBody.querySelectorAll('tr');
+            rows.forEach((row, index) => {
+                const snoInput = row.querySelector('input[name="sno"]');
+                if (snoInput) {
+                    snoInput.value = index + 1;
+                }
+            });
+        }
+
+  function attachAutoFill(row) {
+    const codeInput = row.querySelector('input[name="code"]');
+    const nameInput = row.querySelector('input[name="item_name"]');
+    const unitInput = row.querySelector('input[name="unit"]');
+    const mrspInput = row.querySelector('input[name="mrsp"]');
+    const priceInput = row.querySelector('input[name="sellingprice"]');
+    const quantityInput = row.querySelector('input[name="qty"]');
+    const availableInput = row.querySelector('input[name="available"]');
+    const batchNoInput = row.querySelector('input[name="batch_no"]');
+
+    function fetchItemInfo(field, value) {
+        if (!value.trim()) return;
+        const url = `/ajax/get-item-info/?${field}=${encodeURIComponent(value.trim())}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("Item not found!");
+                    codeInput.value = '';
+                    nameInput.value = '';
+                    codeInput.focus();
+                    return;
+                }
+
+                if (data.item_code) codeInput.value = data.item_code;
+                if (data.item_name) nameInput.value = data.item_name;
+                if (data.unit) unitInput.value = data.unit;
+
+                const batchList = data.batch_details || [];
+                const firstBatch = batchList[0] || {};
+
+                const batchQty = parseFloat(firstBatch.available_qty || 0);
+                const batchNo = firstBatch.batch_no || '';
+
+                if (mrspInput) mrspInput.value = firstBatch.mrp ?? '';
+                if (priceInput) priceInput.value = firstBatch.split_sale_price ?? '';
+                if (availableInput) availableInput.value = parseFloat(data.total_available || 0).toFixed(2);
+                if (batchNoInput) batchNoInput.value = batchNo;
+
+                if (batchQty <= 0) {
+                    alert(`⚠️ Batch ${batchNo} has no stock available.`);
+
+                    // Assuming quantityInput is the quantity input element in the current row
+                    const row = quantityInput.closest('tr');  // get the row containing the input
+
+                    // Clear all inputs in this row (optional: or clear just the ones you want)
+                    row.querySelectorAll('input').forEach(input => input.value = '');
+
+                    // Focus the "code" input in this row
+                    const codeInput = row.querySelector('input[name="code"]');
+                    if (codeInput) {
+                        codeInput.focus();
+                    }
+                    updateSerialNumbers();
+                    return;
+                }
+
+                if (data.low_stock_warning) {
+                    alert(data.warning_message);
+                }
+
+                // Enforce strict batch-wise limit
+                const validateQty = () => {
+                    const enteredQty = parseFloat(quantityInput.value || 0);
+                    if (enteredQty > batchQty) {
+                        alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}. Please enter a lower quantity.`);
+                        quantityInput.value = '';
+                        quantityInput.focus();
+                        return false;
+                    }
+                    return true;
+                };
+
+                quantityInput.removeEventListener('_strictQtyCheck', quantityInput._strictQtyCheckListener);
+
+                const onQtyChange = () => {
+                    validateQty();
+                    updateCalculations();
+                };
+
+                quantityInput._strictQtyCheckListener = onQtyChange;
+                quantityInput.addEventListener('change', onQtyChange);
+                quantityInput.addEventListener('blur', onQtyChange);
+
+                quantityInput.addEventListener('keydown', function (e) {
+                    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                     if (
+                            (e.key >= '0' && e.key <= '9') || 
+                            allowedKeys.includes(e.key)
+                        ) {
+                            return;
+                        }
+
+                    const preview = quantityInput.value + e.key;
+                    const enteredQty = parseFloat(preview);
+                    if (!isNaN(enteredQty) && enteredQty > batchQty) {
+                        e.preventDefault();
+                        setTimeout(() => {
+                            alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}.`);
+                            quantityInput.value = '';
+                            quantityInput.focus();
+                        }, 10);
+                    }
+                });
+
+                updateCalculations();
+            })
+            .catch(err => {
+                console.error('Item fetch error:', err);
+            });
+    }
+
+    if (codeInput) {
+        codeInput.addEventListener('blur', () => {
+            fetchItemInfo('code', codeInput.value);
+        });
+    }
+
+    if (nameInput) {
+        nameInput.addEventListener('input', () => {
+            const value = nameInput.value.trim();
+            if (value.length < 2) return; // wait until 2+ chars
+
+            fetch(`/ajax/get-itemname-info/?q=${encodeURIComponent(value)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.suggestions) {
+                        let list = document.createElement('ul');
+                        list.className = "suggestion-list";
+
+                        data.suggestions.forEach(s => {
+                            let li = document.createElement('li');
+                            li.textContent = `${s.item_name} (${s.item_code})`;
+                            li.addEventListener('click', () => {
+                                // Fill inputs
+                                codeInput.value = s.item_code;
+                                nameInput.value = s.item_name;
+                                unitInput.value = s.unit;
+
+                                // Fetch full inventory details
+                                fetchItemInfo('code', s.item_code);
+
+                                list.remove();
+                            });
+                            list.appendChild(li);
+                        });
+
+                        // Replace old dropdown if exists
+                        const oldList = nameInput.parentNode.querySelector('.suggestion-list');
+                        if (oldList) oldList.remove();
+                        nameInput.parentNode.appendChild(list);
+                    }
+                });
+        });
+    }
+}
+
+        // Event listeners
+        addRowBtn.addEventListener('click', addNewRow);
+        receivedInput.addEventListener('input', updateCalculations);
+
+        // Initialize first row
+        const initialRow = itemTableBody.querySelector('tr');
+        if (initialRow) {
+            attachInputListeners(initialRow);
+            attachDeleteListener(initialRow);
+            attachKeyboardFlow(initialRow);   
+            attachAutoFill(initialRow);
+            updateSerialNumbers();
+            updateCalculations();
+        }
+    }
+
+        document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('billingForm');
+        const saveBtn = document.getElementById('saveBtn');
+
+        // Prevent all form submissions from Enter or default browser behavior
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            submitBilling();
+        });
+
+        // Optional: attach click manually
+        // saveBtn.addEventListener('click', function (e) {
+        //     e.preventDefault();
+        //     submitBilling();
+        // });
+    });
+    
+// small helpers
+function q(sel){ return document.querySelector(sel); }
+function gid(id){ return document.getElementById(id); }
+function firstNonEmptyEl(...els){
+  for (const el of els){
+    if (el && typeof el.value !== 'undefined'){
+      const v = String(el.value).trim();
+      if (v) return v;
+    }
+  }
+  return '';
+}
+
+function submitBilling() {
+    if (!validateForm()) return;
+    if (!validateAllRows()) return;
+
+    const items = collectItemData();
+
+    let balance = parseFloat(q('input[name="balance"]').value) || 0;
+    let cash = parseFloat(q('input[name="cash_amount"]').value) || 0;
+    let card = parseFloat(q('input[name="card_amount"]').value) || 0;
+    let billType = q('select[name="bill_type"]').value.trim().toLowerCase();
+
+    if (balance > 0) {
+        if (billType !== "credit") {
+            alert("⚠ Remaining balance detected! Bill Type must be 'Credit'.");
+            return;
+        }
+    } else {
+        if (cash > 0 && card === 0 && billType !== "cash") {
+            alert("⚠ Cash amount entered! Bill Type must be 'Cash'.");
+            return;
+        }
+        if (card > 0 && cash === 0 && billType !== "card") {
+            alert("⚠ Card amount entered! Bill Type must be 'Card'.");
+            return;
+        }
+        if (cash > 0 && card > 0 && billType !== "both cash & card") {
+            alert("⚠ Cash and Card entered together! Bill Type must be 'Both Cash & Card'.");
+            return;
+        }
+        if (cash === 0 && card === 0 && billType !== "credit") {
+            alert("⚠ No payment entered! Bill Type must be 'Credit'.");
+            return;
+        }
+    }
+        let printBill = confirm("Do you want to print the bill before saving?");
+        if (printBill) {
+            const billData = getBillingInfo(items);
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
+
+            if (printWindow) {
+
+             
+                let companyName = gid("company_name").value;
+                let companyAddress = gid("company_address").value;
+                let companyGstin = gid("company_gstin").value;
+                let companyPhone = gid("company_phone").value;
+                let companyWebsite = gid("company_website").value;
+
+                let html = `
+                <html>
+                <head>
+                <title>Bill Preview</title>
+                <style>
+                    @media print {
+                    @page {
+                    size: 79mm auto; 
+                    margin: 0;
+                    }
+                    body {
+                    width: 79mm; 
+                    }
+                    }
+                    body { 
+                    font-family: monospace; 
+                    font-size: 12px; 
+                    }
+                    h2 { 
+                    text-align: center; 
+                    margin: 0; 
+                    white-space: pre-line; 
+                    }
+                    table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 5px; 
+                    }
+                    td { 
+                    padding: 2px; 
+                    }
+                    .line { 
+                    border-top: 1px dashed #000; 
+                    margin: 4px 0; 
+                    }
+                </style>
+                </head>
+                <body>
+                  
+                    <h2>
+                            ${companyName}
+                            ${companyAddress}
+                            GSTIN : ${companyGstin}
+                            Phone : ${companyPhone}
+                            Website : ${companyWebsite}
+                        </h2>
+                        
+                        <div class="line"></div>
+                    <table>
+                    <tr>
+                        <td>B.No : ${billData.bill_no}</td>
+                        <td style="text-align:right;">Date : ${billData.date}</td>
+                    </tr>
+                    <tr>
+                        <td>To : ${billData.name}</td>
+                        <td style="text-align:right;">Time : ${billData.time}</td>
+                    </tr>
+                    <tr>
+                        <td>  Mobile : ${billData.phone}</td>
+                    </tr>
+                    </table>
+                    <div class="line"></div>
+
+                    <table>
+                    <tr>
+                        <td><strong>ITEM NAME</strong></td>
+                        <td><strong>QTY</strong></td>
+                        <td><strong>MRP</strong></td>
+                        <td><strong>RATE</strong></td>
+                        <td><strong>AMOUNT</strong></td>
+                    </tr>
+                    ${billData.items.map((item, idx) => `
+                        <tr>
+                        <td>${item.item_name}</td>
+                        <td>${item.qty}</td>
+                        <td>${item.mrsp.toFixed(2)}</td>
+                        <td>${item.sellingprice.toFixed(2)}</td>
+                        <td>${item.amount.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                    </table>
+
+                    <div class="line"></div>
+                    <table>
+                    <tr>
+                        <td>Qty : ${billData.total_qty}</td>
+                        <td style="text-align:right;">Total Amt : ${billData.total_amount.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Items : ${billData.items.length}</td>
+                        </tr>
+                    </table>
+
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td colspan="2">Net Amt : ${billData.total_amount.toFixed(2)}</td>
+                    </tr>
+                    </table>
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td colspan="2">Payment Mode - ${billData.payment_mode} ${billData.total_amount.toFixed(2)}</td>
+                    </tr>
+                    </table>
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td>Balance Amt : ${billData.balance.toFixed(2)}</td>
+                    </tr>
+                     </table>
+                    <div class="line"></div>  
+                    <table>
+                    <tr>
+                        <td>Total MRP : ${billData.total_mrsp.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Discount : ${(billData.total_mrsp - billData.total_amount).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Today Points : ${billData.today_points.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Points : ${(billData.old_points + billData.today_points).toFixed(2)}</td>
+                    </tr>
+                    </table>
+                    <div class="line"></div>
+                </body>
+                </html>
+                `;
+
+                printWindow.document.write(html);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+            }
+        }
+
+        // alert("✅ Billing submitted successfully!");
+        gid('billingForm').submit();
+
+        }
+
+// fetch data
+function getBillingInfo(items) {
+    let total_qty = items.reduce((sum, i) => sum + Number(i.qty || 0), 0);
+    let total_amount = items.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+
+    let total_mrsp = items.reduce((sum, i) => sum + (Number(i.mrsp || 0) * Number(i.qty || 0)), 0);
+
+    const name = firstNonEmptyEl(q('input[name="name"]'), gid('cust_name'), gid('name'));
+    const phone = firstNonEmptyEl(q('input[name="cell"]'), gid('cust_cell'), gid('cell'));
+    const address = firstNonEmptyEl(q('textarea[name="address"]'), gid('cust_address'), gid('address'));
+
+    const now = new Date(); // current date and time
+    const formattedDate = now.toLocaleDateString(); // e.g., 9/8/2025
+    const formattedTime = now.toLocaleTimeString();
+
+    let cash = Number(firstNonEmptyEl(q('input[name="cash_amount"]'), gid('cash_amount'))) || 0;
+    let card = Number(firstNonEmptyEl(q('input[name="card_amount"]'), gid('card_amount'))) || 0;
+
+    // 🔹 Payment Mode decide
+    let payment_mode = "Credit";
+    if (cash > 0 && card > 0) {
+        payment_mode = "Cash + Card";
+    } else if (cash > 0) {
+        payment_mode = "Cash";
+    } else if (card > 0) {
+        payment_mode = "Card";
+    }
+
+    return {
+        bill_no: firstNonEmptyEl(q('input[name="bill_no"]'), gid('bill_no')),
+        date: firstNonEmptyEl(q('input[name="date"]'), gid('date')),
+        time: formattedTime, 
+        name: name,
+        phone: phone,
+        customer_address: address,
+        items: items,
+        total_qty: total_qty,
+        total_amount: total_amount,
+        cash: Number(firstNonEmptyEl(q('input[name="cash_amount"]'), gid('cash_amount'))) || 0,
+        card: Number(firstNonEmptyEl(q('input[name="card_amount"]'), gid('card_amount'))) || 0,
+        balance: Number(firstNonEmptyEl(q('input[name="balance"]'), gid('balance'))) || 0,
+        old_points: Number(gid('points')?.value || 0),
+        today_points: Number(gid('total_earned')?.value || 0),
+        payment_mode: payment_mode ,
+        total_mrsp:total_mrsp
+    };
+}
+
+// customer dropdown update
+document.addEventListener('DOMContentLoaded', function(){
+    const customerSelect = gid('customer');
+    if (!customerSelect) return;
+    customerSelect.addEventListener('change', function(){
+        const opt = this.options[this.selectedIndex];
+        const n = opt?.getAttribute('data-name') || '';
+        const c = opt?.getAttribute('data-cell') || '';
+        const a = opt?.getAttribute('data-address') || '';
+        gid('cust_name') && (gid('cust_name').value = n);
+        gid('cust_cell') && (gid('cust_cell').value = c);
+        gid('cust_address') && (gid('cust_address').value = a);
+    });
+});
+
+
+    function submitAsQuotation() {
+    const billTypeSelect = document.querySelector('select[name="bill_type"]');
+    
+    // Check Bill Type
+    if (billTypeSelect.value.toLowerCase() !== "credit") {
+        alert("⚠️ Bill Type must be 'Credit' for a Quotation. Please change it to Credit.");
+        billTypeSelect.focus();
+        return; // stop submission
+    }
+
+     if (!confirm("This sale will be moved to a quotation. Do you want to continue?")) {
+        return;
+    }        
+
+    if (!validateForm() || !validateAllRows()) return;
+
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+
+     // Ensure 'name' is included
+    const customerName = document.getElementById('name').value;
+    if (!customerName) {
+        alert("Customer Name is required!");
+        return;
+    }
+    formData.set("name", customerName);
+    
+    // Manually append all required fields (if not automatically included)
+    const requiredFields = [
+        'cell', 'address', 'date_joined',
+        'sale_type', 'bill_type', 'counter', 'points', 'total_earned', 'discount'
+    ];
+
+    requiredFields.forEach(field => {
+        const value = document.querySelector(`[name="${field}"]`)?.value;
+        if (value !== undefined) {
+            formData.set(field, value);
+        }
+    });
+
+    // Append item data as JSON
+    const items = collectItemData();
+    formData.set("item_data", JSON.stringify(items));
+
+    // Submit to Django
+    fetch("{% url 'create_quotation' %}", {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Quotation saved successfully!");
+            window.location.href = `/quotation/detail/${data.qtn_no}/`;
+        } else {
+            alert(data.error || "Failed to save quotation.");
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Server error. Check console for details.");
+    });
+}
+</script>
+{% endblock %}

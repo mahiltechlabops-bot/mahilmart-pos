@@ -1,0 +1,201 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tax Creation</title>
+    <style>
+        body {
+            background-color: #00bfff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h2 {
+            margin: 0;
+            text-align: center;
+            color: white;
+            background-color: #0d0947;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        form {
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        table td, table th {
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"] {
+            width: 95%;
+            padding: 5px;
+            border: 1px solid #aaa;
+            border-radius: 3px;
+        }
+
+        .btn-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .btn {
+            background-color: #0f463d;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #ff1493;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        th {
+            background-color: #00aaff;
+            color: white;
+        }
+        .exit-btn {
+            background-color: #8b4d52;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .exit-btn:hover {
+            background-color: #30070b;
+        }
+    </style>
+</head>
+<body>
+    <h2>Tax Creation</h2>
+    <form method="POST">
+        {% csrf_token %}
+        <table>
+            <tr>
+                <td><label>Tax Name: (ex: GST 5%)</label></td>
+                <td><input type="text" name="tax_name"></td>
+                <td><label>Print Name: (ex: GST 5%)</label></td>
+                <td><input type="text" name="print_name"></td>
+            </tr>
+            <tr>
+                <td><label>Type: (ex: GST)</label></td>
+                <td><input type="text" name="tax_type"></td>
+                <td><label>Effect From:</label></td>
+                <td><input type="date" name="effect_form"></td>
+            </tr>
+            <tr>
+                <td><label>Rounded: (ex: 0/1)</label></td>
+                <td><input type="number" name="rounded"></td>
+                <td><label>Round Type: (ex: Up/None)</label></td>
+                <td><input type="text" name="round_type"></td>
+            </tr>
+            <tr>
+                <td><label>GST Type: (ex: 0/5/12/18/28)</label></td>
+                <td><input type="text" name="gst_type"></td>
+                <td><label>GST %: (ex: 0/5/12/18/28)</label></td>
+                <td><input type="number" name="gst_percent"></td>
+            </tr>
+            <tr>
+                <td><label>CESS %:</label></td>
+                <td><input type="number" name="cess_percent"></td>
+            </tr>
+        </table>
+
+        <hr>
+
+        <label>SGST %: (ex: 5% -> 2.5%)</label>
+        <input type="number" name="sgst_percent" step="0.01" style="width: 100px;"><br><br>   
+
+        <table border="1">
+            <tr>
+                <th></th>
+                <th>Account 1</th>
+                <th>Account 2</th>
+                <th>Return 1</th>
+                <th>Return 2</th>
+            </tr>
+            <tr>
+                <th>Sales (ex: SGST Sales A1, SGST Ret A1)</th>
+                <td><input type="text" name="sgst_sales_account_1"></td>
+                <td><input type="text" name="sgst_sales_account_2"></td>
+                <td><input type="text" name="sgst_sales_return_1"></td>
+                <td><input type="text" name="sgst_sales_return_2"></td>
+            </tr>
+            <tr>
+                <th>Purchase (ex: SGST Purch A1, SGST PRet A1)</th>
+                <td><input type="text" name="sgst_purchase_account_1"></td>
+                <td><input type="text" name="sgst_purchase_account_2"></td>
+                <td><input type="text" name="sgst_purchase_return_1"></td>
+                <td><input type="text" name="sgst_purchase_return_2"></td>
+            </tr>
+        </table>
+
+        <label>CGST %: (ex: 5% -> 2.5%)</label>
+        <input type="number" name="cgst_percent" step="0.01" style="width: 100px;"><br><br>
+
+        <table border="1">
+            <tr>
+                <th></th>
+                <th>Account 1</th>
+                <th>Account 2</th>
+                <th>Return 1</th>
+                <th>Return 2</th>
+            </tr>
+            <tr>
+                <th>Sales (ex: CGST Sales A1, CGST Ret A1)</th>
+                <td><input type="text" name="cgst_sales_account_1"></td>
+                <td><input type="text" name="cgst_sales_account_2"></td>
+                <td><input type="text" name="cgst_sales_return_1"></td>
+                <td><input type="text" name="cgst_sales_return_2"></td>
+            </tr>
+            <tr>
+                <th>Purchase (ex: CGST Purch A1, CGST PRet A1)</th>
+                <td><input type="text" name="cgst_purchase_account_1"></td>
+                <td><input type="text" name="cgst_purchase_account_2"></td>
+                <td><input type="text" name="cgst_purchase_return_1"></td>
+                <td><input type="text" name="cgst_purchase_return_2"></td>
+            </tr>
+        </table>
+
+        <div class="btn-container">
+            <button type="submit" class="btn" onclick="return confirmSave()">Save</button>                  
+            <button type="button" class="exit-btn" onclick="window.location.href='{% url 'items' %}'">Exit</button>
+        </div>
+    </form>
+</body>
+</html>
+{% endblock %}
+{% block extra_js %}
+<script>
+function confirmSave() {
+    return confirm("Are you sure you want to save this tax?");
+}
+</script>
+{% endblock %}

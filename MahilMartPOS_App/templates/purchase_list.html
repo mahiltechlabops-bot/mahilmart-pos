@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Purchase List{% endblock %}
+
+{% block content %}
+<style>
+    /* Compact table styling */
+    .table-compact th, 
+    .table-compact td {
+        padding: 4px 6px !important;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .sticky-top {
+        top: 0;
+        z-index: 1020;
+    }
+
+    /* Reduce card margins for better fit */
+    .card {
+        margin-bottom: 0.8rem;
+    }
+
+    /* Make header text smaller on small screens */
+    @media (max-width: 768px) {
+        h2 {
+            font-size: 1.2rem;
+        }
+    }
+</style>
+
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="fw-bold text-primary">📦 Purchase Records</h2>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-center">
+                <div class="col-md-9 col-sm-8 d-flex flex-wrap gap-2">
+                    <!-- Supplier Filter -->
+                    <div>
+                        <label for="supplier" class="form-label fw-bold mb-1">Supplier</label>
+                        <select name="supplier" id="supplier" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">-- All Suppliers --</option>
+                            {% for sid in supplier_ids %}
+                                {% if sid %}
+                                    <option value="{{ sid }}" {% if selected_supplier == sid %}selected{% endif %}>{{ sid }}</option>
+                                {% else %}
+                                    <option value="None" {% if selected_supplier == 'None' %}selected{% endif %}>Unknown Supplier</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Sort Order -->
+                    <div>
+                        <label for="sort" class="form-label fw-bold mb-1">Sort Order</label>
+                        <select name="sort" id="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Latest First</option>
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Oldest First</option>
+                        </select>
+                    </div>
+
+                    <!-- Item Name Filter -->
+                    <div>
+                        <label for="item_name" class="form-label fw-bold mb-1">Item Name</label>
+                        <input type="text" name="item_name" id="item_name" class="form-control form-control-sm"
+                            value="{{ item_name }}" placeholder="Enter item name"
+                            onblur="this.form.submit()" />
+                    </div>
+
+                    <!-- Item Code Filter -->
+                    <div>
+                        <label for="item_code" class="form-label fw-bold mb-1">Item Code</label>
+                        <input type="text" name="item_code" id="item_code" class="form-control form-control-sm"
+                            value="{{ request.GET.item_code }}" placeholder="Enter item code"
+                            onblur="this.form.submit()" />
+                    </div>
+                </div>
+
+                <!-- Back Button -->
+                <div class="col-md-3 col-sm-4 d-flex justify-content-end align-items-end">
+                    <a href="{% url 'purchase_list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            onclick="window.location.href='{% url 'purchase' %}'">
+                        Back
+                    </button>                    
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Purchase Table -->
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle table-bordered table-compact">
+            <thead class="table-dark sticky-top">
+                <tr>
+                    <th>ID</th>
+                    <th>Item Name</th>
+                    <th>Brand</th>
+                    <th>Group</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Kg/Ltr/Pcs</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                    <th>MRP</th>
+                    <th>Wh1</th>
+                    <th>Wh2</th>
+                    <th>Discount</th>
+                    <th>Taxable Amt</th>
+                    <th>Tax %</th>
+                    <th>Sale Price</th>
+                    <th>Net Price</th>
+                    <th>Batch</th>
+                    <th>Expiry</th>
+                    <th>Purchased At</th>
+                    <th>Supplier</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in purchases %}
+                <tr>
+                    <td>{{ p.id }}</td>
+                    <td class="fw-bold text-primary">{{ p.item_name }}</td>
+                    <td>{{ p.brand }}</td>
+                    <td>{{ p.group }}</td>
+                    <td class="text-end">{{ p.quantity }}</td>
+                    <td>{{ p.unit }}</td>
+                    <td>{{ p.split_unit }}</td>
+                    <td class="text-end text-success">{{ p.unit_price }}</td>
+                    <td class="text-end fw-bold text-success">{{ p.total_price }}</td>
+                    <td>{{ p.mrp_price }}</td>
+                    <td>{{ p.whole_price }}</td>
+                    <td>{{ p.whole_price_2 }}</td>
+                    <td>{{ p.discount }}</td>
+                    <td>{{ p.taxable_price }}</td>
+                    <td>{{ p.tax }}</td>
+                    <td>{{ p.sale_price }}</td>
+                    <td class="fw-bold">{{ p.net_price }}</td>
+                    <td>{{ p.batch_no }}</td>
+                    <td>{{ p.expiry_date }}</td>
+                    <td>{{ p.purchased_at|date:"Y-m-d" }}</td>
+                    <td class="fw-bold">{{ p.supplier_id }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="21" class="text-center text-muted">No purchases found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
