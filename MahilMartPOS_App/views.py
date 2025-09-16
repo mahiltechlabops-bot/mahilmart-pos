@@ -16,7 +16,7 @@ from datetime import datetime
 from django.core.serializers import serialize
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.paginator import Paginator
-from .forms import OrderForm,OrderItem,ExpenseForm,PaymentForm,BillingForm,BillTypeForm,PaymentModeForm,CounterForm
+from .forms import OrderForm,OrderItem,ExpenseForm,PaymentForm,BillingForm,BillTypeForm,PaymentModeForm,CounterForm,PointsConfigForm
 from django.db import IntegrityError
 from collections import defaultdict
 from django.utils.timezone import localtime
@@ -85,6 +85,7 @@ from .models import (
     PurchasePayment,
     PurchaseTracking,
     DailyPurchasePayment,
+    PointsConfig,
 )
 
 def home(request):
@@ -197,7 +198,9 @@ def dashboard_view(request):
         payments_total = BillingPayment.objects.filter(billing=bill).aggregate(
             total=Sum('new_payment')
         )['total'] or Decimal('0')
-        return (bill.received or Decimal('0')) + payments_total                
+
+        discount_amount = bill.discount_amt or Decimal('0')
+        return (bill.received or Decimal('0')) + payments_total + discount_amount
 
     # Recent bills    
     recent_bills_qs = bills_qs.select_related('customer').order_by('-created_at')
@@ -621,8 +624,6 @@ def create_invoice_view(request):
         # Debug prints
         print("Phone requested:", phone)
         print("Customer object:", customer)
-
-
          
         if customer:
             print("Name:", customer.name)
@@ -678,7 +679,23 @@ def create_invoice_view(request):
             points_earned_total = 0.0         
 
             cash = float(request.POST.get('cash_amount') or 0)
-            card = float(request.POST.get('card_amount') or 0)            
+            card = float(request.POST.get('card_amount') or 0)
+
+            items_json = request.POST.get('item_data', '[]')
+            items = json.loads(items_json)
+
+            # Calculate total sale amount from items
+            total_sale_amount = sum(float(item['amount']) for item in items)
+            # Get discount input (default 0)
+            discount = float(request.POST.get('discount') or 0)
+            # Calculate discount amount
+            discount_amt = total_sale_amount * discount / 100
+
+            print("POST data keys:", request.POST.keys())
+            print("Items:", items)
+            print("Total sale amount:", total_sale_amount)
+            print("Discount input:", discount)
+            print("Calculated discount_amt:", discount_amt)
 
             # Create Billing object first
             billing = Billing.objects.create(
@@ -695,6 +712,7 @@ def create_invoice_view(request):
                 received=request.POST.get('received') or 0,
                 balance = max(float(request.POST.get('balance') or 0), 0),        
                 discount=request.POST.get('discount') or 0,
+                discount_amt = discount_amt,
                 points=total_points,
                 points_earned=0,
                 remarks=request.POST.get('remarks', ''),
@@ -807,12 +825,21 @@ def create_invoice_view(request):
     payment_modes = PaymentMode.objects.all()
     counter = Counter.objects.all().order_by('counter_id')
 
+    # Company details information
+    company = CompanyDetails.objects.first()  # assuming only 1 company record
+
+    # Points configuration data
+    points_config = PointsConfig.objects.order_by('-updated_at').first()
+    amount_for_one_point = points_config.amount_for_one_point if points_config else 200  # fallback 200
+
     return render(request, 'billing.html', {
         'today_date': today_date,
         'bill_no': next_bill_no,
         'bill_types':bill_types,
         'payment_modes':payment_modes,
         'counter':counter,
+        "company": company,
+        "amount_for_one_point": amount_for_one_point,
     })
 
 def get_item_info(request):
@@ -889,8 +916,12 @@ def get_item_info(request):
         else:
             merged_batches.append(current_row)
 
+        # if available < 10:
+        #     low_stock_batches.append(inv.batch_no)
+
+        # Track low stock ONLY for this batch
         if available < 10:
-            low_stock_batches.append(inv.batch_no)
+            low_stock_batches.append(f"{inv.batch_no} (qty: {available})")            
 
     # Step 5: Round quantities
     for batch in merged_batches:
@@ -900,8 +931,10 @@ def get_item_info(request):
     low_stock_warning = bool(low_stock_batches)
     if total_available == 0:
         warning_message = "⚠️ No stock available"
-    elif low_stock_warning:
-        warning_message = f"⚠️ Low stock in batch(es): {', '.join(low_stock_batches)}, available qty: {round(total_available, 2)}"
+    # elif low_stock_warning:
+    #     warning_message = f"⚠️ Low stock in batch(es): {', '.join(low_stock_batches)}, available qty: {round(total_available, 2)}"
+    elif low_stock_batches:
+        warning_message = f"⚠️ Low stock in batch(es): {', '.join(low_stock_batches)}"
     else:
         warning_message = ""
 
@@ -944,6 +977,8 @@ def add_billtype(request):
     billtype_form = BillTypeForm()
     paymentmode_form = PaymentModeForm()
     counter_form = CounterForm()
+    points_config = PointsConfig.objects.first()  # fetch the config
+    points_form = PointsConfigForm(instance=points_config) 
 
     if request.method == "POST":
         if "save_billtype" in request.POST:
@@ -963,11 +998,18 @@ def add_billtype(request):
             if counter_form.is_valid():
                 counter_form.save()
                 return redirect("add")
+            
+        elif "save_points" in request.POST:
+            points_form = PointsConfigForm(request.POST)
+            if points_form.is_valid():
+                points_form.save()
+                return redirect("add")            
 
     return render(request, "add_billtype.html", {
         "billtype_form": billtype_form,
         "paymentmode_form": paymentmode_form,
-        "counter_form": counter_form
+        "counter_form": counter_form,
+        "points_form": points_form,
     })
 
 def order_payments(request, order_id):
@@ -1240,8 +1282,7 @@ def create_quotation(request):
     if request.method == 'POST':
         try:
             cell = request.POST.get('cell')
-            name = request.POST.get('name')
-            email = request.POST.get('email')
+            name = request.POST.get('name')           
             address = request.POST.get('address')
             date_joined = request.POST.get('date_joined')
             sale_type = request.POST.get('sale_type')
@@ -1249,6 +1290,7 @@ def create_quotation(request):
             counter = request.POST.get('counter')            
             total_points = float(request.POST.get('points') or 0)
             earned_points = float(request.POST.get('total_earned') or 0)
+            discount = float(request.POST.get('discount') or 0)
             item_data_raw = request.POST.get('item_data')    
 
             item_data = json.loads(item_data_raw) if item_data_raw else []
@@ -1258,23 +1300,27 @@ def create_quotation(request):
             base_qtn_no = int(latest.qtn_no) + 1 if latest and str(latest.qtn_no).isdigit() else 1
             qtn_no = str(base_qtn_no)
 
+            # Calculate total before discount
+            subtotal = sum(float(item.get('amount', 0)) for item in item_data)
+            discount_amount = (subtotal * discount) / 100
+            total_after_discount = subtotal - discount_amount
+
             quotation = Quotation.objects.create(
                 qtn_no=qtn_no,
                 date=date.today(),
-                name=name,
-                email=email,
+                name=name,                
                 address=address,
                 cell=cell,
                 date_joined=date_joined,
                 sale_type=sale_type,
                 bill_type=bill_type,
-                counter=counter,
-                # order_no=order_no,
-                # received=received,
-                # balance=balance,
+                counter=counter,               
                 points=total_points,
                 points_earned=earned_points,
+                discount=discount,
                 items=item_data,
+                discount_amt=discount_amount,
+                discount_after_total=total_after_discount,
             )
 
             return JsonResponse({'success': True, 'quotation_id': quotation.id})
@@ -1312,8 +1358,7 @@ def quotation_detail(request, qtn_no=None):
             'items': items,
             'customer': {
                 'name': quotation.name,
-                'cell': quotation.cell,
-                'email': quotation.email,
+                'cell': quotation.cell,               
                 'date': quotation.date,
                 'sale_type': quotation.sale_type,
             }
@@ -1334,8 +1379,7 @@ def get_last_quotation(request):
         'qtn_no': last_quotation.qtn_no,
         'date': last_quotation.date.strftime('%Y-%m-%d'),
         'name': last_quotation.name,
-        'cell': last_quotation.cell,
-        'email': last_quotation.email,
+        'cell': last_quotation.cell,        
         'address': last_quotation.address,
         'sale_type': last_quotation.sale_type,
         'bill_type': last_quotation.bill_type,
@@ -1437,8 +1481,7 @@ def convert_quotation_to_order(request, qtn_no):
     order = Order.objects.create(
         customer_name=first_qtn.name,
         phone_number=first_qtn.cell,
-        address=first_qtn.address,
-        email=first_qtn.email,
+        address=first_qtn.address,        
         date_of_order=timezone.now(),
         expected_delivery_datetime=timezone.now(),
         delivery='no',
@@ -1469,8 +1512,7 @@ def convert_quotation_to_order(request, qtn_no):
     customer, _ = Customer.objects.get_or_create(
         cell=first_qtn.cell,
         defaults={
-            'name': first_qtn.name,
-            'email': first_qtn.email,
+            'name': first_qtn.name,            
             'address': first_qtn.address,
         }
     )
@@ -1518,6 +1560,9 @@ def convert_quotation_to_order(request, qtn_no):
         points_earned = round(amount / 200, 2)
         points_earned_total += points_earned
 
+        print(f"\nProcessing Item: {item.get('item_name', '')} | Code: {item.get('code', '')}")
+        print(f"Qty: {qty}, MRP: {mrp}, Selling Price: {selling_price}, Amount: {amount}, Points Earned: {points_earned}")
+
         item_code = item.get("code", "")
         remaining_qty = qty
 
@@ -1526,30 +1571,46 @@ def convert_quotation_to_order(request, qtn_no):
             quantity__gt=0
         ).order_by('purchased_at', 'id')
 
+        print(f"Found {inventory_items.count()} inventory records for Code: {item_code}")
+
         for inv_item in inventory_items:
             if remaining_qty <= 0:
                 break
+
+            print(f"\nInventory Item ID: {inv_item.id}, Unit: {inv_item.unit}, "
+              f"Quantity: {inv_item.quantity}, Split Unit: {inv_item.split_unit}")
 
             if "bulk" in inv_item.unit.lower():
                 available_qty = inv_item.split_unit or 0
                 deduct_qty = min(available_qty, remaining_qty)
                 unit_quantity = inv_item.unit_qty or 1
                 quantity_to_deduct = deduct_qty / unit_quantity
+                print(f"Bulk Mode → Available: {available_qty}, Deduct: {deduct_qty}, "
+                  f"Unit Qty: {unit_quantity}, Quantity to Deduct: {quantity_to_deduct}")
                 inv_item.split_unit = max(0, (inv_item.split_unit or 0) - deduct_qty)
                 inv_item.quantity = round(inv_item.quantity - quantity_to_deduct, 1)
             else:
                 available_qty = inv_item.quantity
                 deduct_qty = min(available_qty, remaining_qty)
                 inv_item.quantity -= deduct_qty
+                print(f"Normal Mode → Available: {available_qty}, Deduct: {deduct_qty}")
 
-            if (inv_item.split_unit is not None and inv_item.split_unit <= 0) or (inv_item.quantity is not None and inv_item.quantity <= 0):
+            if ((inv_item.split_unit is None or inv_item.split_unit <= 0) and 
+                (inv_item.quantity is None or inv_item.quantity <= 0)):
                 inv_item.status = "completed"
+                print(f"Inventory Item ID {inv_item.id} marked as completed")
+
+            print(f"After Deduction → Remaining Qty: {remaining_qty}, "
+              f"Inventory Qty: {inv_item.quantity}, Split Unit: {inv_item.split_unit}")
 
             inv_item.save()
             remaining_qty -= deduct_qty
 
         if remaining_qty > 0:
+            print(f"❌ ERROR: Insufficient stock for {item.get('item_name', '')} (Code: {item_code})")
             raise ValueError(f"Insufficient stock for item {item.get('item_name', '')} (Code: {item_code})")
+        else:
+            print(f" Stock deduction completed for {item.get('item_name', '')} (Code: {item_code})")
 
         BillingItem.objects.create(
             billing=billing,
@@ -1734,15 +1795,15 @@ def build_label(item, label_size):
     Build label TSPL command based on size.
     """
     # Convert purchased_at from yyyy-mm-dd to dd/mm/yyyy 
-    purchased_at_raw = item.get("purchased_at", "")
-    if purchased_at_raw:
+    expiry_at_raw = item.get("expiry", "")
+    if  expiry_at_raw:
         try:
-            dt = datetime.strptime(purchased_at_raw, "%Y-%m-%d")
-            purchased_at = dt.strftime("%d/%m/%Y")  # Convert to dd/mm/yyyy
+             dt = datetime.strptime( expiry_at_raw, "%Y-%m-%d")
+             expiry_at = dt.strftime("%d/%m/%Y")  # Convert to dd/mm/yyyy
         except ValueError:
-            purchased_at = purchased_at_raw
+             expiry_at =  expiry_at_raw
     else:
-        purchased_at = ""
+         expiry_at = ""
 
     # Clean barcode for Code39
     barcode_clean = re.sub(r'[^A-Z0-9\-\.\ \$\/\+\%]', '', str(item['barcode']).upper())
@@ -1773,11 +1834,10 @@ def build_label(item, label_size):
         tspl += f'TEXT {base_x + offset_x},{base_y + 0},"0",0,10,10,"Mahil SuperMarket"\n'
         tspl += f'TEXT {base_x + offset_x},{base_y + 28},"0",0,10,10,"{item["name"]}"\n'
         tspl += f'TEXT {base_x + offset_x},{base_y + 56},"0",0,9,9,"MRP:{item["mrp"]} Sale:{item["sale"]}"\n'        
-        tspl += f'TEXT {base_x + offset_x},{base_y + 84},"0",0,8,8,"{item["batch"]} Pack At:{purchased_at}"\n'
+        tspl += f'TEXT {base_x + offset_x},{base_y + 84},"0",0,8,8,"{item["code"]}  Exp:{expiry_at}"\n'
         tspl += f'BARCODE {base_x + offset_x},{base_y + 112},"39",40,0,0,1,4,"{barcode_clean}"\n'
-
     tspl += "PRINT 1\n"
-    return tspl
+    return tspl    
 
 def print_barcode(request):
     if request.method == "POST":
@@ -1809,13 +1869,14 @@ def print_barcode(request):
 
             for _ in range(qty):
                 items.append({
+                    "code": codes[i].strip(),
                     "name": item_name,
                     "barcode": barcode_value,
                     "mrp": mrps[i].strip(),
                     "sale": sales[i].strip(),
                     "batch": batches[i].strip(),
                     "purchased_at": purchased[i].strip(),
-                    "expiry": expirys[i].strip(),
+                    "expiry": expirys[i].strip(),                   
                 })
 
             print("Items for printing:")

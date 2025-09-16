@@ -60,6 +60,7 @@ class Billing(models.Model):
     card_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    discount_amt = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,default=0)
     points = models.FloatField(default=0.0)  
     points_earned = models.FloatField(default=0.0)   
     status_on = models.CharField(max_length=50, default="counter_bill")
@@ -119,7 +120,6 @@ class Order(models.Model):
     customer_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=10)
     address = models.TextField()
-    email = models.EmailField()
 
     date_of_order = models.DateTimeField(default=timezone.now)
     expected_delivery_datetime = models.DateTimeField()
@@ -162,7 +162,6 @@ class Quotation(models.Model):
     date = models.DateField(auto_now_add=True)
     name = models.CharField(max_length=100)
     cell = models.CharField(max_length=15)
-    email = models.EmailField()
     address = models.TextField(blank=True, null=True)
     date_joined = models.DateField()
     sale_type = models.CharField(max_length=50)
@@ -170,8 +169,11 @@ class Quotation(models.Model):
     counter = models.CharField(max_length=50)
     points = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     points_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     items = models.JSONField()
     bill_no = models.CharField(max_length=100, null=True, blank=True)
+    discount_amt = models.FloatField(default=0)
+    discount_after_total = models.FloatField(default=0)
 
     def __str__(self):
         return f"Quotation #{self.qtn_no} - {self.name}"
@@ -217,7 +219,14 @@ class Counter(models.Model):
     counter_name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
-        return self.counter_name    
+        return self.counter_name
+
+class PointsConfig(models.Model):
+    amount_for_one_point = models.DecimalField(max_digits=10, decimal_places=2, default=200)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"₹{self.amount_for_one_point} per point"        
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

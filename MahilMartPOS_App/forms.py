@@ -265,6 +265,20 @@ class CounterForm(forms.ModelForm):
             'counter_name': forms.TextInput(attrs={'placeholder': 'Enter Counter Name'}),
         }
 
+from .models import PointsConfig
+
+class PointsConfigForm(forms.ModelForm):
+    class Meta:
+        model = PointsConfig
+        fields = ["amount_for_one_point"]
+        widgets = {
+            "amount_for_one_point": forms.NumberInput(attrs={
+                "class": "form-control",
+                "step": "0.01",
+                "min": "1"
+            })
+        }       
+
 # forms.py
 from django import forms
 from .models import BarcodeLabelSize
