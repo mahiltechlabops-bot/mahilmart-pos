@@ -77,10 +77,10 @@ WSGI_APPLICATION = 'MahilMartPOS.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mahilmart_db',
+        'NAME': 'mmpos',
         'USER': 'postgres',
-        'PASSWORD': 'admin',
-        'HOST': '127.0.0.1',
+        'PASSWORD': 'admin123',
+        'HOST': '192.168.0.105',
         'PORT': '5432',    
     }
 }
