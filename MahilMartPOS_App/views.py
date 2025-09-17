@@ -938,12 +938,17 @@ def get_item_info(request):
     else:
         warning_message = ""
 
+    
+    # Debugging tax
+    print("DEBUG - Item:", item.code, item.item_name, "Tax:", item.tax)        
+
     return JsonResponse({
         'item_name': item.item_name,
         'item_code': item.code,
         'unit': item.unit,
         'is_bulk': is_bulk,
         'current_mrp': current_mrp,
+        'tax': float(item.tax or 0),
         'total_available': round(total_available, 2),
         'low_stock_warning': low_stock_warning,
         'warning_message': warning_message,
