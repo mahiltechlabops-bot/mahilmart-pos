@@ -151,5 +151,17 @@ body {
         </div>
         <button type="submit" name="save_points">Save Points Config</button>
     </form>
+
+    <!-- Billing Configuration -->
+    <h3>Billing Configuration</h3>
+    <form method="post">
+        {% csrf_token %}
+        <label for="enable_gst">
+            <input type="checkbox" id="enable_gst" name="enable_gst"
+                {% if config.enable_gst %}checked{% endif %}>
+            Enable GST Billing
+        </label>
+        <button type="submit" name="save_billing_config">Save Billing Config</button>
+    </form>
 </div>
 {% endblock %}
