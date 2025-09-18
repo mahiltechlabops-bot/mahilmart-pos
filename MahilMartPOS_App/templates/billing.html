@@ -285,6 +285,7 @@
                     <td style="padding: 2px;"><input type="number" name="qty" class="table-input" step="any"></td>
                     <td style="padding: 2px;"><input type="number" name="mrsp" class="table-input" readonly></td>
                     <td style="padding: 2px;"><input type="number" name="sellingprice" class="table-input" readonly></td>
+                    <td style="display:none;"><input type="hidden" name="tax" class="table-input" value="0"></td>
                     <td style="padding: 2px;"><input type="text" class="table-input amount-output" value="0.00" readonly></td>
                     <td style="padding: 2px;"><button type="button" class="delete-row-btn">Delete</button></td>
                 </tr>
@@ -1101,19 +1102,16 @@ function submitBilling() {
                     const rate = Number(item.sellingprice || 0);
                     const taxRate = Number(item.tax || 0);
                     const mrsp = Number(item.mrsp || 0);
-                    const taxableRate = Number(item.sellingprice || 0) / (1 + taxRate / 100);
-                    const cgst = (amountInclTax - (taxableRate * qty)) / 2;
-                    const sgst = (amountInclTax - (taxableRate * qty)) / 2;
+                    // const taxableRate = Number(item.sellingprice || 0) / (1 + taxRate / 100);
+                    // const cgst = (amountInclTax - (taxableRate * qty)) / 2;
+                    // const sgst = (amountInclTax - (taxableRate * qty)) / 2;
 
                     itemRows += `
                         <tr>
                             <td>${item.item_name}</td>
                             <td>${qty}</td>
                             <td>${mrsp.toFixed(2)}</td>
-                            <td>${rate.toFixed(2)}</td>
-                            <td>${taxRate}%</td>
-                            <td>${cgst.toFixed(2)}</td>
-                            <td>${sgst.toFixed(2)}</td>
+                            <td>${rate.toFixed(2)}</td>                            
                             <td>${amountInclTax.toFixed(2)}</td>
                         </tr>
                     `;
@@ -1184,10 +1182,7 @@ function submitBilling() {
                             <td><strong>ITEM</strong></td>
                             <td><strong>QTY</strong></td>
                             <td><strong>MRP</strong></td>
-                            <td><strong>RATE</strong></td>
-                            <td><strong>TAX%</strong></td>
-                            <td><strong>CGST</strong></td>
-                            <td><strong>SGST</strong></td>
+                            <td><strong>RATE</strong></td>                           
                             <td><strong>AMOUNT</strong></td>
                         </tr>` : `
                         <tr>
