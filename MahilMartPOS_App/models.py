@@ -226,7 +226,10 @@ class PointsConfig(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"₹{self.amount_for_one_point} per point"        
+        return f"₹{self.amount_for_one_point} per point"
+
+class BillingConfig(models.Model):
+    enable_gst = models.BooleanField(default=True)          
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
