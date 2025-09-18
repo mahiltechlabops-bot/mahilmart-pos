@@ -16,7 +16,7 @@ from datetime import datetime
 from django.core.serializers import serialize
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.paginator import Paginator
-from .forms import OrderForm,OrderItem,ExpenseForm,PaymentForm,BillingForm,BillTypeForm,PaymentModeForm,CounterForm,PointsConfigForm
+from .forms import OrderForm,OrderItem,ExpenseForm,PaymentForm,BillingForm,BillTypeForm,PaymentModeForm,CounterForm,PointsConfigForm,BillingConfigForm
 from django.db import IntegrityError
 from collections import defaultdict
 from django.utils.timezone import localtime
@@ -65,6 +65,7 @@ from .models import (
     BillType,
     PaymentMode,
     Counter,
+    BillingConfig,
     Item,  
     Unit,
     Group,
@@ -832,6 +833,13 @@ def create_invoice_view(request):
     points_config = PointsConfig.objects.order_by('-updated_at').first()
     amount_for_one_point = points_config.amount_for_one_point if points_config else 200  # fallback 200
 
+    # Fetch latest BillingConfig
+    billing_config = BillingConfig.objects.order_by('-id').first()
+    enable_gst = billing_config.enable_gst if billing_config else False
+
+    print("BillingConfig object:", billing_config)
+    print("Enable GST flag:", enable_gst)
+
     return render(request, 'billing.html', {
         'today_date': today_date,
         'bill_no': next_bill_no,
@@ -840,6 +848,7 @@ def create_invoice_view(request):
         'counter':counter,
         "company": company,
         "amount_for_one_point": amount_for_one_point,
+        'enable_gst': enable_gst,
     })
 
 def get_item_info(request):
@@ -1008,13 +1017,23 @@ def add_billtype(request):
             points_form = PointsConfigForm(request.POST)
             if points_form.is_valid():
                 points_form.save()
-                return redirect("add")            
-
+                return redirect("add")
+        
+        elif "save_billing_config" in request.POST:
+            billing_config, created = BillingConfig.objects.get_or_create(id=1)
+            form = BillingConfigForm(request.POST, instance=billing_config)
+            if form.is_valid():
+                form.save()
+                return redirect("add")
+            
+    billing_config, _ = BillingConfig.objects.get_or_create(id=1)           
+                                
     return render(request, "add_billtype.html", {
         "billtype_form": billtype_form,
         "paymentmode_form": paymentmode_form,
         "counter_form": counter_form,
         "points_form": points_form,
+        "config": billing_config,
     })
 
 def order_payments(request, order_id):

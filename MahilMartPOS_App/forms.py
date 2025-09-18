@@ -2,7 +2,7 @@ from datetime import datetime
 from django import forms
 from .models import Supplier
 from .models import CompanyDetails
-from .models import Billing,Order,OrderItem,Expense,BillType,PaymentMode,Counter
+from .models import Billing,Order,OrderItem,Expense,BillType,PaymentMode,Counter,BillingConfig
 from django.forms.widgets import DateTimeInput
 from django.forms.widgets import DateInput
 import re
@@ -278,6 +278,11 @@ class PointsConfigForm(forms.ModelForm):
                 "min": "1"
             })
         }       
+
+class BillingConfigForm(forms.ModelForm):
+    class Meta:
+        model = BillingConfig
+        fields = ['enable_gst']
 
 # forms.py
 from django import forms
