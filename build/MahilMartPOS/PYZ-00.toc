@@ -3548,42 +3548,6 @@
    'C:\\Users\\Billing System '
    '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\signals.py',
    'PYMODULE'),
-  ('django.db.backends.sqlite3',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\__init__.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3._functions',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\_functions.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3.base',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\base.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3.client',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\client.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3.creation',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\creation.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3.features',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\features.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3.introspection',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\introspection.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3.operations',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\operations.py',
-   'PYMODULE'),
-  ('django.db.backends.sqlite3.schema',
-   'C:\\Users\\Billing System '
-   '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\sqlite3\\schema.py',
-   'PYMODULE'),
   ('django.db.backends.utils',
    'C:\\Users\\Billing System '
    '2\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\django\\db\\backends\\utils.py',
@@ -6351,22 +6315,6 @@
   ('socketserver',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\\Lib\\socketserver.py',
-   'PYMODULE'),
-  ('sqlite3',
-   'C:\\Program '
-   'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\\Lib\\sqlite3\\__init__.py',
-   'PYMODULE'),
-  ('sqlite3.__main__',
-   'C:\\Program '
-   'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\\Lib\\sqlite3\\__main__.py',
-   'PYMODULE'),
-  ('sqlite3.dbapi2',
-   'C:\\Program '
-   'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\\Lib\\sqlite3\\dbapi2.py',
-   'PYMODULE'),
-  ('sqlite3.dump',
-   'C:\\Program '
-   'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\\Lib\\sqlite3\\dump.py',
    'PYMODULE'),
   ('sqlparse',
    'C:\\Users\\Billing System '
