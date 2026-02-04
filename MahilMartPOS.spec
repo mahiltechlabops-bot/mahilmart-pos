@@ -19,7 +19,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['sqlite3', '_sqlite3', 'django.db.backends.sqlite3'],
     noarchive=False,
     optimize=0,
 )
