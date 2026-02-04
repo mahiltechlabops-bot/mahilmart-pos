@@ -452,6 +452,9 @@ from .utils.ip_utils import get_client_ip, get_machine_name_from_ip
 def login_view(request):
     from .models import CompanyDetails
 
+    if not User.objects.filter(is_superuser=True).exists():
+        return redirect("initial_admin_setup")
+
     def _get_branding_context():
         company = CompanyDetails.objects.first()
         app_name = "MY APP"
@@ -535,6 +538,63 @@ def login_view(request):
     # REDIRECT TO DASHBOARD
     # ------------------------------------------
     return redirect("dashboard")
+
+
+def initial_admin_setup(request):
+    from .models import CompanyDetails
+
+    if User.objects.filter(is_superuser=True).exists():
+        return redirect("home")
+
+    def _get_branding_context():
+        company = CompanyDetails.objects.first()
+        app_name = "MY APP"
+        app_short = "MM"
+        if company:
+            app_name = company.print_name or company.company_name or app_name
+            app_short = company.short_name or app_short
+        return {
+            "app_name": app_name,
+            "app_short": app_short,
+            "app_tagline": "Enterprise Retail System",
+            "app_version": "v2.0.0",
+        }
+
+    context = _get_branding_context()
+    context.update({
+        "errors": [],
+        "success": False,
+        "form": {
+            "username": "",
+            "email": "",
+        }
+    })
+
+    if request.method == "POST":
+        username = (request.POST.get("username") or "").strip()
+        email = (request.POST.get("email") or "").strip()
+        password = request.POST.get("password") or ""
+        confirm = request.POST.get("confirm_password") or ""
+
+        context["form"]["username"] = username
+        context["form"]["email"] = email
+
+        if not username:
+            context["errors"].append("Username is required.")
+        if not password:
+            context["errors"].append("Password is required.")
+        if password and len(password) < 6:
+            context["errors"].append("Password must be at least 6 characters.")
+        if password != confirm:
+            context["errors"].append("Passwords do not match.")
+        if username and User.objects.filter(username=username).exists():
+            context["errors"].append("Username already exists.")
+
+        if not context["errors"]:
+            User.objects.create_superuser(username=username, email=email, password=password)
+            context["success"] = True
+
+    return render(request, "admin_setup.html", context)
 
 
 

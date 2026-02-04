@@ -6,6 +6,7 @@ from django.conf.urls import handler403
 urlpatterns = [
     # login page
     path('', views.login_view, name='home'),
+    path("setup-admin/", views.initial_admin_setup, name="initial_admin_setup"),
     path("access-denied/", views.access_denied, name="access_denied"),
 
     path("settings/", views.settings_page, name="settings_page"),
