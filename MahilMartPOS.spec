@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('MahilMartPOS_App\\\\templates', 'MahilMartPOS_App\\\\templates'), ('staticfiles', 'staticfiles'), ('MahilMartPOS', 'MahilMartPOS'), ('MahilMartPOS_App', 'MahilMartPOS_App')]
+datas = [('db.sqlite3', 'db.sqlite3'), ('MahilMartPOS_App\\\\templates', 'MahilMartPOS_App\\\\templates'), ('staticfiles', 'staticfiles'), ('MahilMartPOS', 'MahilMartPOS'), ('MahilMartPOS_App', 'MahilMartPOS_App')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('django')
@@ -38,7 +38,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
