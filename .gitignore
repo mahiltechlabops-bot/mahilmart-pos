@@ -182,3 +182,4 @@ MahilMartPOS_App/migrations/0156_billingconfig.py
 MahilMartPOS_App/migrations/0157_remove_billingconfig_updated_at.py
 *.png
 *.pyc
+NUL
