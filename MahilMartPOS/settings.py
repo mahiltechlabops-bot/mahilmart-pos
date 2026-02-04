@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-import sys
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -89,27 +88,16 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-USE_SQLITE = os.getenv("MAHILMARTPOS_SQLITE") == "1"
-
-if USE_SQLITE:
-    db_path = os.getenv("MAHILMARTPOS_SQLITE_PATH") or (BASE_DIR / "db.sqlite3")
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': str(db_path),
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mmpos2',
+        'USER': 'postgres',
+        'PASSWORD': 'admin@123',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'mmpos2',
-            'USER': 'postgres',
-            'PASSWORD': 'admin@123',
-            'HOST': 'localhost',
-            'PORT': '5432',    
-        }
-    }
+}
 
 # psql -h localhost -p 5432 -U mahilmart_user -d mahilmart_db
 
