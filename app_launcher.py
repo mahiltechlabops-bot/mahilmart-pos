@@ -15,6 +15,10 @@ def _is_frozen():
     return bool(getattr(sys, "frozen", False))
 
 
+def _should_use_sqlite():
+    return os.getenv("MAHILMARTPOS_SQLITE") == "1"
+
+
 def _get_user_db_path():
     base = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or os.path.expanduser("~")
     data_dir = os.path.join(base, "MahilMartPOS", "data")
@@ -51,7 +55,7 @@ def _ensure_sqlite_db():
 def main():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "MahilMartPOS.settings")
 
-    if _is_frozen():
+    if _is_frozen() and _should_use_sqlite():
         _ensure_sqlite_db()
 
     threading.Thread(target=_open_browser, daemon=True).start()

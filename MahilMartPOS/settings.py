@@ -89,7 +89,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-USE_SQLITE = os.getenv("MAHILMARTPOS_SQLITE") == "1" or bool(getattr(sys, "frozen", False))
+USE_SQLITE = os.getenv("MAHILMARTPOS_SQLITE") == "1"
 
 if USE_SQLITE:
     db_path = os.getenv("MAHILMARTPOS_SQLITE_PATH") or (BASE_DIR / "db.sqlite3")
