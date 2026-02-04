@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import time
 import webbrowser
@@ -11,6 +12,8 @@ def _open_browser():
 
 def main():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "MahilMartPOS.settings")
+    if not sys.argv or not sys.argv[0]:
+        sys.argv = ["MahilMartPOS"]
 
     threading.Thread(target=_open_browser, daemon=True).start()
     from django.core.management import execute_from_command_line
