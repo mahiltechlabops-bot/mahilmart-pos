@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs, collect_submodules
 
 datas = [('MahilMartPOS_App\\templates', 'MahilMartPOS_App\\templates'), ('staticfiles', 'staticfiles'), ('MahilMartPOS', 'MahilMartPOS'), ('MahilMartPOS_App', 'MahilMartPOS_App')]
 binaries = []
@@ -10,6 +10,16 @@ tmp_ret = collect_all('barcode')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('psycopg2')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+hiddenimports += [
+    'win32print',
+    'win32api',
+    'win32con',
+    'win32ui',
+    'pywintypes',
+    'pythoncom',
+]
+hiddenimports += collect_submodules('win32com')
+binaries += collect_dynamic_libs('pywin32_system32')
 
 
 a = Analysis(
