@@ -11,155 +11,617 @@
   <style>
     :root {
       --primary: #2e3b4e;
-      --accent: #3b82f6;
-      --bg: #f1f5f9;
-      --card: #ffffff;
-      --text: #1e293b;
-      --muted: #64748b;
-      --border: #e2e8f0;
+      --primary-dark: #1c2532;
+      --primary-light: #4a5b78;
+      --secondary: #6c63ff;
+      --accent: #36d1dc;
+      --success: #4ade80;
+      --light-bg: #f8fafc;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.12);
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
-    * { box-sizing: border-box; }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: 'Inter', 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-      color: var(--text);
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
+      position: relative;
     }
+
+    /* Animated background from login page */
+    .bg-shapes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .shape {
+      position: absolute;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+      opacity: 0.03;
+    }
+
+    .shape-1 {
+      width: 400px;
+      height: 400px;
+      top: -150px;
+      right: -100px;
+    }
+
+    .shape-2 {
+      width: 300px;
+      height: 300px;
+      bottom: -100px;
+      left: -50px;
+    }
+
+    .shape-3 {
+      width: 200px;
+      height: 200px;
+      top: 40%;
+      left: 10%;
+    }
+
+    /* Updated setup card styling */
     .setup-card {
       width: 100%;
-      max-width: 520px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 28px;
-      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+      max-width: 500px;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 0;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: fadeIn 0.8s ease-in-out;
     }
-    .setup-header {
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Card header matching login page */
+    .card-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 40px 30px 30px;
+      text-align: center;
+      position: relative;
+    }
+
+    .card-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%);
+    }
+
+    .logo-container {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
     }
-    .setup-header i {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--accent);
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      display: inline-flex;
+
+    .logo-circle {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%);
+      color: white;
+      border-radius: 50%;
+      width: 70px;
+      height: 70px;
+      display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 1.8rem;
+      box-shadow: 0 8px 20px rgba(108, 99, 255, 0.3);
     }
-    .setup-title {
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .logo-text h1 {
+      font-size: 1.8rem;
       font-weight: 700;
-      font-size: 20px;
       margin: 0;
+      color: white;
     }
+
+    .logo-text span {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .welcome-text {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .welcome-text h2 {
+      font-size: 1.5rem;
+      color: white;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .welcome-text p {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 0;
+    }
+
+    .card-body {
+      padding: 40px 35px;
+    }
+
+    .setup-title {
+      font-size: 1.5rem;
+      color: var(--primary);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
     .setup-subtitle {
-      margin: 0 0 18px 0;
-      color: var(--muted);
-      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 30px;
+      font-size: 0.95rem;
+      line-height: 1.5;
     }
+
+    /* Alert styling */
     .alert-list {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #991b1b;
-      border-radius: 10px;
-      padding: 12px 14px;
-      margin-bottom: 16px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.2);
+      color: #dc2626;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      border-left: 4px solid #dc2626;
     }
+
     .alert-list ul {
       margin: 0;
-      padding-left: 16px;
+      padding-left: 20px;
     }
+
+    .alert-list li {
+      margin-bottom: 4px;
+    }
+
     .success-box {
-      background: #ecfdf3;
-      border: 1px solid #bbf7d0;
-      color: #065f46;
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 16px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(22, 163, 74, 0.2);
+      color: #16a34a;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-left: 4px solid #16a34a;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
+
+    .success-box i {
+      font-size: 1.2rem;
+    }
+
+    /* Form styling */
+    .form-group {
+      margin-bottom: 24px;
+      position: relative;
+    }
+
     .form-label {
-      font-weight: 600;
-      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      display: block;
     }
+
+    .input-with-icon {
+      position: relative;
+    }
+
+    .input-with-icon i {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+
     .form-control {
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      padding: 10px 12px;
+      width: 100%;
+      padding: 14px 16px 14px 50px;
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      background-color: white;
+      transition: var(--transition);
+      color: var(--text-primary);
     }
-    .btn-primary {
-      background: var(--accent);
-      border: none;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 600;
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(46, 59, 78, 0.1);
     }
+
     .help-text {
-      color: var(--muted);
-      font-size: 12px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
       margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .help-text i {
+      font-size: 0.8rem;
+    }
+
+    /* Button styling */
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 6px 15px rgba(46, 59, 78, 0.2);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(46, 59, 78, 0.25);
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    }
+
+    .btn-primary:active {
+      transform: translateY(-1px);
+    }
+
+    /* Features section from login page */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .feature-item i {
+      color: var(--success);
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    .setup-footer {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .setup-footer i {
+      color: var(--accent);
+    }
+
+    /* Password toggle */
+    .toggle-password {
+      position: absolute;
+      left: auto;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .setup-card {
+        max-width: 90%;
+      }
+
+      .card-body {
+        padding: 30px 25px;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .setup-card {
+        max-width: 95%;
+      }
+
+      .card-body {
+        padding: 25px 20px;
+      }
+
+      .logo-container {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .logo-text {
+        align-items: center;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Animated background shapes -->
+  <div class="bg-shapes">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+  </div>
+
   <div class="setup-card">
-    <div class="setup-header">
-      <i class="fas fa-user-shield"></i>
-      <div>
-        <h1 class="setup-title">First Admin Setup</h1>
-        <div class="help-text">{{ app_name }} · {{ app_tagline }}</div>
+    <div class="card-header">
+      <div class="logo-container">
+        <div class="logo-circle">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <div class="logo-text">
+          <h1>{{ app_name|default:"MY APP" }}</h1>
+          <span>{{ app_tagline|default:"Enterprise Retail System" }}</span>
+        </div>
+      </div>
+      
+      <div class="welcome-text">
+        <h2>First Admin Setup</h2>
+        <p>Secure your system by creating the master administrator account</p>
       </div>
     </div>
-    <p class="setup-subtitle">
-      Create the first admin account to secure your system. This page will be locked after setup.
-    </p>
 
-    {% if success %}
-      <div class="success-box">
-        Admin created successfully. You can now log in.
-      </div>
-      <a class="btn btn-primary w-100" href="{% url 'home' %}">Go to Login</a>
-    {% else %}
-      {% if errors %}
-        <div class="alert-list">
-          <ul>
-            {% for err in errors %}
-              <li>{{ err }}</li>
-            {% endfor %}
-          </ul>
+    <div class="card-body">
+      {% if success %}
+        <div class="success-box">
+          <i class="fas fa-check-circle"></i>
+          <div>
+            <strong>Admin created successfully!</strong>
+            <div style="font-size: 0.9rem; font-weight: normal; margin-top: 4px;">
+              You will be redirected to the login page.
+            </div>
+          </div>
         </div>
+        
+        <a class="btn btn-primary" href="{% url 'home' %}">
+          <i class="fas fa-sign-in-alt"></i>
+          <span>Go to Login</span>
+        </a>
+        
+        <div class="features">
+          <div class="feature-item">
+            <i class="fas fa-check-circle"></i>
+            <span>Account Created</span>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-check-circle"></i>
+            <span>System Secured</span>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-check-circle"></i>
+            <span>Access Granted</span>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-check-circle"></i>
+            <span>Setup Complete</span>
+          </div>
+        </div>
+      {% else %}
+        <div class="setup-title">Create Administrator Account</div>
+        <p class="setup-subtitle">
+          This is a one-time setup process. After creating the admin account, 
+          this page will be permanently disabled for security reasons.
+        </p>
+
+        {% if errors %}
+          <div class="alert-list">
+            <ul>
+              {% for err in errors %}
+                <li>{{ err }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <div class="input-with-icon">
+              <i class="fas fa-user"></i>
+              <input type="text" name="username" class="form-control" 
+                     value="{{ form.username }}" 
+                     placeholder="Enter admin username" required>
+            </div>
+            <div class="help-text">
+              <i class="fas fa-info-circle"></i>
+              This will be your primary login identifier
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <div class="input-with-icon">
+              <i class="fas fa-envelope"></i>
+              <input type="email" name="email" class="form-control" 
+                     value="{{ form.email }}" 
+                     placeholder="admin@example.com">
+            </div>
+            <div class="help-text">
+              <i class="fas fa-info-circle"></i>
+              Optional - for password recovery and notifications
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-with-icon">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="password" name="password" 
+                     class="form-control" 
+                     placeholder="Enter strong password" required>
+              <i class="fas fa-eye toggle-password" onclick="togglePassword('password')"></i>
+            </div>
+            <div class="help-text">
+              <i class="fas fa-shield-alt"></i>
+              Minimum 8 characters with letters and numbers
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <div class="input-with-icon">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="confirm_password" name="confirm_password" 
+                     class="form-control" 
+                     placeholder="Re-enter your password" required>
+              <i class="fas fa-eye toggle-password" onclick="togglePassword('confirm_password')"></i>
+            </div>
+            <div class="help-text">
+              <i class="fas fa-check-double"></i>
+              Must match the password above
+            </div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i>
+            <span>Create Admin Account</span>
+          </button>
+          
+          <div class="features">
+            <div class="feature-item">
+              <i class="fas fa-check-circle"></i>
+              <span>Full System Access</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-check-circle"></i>
+              <span>User Management</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-check-circle"></i>
+              <span>Security Settings</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-check-circle"></i>
+              <span>Audit Logs</span>
+            </div>
+          </div>
+        </form>
       {% endif %}
-
-      <form method="post">
-        {% csrf_token %}
-        <div class="mb-3">
-          <label class="form-label">Username</label>
-          <input type="text" name="username" class="form-control" value="{{ form.username }}" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Email (optional)</label>
-          <input type="email" name="email" class="form-control" value="{{ form.email }}">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Password</label>
-          <input type="password" name="password" class="form-control" required>
-          <div class="help-text">Minimum 6 characters.</div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Confirm Password</label>
-          <input type="password" name="confirm_password" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary w-100">Create Admin</button>
-      </form>
-    {% endif %}
+      
+      <div class="setup-footer">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>This is a one-time setup process</span>
+      </div>
+    </div>
   </div>
+
+  <script>
+    // Toggle password visibility
+    function togglePassword(fieldId) {
+      const field = document.getElementById(fieldId);
+      const eyeIcon = field.nextElementSibling;
+      
+      if (field.type === "password") {
+        field.type = "text";
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+      } else {
+        field.type = "password";
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+      }
+    }
+
+    // Password strength indicator (optional enhancement)
+    function checkPasswordStrength(password) {
+      const strength = {
+        length: password.length >= 8,
+        hasUpper: /[A-Z]/.test(password),
+        hasLower: /[a-z]/.test(password),
+        hasNumber: /\d/.test(password),
+        hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+      };
+      
+      const passed = Object.values(strength).filter(Boolean).length;
+      return Math.min(passed * 20, 100); // Returns 0-100%
+    }
+
+    // Auto-hide success message after redirect (if you want)
+    document.addEventListener('DOMContentLoaded', function() {
+      const successBox = document.querySelector('.success-box');
+      if (successBox) {
+        setTimeout(() => {
+          window.location.href = "{% url 'home' %}";
+        }, 3000); // Redirect after 3 seconds
+      }
+    });
+  </script>
 </body>
 </html>
