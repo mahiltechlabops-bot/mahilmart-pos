@@ -3710,7 +3710,10 @@ def Unit_creation(request):
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": True, "id": new_unit.id, "name": new_unit.unit_name})
 
-        return redirect('unit_creation')
+        return_to = request.POST.get("return_to") or request.META.get("HTTP_REFERER")
+        if return_to:
+            return redirect(return_to)
+        return redirect("unit_creation")
 
     return render(request, 'unit.html')
 
@@ -3765,6 +3768,9 @@ def Group_creation(request):
                     "name": group.group_name
                 })
 
+            return_to = request.POST.get("return_to") or request.META.get("HTTP_REFERER")
+            if return_to:
+                return redirect(return_to)
             return redirect("group_creation")
 
         except Exception as e:
@@ -3800,6 +3806,9 @@ def Brand_creation(request):
                 "name": brand.brand_name
             })
 
+        return_to = request.POST.get("return_to") or request.META.get("HTTP_REFERER")
+        if return_to:
+            return redirect(return_to)
         return redirect('brand_creation')
 
     return render(request, 'brand.html')

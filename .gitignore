@@ -11,6 +11,8 @@ db.sqlite3
 
 # Environment variables
 .env
+db_config.ini
+db_config.local.ini
 
 # Pytest cache
 .pytest_cache/

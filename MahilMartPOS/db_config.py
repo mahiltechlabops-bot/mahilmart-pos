@@ -18,6 +18,10 @@ def _candidate_paths():
     if env_path:
         yield Path(env_path)
 
+    project_root = Path(__file__).resolve().parent.parent
+    yield project_root / "db_config.ini"
+    yield project_root / "db_config.local.ini"
+
     programdata = os.environ.get("PROGRAMDATA")
     if programdata:
         yield Path(programdata) / "MahilMartPOS" / "db_config.ini"

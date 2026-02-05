@@ -814,6 +814,159 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateItemCode(code) {
         // Your existing validation logic
     }
+
+    // Submit Unit modal via AJAX so we don't navigate to unit.html
+    const unitForm = document.getElementById("unitForm");
+    if (unitForm) {
+        unitForm.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const submitBtn = unitForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerHTML : null;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            }
+
+            const formData = new FormData(unitForm);
+            const csrfToken = formData.get("csrfmiddlewaretoken");
+
+            try {
+                const response = await fetch(unitForm.action, {
+                    method: "POST",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: formData,
+                    credentials: "same-origin"
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.error || "Unable to save unit. Please try again.");
+                    return;
+                }
+
+                const newId = String(data.id || "");
+                const newName = data.name || "";
+                const unitSelect = document.getElementById("unit");
+                const pUnitSelect = document.getElementById("p_unit");
+
+                const addOption = (selectEl, shouldSelect) => {
+                    if (!selectEl) return;
+                    const exists = Array.from(selectEl.options).some(opt => opt.value === newId);
+                    if (exists) {
+                        if (shouldSelect) selectEl.value = newId;
+                        return;
+                    }
+                    const option = document.createElement("option");
+                    option.value = newId;
+                    option.textContent = newName;
+                    selectEl.appendChild(option);
+                    if (shouldSelect) selectEl.value = newId;
+                };
+
+                addOption(unitSelect, true);
+                addOption(pUnitSelect, false);
+
+                const modalEl = document.getElementById("unitModal");
+                if (modalEl && window.bootstrap) {
+                    const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+                    modal.hide();
+                }
+                unitForm.reset();
+            } catch (err) {
+                alert("Network error while saving unit.");
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            }
+        });
+    }
+
+    const updateSelectOption = (selectEl, newId, newName, shouldSelect) => {
+        if (!selectEl) return;
+        const exists = Array.from(selectEl.options).some(opt => opt.value === newId);
+        if (!exists) {
+            const option = document.createElement("option");
+            option.value = newId;
+            option.textContent = newName;
+            selectEl.appendChild(option);
+        }
+        if (shouldSelect) {
+            selectEl.value = newId;
+        }
+    };
+
+    const wireModalForm = (formId, modalId, onSuccess) => {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerHTML : null;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            }
+
+            const formData = new FormData(form);
+            const csrfToken = formData.get("csrfmiddlewaretoken");
+
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: formData,
+                    credentials: "same-origin"
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.error || "Unable to save. Please try again.");
+                    return;
+                }
+
+                if (onSuccess) onSuccess(data, form);
+
+                const modalEl = document.getElementById(modalId);
+                if (modalEl && window.bootstrap) {
+                    const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+                    modal.hide();
+                }
+                form.reset();
+            } catch (err) {
+                alert("Network error while saving.");
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            }
+        });
+    };
+
+    wireModalForm("groupModalForm", "groupModal", (data, form) => {
+        const newId = String(data.id || "");
+        const newName = data.name || "";
+        updateSelectOption(document.getElementById("group"), newId, newName, true);
+        const parentSelect = form.querySelector('select[name="under"]');
+        updateSelectOption(parentSelect, newId, newName, false);
+    });
+
+    wireModalForm("brandModalForm", "brandModal", (data) => {
+        const newId = String(data.id || "");
+        const newName = data.name || "";
+        updateSelectOption(document.getElementById("brand"), newId, newName, true);
+    });
 });
 </script>
 {% endblock %}
