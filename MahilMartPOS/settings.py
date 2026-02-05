@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 
+from .db_config import get_database_settings
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -89,14 +91,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mmpos2',
-        'USER': 'postgres',
-        'PASSWORD': 'admin@123',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    "default": get_database_settings()
 }
 
 # psql -h localhost -p 5432 -U mahilmart_user -d mahilmart_db

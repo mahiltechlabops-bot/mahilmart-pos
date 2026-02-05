@@ -5848,11 +5848,13 @@ MSSQL_CONN_STR = (
     "TrustServerCertificate=yes;"
 )
 
+_pg_settings = settings.DATABASES.get("default", {})
 POSTGRES_PARAMS = {
-    "host": "localhost",
-    "user": "postgres",
-    "password": "Praveen",
-    "dbname": "mmpos",
+    "host": _pg_settings.get("HOST") or "localhost",
+    "port": _pg_settings.get("PORT") or "5432",
+    "user": _pg_settings.get("USER") or "",
+    "password": _pg_settings.get("PASSWORD") or "",
+    "dbname": _pg_settings.get("NAME") or "",
 }
 
 executor = ThreadPoolExecutor(max_workers=4)
