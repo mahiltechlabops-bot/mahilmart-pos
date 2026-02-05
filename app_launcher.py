@@ -7,6 +7,9 @@ import webbrowser
 from pathlib import Path
 
 
+_STDIO_STREAM = None
+
+
 def _open_browser():
     time.sleep(1.5)
     webbrowser.open("http://127.0.0.1:8000/")
@@ -21,6 +24,20 @@ def _setup_logging():
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
+
+
+def _ensure_stdio():
+    global _STDIO_STREAM
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    log_dir = Path.home() / "MahilMartPOS" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "startup.log"
+    _STDIO_STREAM = open(log_file, "a", encoding="utf-8")
+    if sys.stdout is None:
+        sys.stdout = _STDIO_STREAM
+    if sys.stderr is None:
+        sys.stderr = _STDIO_STREAM
 
 
 def _ensure_database_exists():
@@ -76,11 +93,19 @@ def _ensure_database_exists():
 
 def _run_migrations():
     from django.core.management import call_command
-    call_command("migrate", interactive=False, run_syncdb=True, verbosity=1)
+    call_command(
+        "migrate",
+        interactive=False,
+        run_syncdb=True,
+        verbosity=1,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+    )
 
 
 def main():
     _setup_logging()
+    _ensure_stdio()
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "MahilMartPOS.settings")
     if not sys.argv or not sys.argv[0]:
         sys.argv = ["MahilMartPOS"]
