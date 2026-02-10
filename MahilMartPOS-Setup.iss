@@ -42,11 +42,20 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\{#MyAppExeName}"; Description: "Start {#MyAppName}"; Flags: postinstall shellexec skipifsilent
 
 [Code]
+const
+  FixedLicenseEmail = 'mahiltechlab.ops@gmail.com';
+
 var
   DbPage: TInputQueryWizardPage;
-  LicensePage: TInputQueryWizardPage;
+  LicenseEmailPage: TInputQueryWizardPage;
+  LicenseKeyPage: TInputQueryWizardPage;
   LicensePath: string;
   ActivationNoticePath: string;
+  PendingEmail: string;
+  PendingMachineId: string;
+  PendingIssuedAt: string;
+  PendingLicenseKey: string;
+  KeyEmailSent: Boolean;
 
 function GetMachineId: string;
 begin
@@ -88,7 +97,7 @@ begin
   end;
 end;
 
-function GenerateLicenseKey(Email, MachineId: string): string;
+function GenerateLicenseKey(Email, MachineId, IssuedAt: string): string;
 var
   Seed: string;
   PartA: Integer;
@@ -97,7 +106,7 @@ var
   PartD: Integer;
   FullKey: string;
 begin
-  Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId);
+  Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId) + '|' + Trim(IssuedAt);
   PartA := BuildChecksumValue(Seed, 3, 11);
   PartB := BuildChecksumValue(Seed, 7, 19);
   PartC := (PartA * 31 + PartB * 17 + Length(Seed) * 97) mod 16777215;
@@ -106,27 +115,87 @@ begin
   Result := Copy(FullKey, 1, 10);
 end;
 
+function EscapePSSingleQuoted(Value: string): string;
+begin
+  Result := Value;
+  StringChangeEx(Result, '''', '''''', True);
+end;
+
+function SendLicenseKeyEmail(MachineId, IssuedAt, LicenseKey: string): Boolean;
+var
+  ScriptPath: string;
+  ScriptContent: string;
+  ResultCode: Integer;
+  EmailAddress: string;
+  AppPassword: string;
+begin
+  EmailAddress := FixedLicenseEmail;
+  AppPassword := 'fbopbtqzaqvedzkg';
+  ScriptPath := ExpandConstant('{tmp}\send_license_key.ps1');
+
+  ScriptContent :=
+    '$ErrorActionPreference = ''Stop''' + #13#10 +
+    '$toEmail = ''' + EscapePSSingleQuoted(EmailAddress) + '''' + #13#10 +
+    '$appPassword = ''' + EscapePSSingleQuoted(AppPassword) + '''' + #13#10 +
+    '$machineId = ''' + EscapePSSingleQuoted(MachineId) + '''' + #13#10 +
+    '$issuedAt = ''' + EscapePSSingleQuoted(IssuedAt) + '''' + #13#10 +
+    '$licenseKey = ''' + EscapePSSingleQuoted(LicenseKey) + '''' + #13#10 +
+    '$sec = ConvertTo-SecureString $appPassword -AsPlainText -Force' + #13#10 +
+    '$cred = New-Object System.Management.Automation.PSCredential($toEmail, $sec)' + #13#10 +
+    '$body = "MahilMart POS license key generated.`r`n`r`nMachine ID: $machineId`r`nIssued At: $issuedAt`r`nLicense Key: $licenseKey`r`n"' + #13#10 +
+    '$msg = New-Object System.Net.Mail.MailMessage' + #13#10 +
+    '$msg.From = $toEmail' + #13#10 +
+    '$msg.To.Add($toEmail)' + #13#10 +
+    '$msg.Subject = "MahilMart POS License Key"' + #13#10 +
+    '$msg.Body = $body' + #13#10 +
+    '$smtp = New-Object System.Net.Mail.SmtpClient(''smtp.gmail.com'', 587)' + #13#10 +
+    '$smtp.EnableSsl = $true' + #13#10 +
+    '$smtp.Credentials = $cred' + #13#10 +
+    '$smtp.Timeout = 15000' + #13#10 +
+    '$smtp.Send($msg)' + #13#10;
+
+  SaveStringToFile(ScriptPath, ScriptContent, False);
+  Result := Exec(
+    ExpandConstant('{cmd}'),
+    '/C powershell -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  ) and (ResultCode = 0);
+end;
+
 procedure InitializeWizard;
 begin
   LicensePath := ExpandConstant('{commonappdata}\MahilMartPOS\license.ini');
   ActivationNoticePath := ExpandConstant('{commonappdata}\MahilMartPOS\license_activation_pending.ini');
+  PendingEmail := '';
+  PendingMachineId := '';
+  PendingIssuedAt := '';
+  PendingLicenseKey := '';
+  KeyEmailSent := False;
 
-  LicensePage := CreateInputQueryPage(
+  LicenseEmailPage := CreateInputQueryPage(
     wpSelectDir,
-    'License Activation',
-    'Activate your installation',
-    'Enter your email and license key for this installation.' + #13#10 + 'Machine ID: ' + GetMachineId
+    'License Email',
+    'Send license key',
+    'License email is fixed in read-only mode.' + #13#10 + 'Machine ID: ' + GetMachineId
   );
-  LicensePage.Add('Email:', False);
-  LicensePage.Add('License Key:', False);
-  if FileExists(LicensePath) then
-  begin
-    LicensePage.Values[0] := GetIniString('license', 'email', '', LicensePath);
-  end;
-  LicensePage.Values[1] := '';
+  LicenseEmailPage.Add('Email:', False);
+  LicenseEmailPage.Values[0] := FixedLicenseEmail;
+  LicenseEmailPage.Edits[0].ReadOnly := True;
+
+  LicenseKeyPage := CreateInputQueryPage(
+    LicenseEmailPage.ID,
+    'License Validation',
+    'Enter received key',
+    'Enter the license key sent by email (read-only mail) for this machine.'
+  );
+  LicenseKeyPage.Add('License Key:', False);
+  LicenseKeyPage.Values[0] := '';
 
   DbPage := CreateInputQueryPage(
-    wpSelectDir,
+    LicenseKeyPage.ID,
     'Database Settings',
     'Configure PostgreSQL connection',
     'These settings will be saved for MahilMart POS.'
@@ -150,31 +219,55 @@ var
   MachineId: string;
 begin
   Result := True;
-  if CurPageID = LicensePage.ID then
+  if CurPageID = LicenseEmailPage.ID then
   begin
-    EnteredEmail := Trim(LicensePage.Values[0]);
-    EnteredKey := NormalizeUpper(LicensePage.Values[1]);
-    MachineId := GetMachineId;
-    if Pos('@', EnteredEmail) = 0 then
+    EnteredEmail := FixedLicenseEmail;
+    LicenseEmailPage.Values[0] := EnteredEmail;
+
+    if PendingEmail <> NormalizeUpper(EnteredEmail) then
+      KeyEmailSent := False;
+
+    if not KeyEmailSent then
     begin
-      MsgBox('A valid email address is required for license activation.', mbError, MB_OK);
-      Result := False;
-      exit;
+      PendingEmail := NormalizeUpper(EnteredEmail);
+      PendingMachineId := GetMachineId;
+      PendingIssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+      PendingLicenseKey := GenerateLicenseKey(EnteredEmail, PendingMachineId, PendingIssuedAt);
+      if not SendLicenseKeyEmail(PendingMachineId, PendingIssuedAt, PendingLicenseKey) then
+      begin
+        MsgBox('Unable to send license key email. Check internet and try again.', mbError, MB_OK);
+        Result := False;
+        exit;
+      end;
+      KeyEmailSent := True;
+      MsgBox('License key sent to ' + FixedLicenseEmail + '. Enter key on next page.', mbInformation, MB_OK);
     end;
+  end;
+  if CurPageID = LicenseKeyPage.ID then
+  begin
+    EnteredKey := NormalizeUpper(LicenseKeyPage.Values[0]);
+    MachineId := GetMachineId;
     if EnteredKey = '' then
     begin
       MsgBox('License key is required.', mbError, MB_OK);
       Result := False;
       exit;
     end;
-    if EnteredKey <> GenerateLicenseKey(EnteredEmail, MachineId) then
+    if not KeyEmailSent then
     begin
-      MsgBox(
-        'Invalid license key for this machine.' + #13#10 +
-        'Machine ID: ' + MachineId,
-        mbError,
-        MB_OK
-      );
+      MsgBox('License key was not sent yet. Go back and send email first.', mbError, MB_OK);
+      Result := False;
+      exit;
+    end;
+    if MachineId <> PendingMachineId then
+    begin
+      MsgBox('Machine changed during setup. Go back and send key email again.', mbError, MB_OK);
+      Result := False;
+      exit;
+    end;
+    if EnteredKey <> PendingLicenseKey then
+    begin
+      MsgBox('Invalid license key for this machine.', mbError, MB_OK);
       Result := False;
       exit;
     end;
@@ -202,10 +295,10 @@ var
   ConfigPath: string;
   Content: string;
   LicenseContent: string;
-  ActivationNoticeContent: string;
   MachineId: string;
   IssuedAt: string;
   EnteredKey: string;
+  EnteredEmail: string;
 begin
   if CurStep = ssInstall then
   begin
@@ -225,24 +318,25 @@ begin
 
     SaveStringToFile(ConfigPath, Content, False);
 
-    MachineId := GetMachineId;
-    IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
-    EnteredKey := NormalizeUpper(LicensePage.Values[1]);
+    EnteredEmail := FixedLicenseEmail;
+    MachineId := PendingMachineId;
+    if MachineId = '' then
+      MachineId := GetMachineId;
+    IssuedAt := PendingIssuedAt;
+    if IssuedAt = '' then
+      IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+    EnteredKey := NormalizeUpper(LicenseKeyPage.Values[0]);
+    if EnteredKey = '' then
+      EnteredKey := PendingLicenseKey;
 
     LicenseContent :=
       '[license]' + #13#10 +
-      'email=' + LicensePage.Values[0] + #13#10 +
+      'email=' + EnteredEmail + #13#10 +
       'machine_id=' + MachineId + #13#10 +
       'issued_at=' + IssuedAt + #13#10 +
       'license_key=' + EnteredKey + #13#10;
     SaveStringToFile(LicensePath, LicenseContent, False);
-
-    ActivationNoticeContent :=
-      '[activation]' + #13#10 +
-      'email=' + LicensePage.Values[0] + #13#10 +
-      'machine_id=' + MachineId + #13#10 +
-      'issued_at=' + IssuedAt + #13#10 +
-      'license_key=' + EnteredKey + #13#10;
-    SaveStringToFile(ActivationNoticePath, ActivationNoticeContent, False);
+    if FileExists(ActivationNoticePath) then
+      DeleteFile(ActivationNoticePath);
   end;
 end;

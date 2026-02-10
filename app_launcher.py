@@ -116,6 +116,11 @@ def _generate_license_key(email, machine_id):
     return _build_checksum_key(seed)[:10]
 
 
+def _generate_staged_license_key(email, machine_id, issued_at):
+    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}|{issued_at.strip()}"
+    return _build_checksum_key(seed)[:10]
+
+
 def _generate_transition_license_key(email, machine_id, issued_at):
     seed = f"{email.strip().upper()}|{machine_id.strip().upper()}|{issued_at.strip()}"
     return _build_checksum_key(seed)
@@ -154,10 +159,13 @@ def _ensure_license():
         raise SystemExit("License not valid for this machine.")
 
     expected_key = _generate_license_key(email, machine_id)
+    staged_key = _generate_staged_license_key(email, machine_id, issued_at) if issued_at else ""
     transition_key = _generate_transition_license_key(email, machine_id, issued_at) if issued_at else ""
     legacy_expected_key = _generate_legacy_license_key(email, machine_id, issued_at) if issued_at else ""
 
     valid_keys = {expected_key}
+    if staged_key:
+        valid_keys.add(staged_key)
     if transition_key:
         valid_keys.add(transition_key)
     if legacy_expected_key:
