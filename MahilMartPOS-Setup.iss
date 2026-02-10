@@ -44,9 +44,40 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Start {#MyAppName}"; Flags: pos
 [Code]
 var
   DbPage: TInputQueryWizardPage;
+  LicensePage: TInputQueryWizardPage;
+  LicensePath: string;
+  ActivationNoticePath: string;
+
+function GetMachineId: string;
+begin
+  Result := GetComputerNameString();
+  if Result = '' then
+    Result := GetSHA1OfString(GetDateTimeString('yyyymmddhhnnss', '', ''));
+end;
+
+function GenerateLicenseKey(Email, MachineId, IssuedAt: string): string;
+var
+  Seed: string;
+begin
+  Seed := Email + '|' + MachineId + '|' + IssuedAt;
+  Result := Uppercase(Copy(GetSHA1OfString(Seed), 1, 24));
+end;
 
 procedure InitializeWizard;
 begin
+  LicensePath := ExpandConstant('{commonappdata}\MahilMartPOS\license.ini');
+  ActivationNoticePath := ExpandConstant('{commonappdata}\MahilMartPOS\license_activation_pending.ini');
+
+  LicensePage := CreateInputQueryPage(
+    wpSelectDir,
+    'License Activation',
+    'Activate your installation',
+    'Enter the email address to bind this installation. A one-time license key will be generated for this machine.'
+  );
+  LicensePage.Add('Email:', False);
+  if FileExists(LicensePath) then
+    LicensePage.Values[0] := GetIniString('license', 'email', '', LicensePath);
+
   DbPage := CreateInputQueryPage(
     wpSelectDir,
     'Database Settings',
@@ -68,6 +99,15 @@ end;
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
+  if CurPageID = LicensePage.ID then
+  begin
+    if Pos('@', LicensePage.Values[0]) = 0 then
+    begin
+      MsgBox('A valid email address is required for license activation.', mbError, MB_OK);
+      Result := False;
+      exit;
+    end;
+  end;
   if CurPageID = DbPage.ID then
   begin
     if Trim(DbPage.Values[2]) = '' then
@@ -90,12 +130,18 @@ var
   ConfigDir: string;
   ConfigPath: string;
   Content: string;
+  LicenseContent: string;
+  ActivationNoticeContent: string;
+  MachineId: string;
+  IssuedAt: string;
 begin
   if CurStep = ssInstall then
   begin
     ConfigDir := ExpandConstant('{commonappdata}\MahilMartPOS');
     ForceDirectories(ConfigDir);
     ConfigPath := ConfigDir + '\db_config.ini';
+    LicensePath := ConfigDir + '\license.ini';
+    ActivationNoticePath := ConfigDir + '\license_activation_pending.ini';
 
     Content :=
       '[database]' + #13#10 +
@@ -106,5 +152,28 @@ begin
       'password=' + DbPage.Values[4] + #13#10;
 
     SaveStringToFile(ConfigPath, Content, False);
+
+    if not FileExists(LicensePath) then
+    begin
+      MachineId := GetMachineId;
+      IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '', '');
+      LicenseContent :=
+        '[license]' + #13#10 +
+        'email=' + LicensePage.Values[0] + #13#10 +
+        'machine_id=' + MachineId + #13#10 +
+        'issued_at=' + IssuedAt + #13#10 +
+        'license_key=' + GenerateLicenseKey(LicensePage.Values[0], MachineId, IssuedAt) + #13#10;
+      SaveStringToFile(LicensePath, LicenseContent, False);
+
+      ActivationNoticeContent :=
+        '[activation]' + #13#10 +
+        'email=' + LicensePage.Values[0] + #13#10 +
+        'machine_id=' + MachineId + #13#10 +
+        'issued_at=' + IssuedAt + #13#10 +
+        'license_key=' + GenerateLicenseKey(LicensePage.Values[0], MachineId, IssuedAt) + #13#10;
+      SaveStringToFile(ActivationNoticePath, ActivationNoticeContent, False);
+    end
+    else
+      Log('Existing license detected; preserving current license file.');
   end;
 end;

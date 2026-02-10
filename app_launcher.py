@@ -5,6 +5,9 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
+import configparser
+import hashlib
+import platform
 
 
 _STDIO_STREAM = None
@@ -91,6 +94,98 @@ def _ensure_database_exists():
         admin_conn.close()
 
 
+def _ensure_license():
+    license_path = Path(os.environ.get("PROGRAMDATA", r"C:\\ProgramData")) / "MahilMartPOS" / "license.ini"
+    if not license_path.exists():
+        logging.error("License file not found at %s", license_path)
+        raise SystemExit("License not found. Please reinstall and activate this copy.")
+
+    parser = configparser.ConfigParser()
+    parser.read(license_path)
+    if "license" not in parser:
+        logging.error("License file missing [license] section.")
+        raise SystemExit("License invalid. Please reinstall and activate this copy.")
+
+    section = parser["license"]
+    email = section.get("email", "").strip()
+    machine_id = section.get("machine_id", "").strip()
+    issued_at = section.get("issued_at", "").strip()
+    stored_key = section.get("license_key", "").strip().upper()
+
+    if not email or not stored_key or not machine_id:
+        logging.error("License file missing required fields.")
+        raise SystemExit("License incomplete. Please reinstall and activate this copy.")
+
+    current_machine = platform.node().strip().lower() or os.environ.get("COMPUTERNAME", "").strip().lower()
+    if machine_id and current_machine and machine_id.lower() != current_machine:
+        logging.error("License machine_id %s does not match current machine %s.", machine_id, current_machine)
+        raise SystemExit("License not valid for this machine.")
+
+    seed = f"{email}|{machine_id}|{issued_at}"
+    expected_key = hashlib.sha1(seed.encode()).hexdigest().upper()[:24]
+    if expected_key != stored_key:
+        logging.error("License integrity check failed. Expected %s, found %s.", expected_key, stored_key)
+        raise SystemExit("License validation failed.")
+
+    logging.info("License validated for %s on machine %s.", email, machine_id)
+
+
+def _send_pending_activation_email():
+    notice_path = Path(os.environ.get("PROGRAMDATA", r"C:\\ProgramData")) / "MahilMartPOS" / "license_activation_pending.ini"
+    if not notice_path.exists():
+        return
+
+    parser = configparser.ConfigParser()
+    parser.read(notice_path)
+    if "activation" not in parser:
+        logging.error("Activation notice file missing [activation] section: %s", notice_path)
+        return
+
+    section = parser["activation"]
+    email = section.get("email", "").strip()
+    machine_id = section.get("machine_id", "").strip()
+    issued_at = section.get("issued_at", "").strip()
+    license_key = section.get("license_key", "").strip().upper()
+    if not email or not machine_id or not issued_at or not license_key:
+        logging.error("Activation notice file missing required fields: %s", notice_path)
+        return
+
+    from django.conf import settings
+    from django.core.mail import send_mail
+
+    try:
+        from MahilMartPOS_App.utils.email_config import apply_email_settings
+        apply_email_settings()
+    except Exception:
+        logging.exception("Failed to apply dynamic email settings. Falling back to static settings.")
+
+    recipients = ["mahiltechlab.ops@gmail.com"]
+
+    from_email = (getattr(settings, "DEFAULT_FROM_EMAIL", None) or "").strip()
+    if not from_email:
+        from_email = (getattr(settings, "EMAIL_HOST_USER", None) or "").strip()
+    if not from_email:
+        logging.warning("Activation email skipped because sender is not configured.")
+        return
+
+    subject = "MahilMart POS License Activated"
+    body = (
+        "A new MahilMart POS license was activated.\n\n"
+        f"Email: {email}\n"
+        f"Machine: {machine_id}\n"
+        f"Issued At: {issued_at}\n"
+        f"License Key: {license_key}\n"
+    )
+
+    try:
+        send_mail(subject, body, from_email, recipients, fail_silently=False)
+        notice_path.unlink(missing_ok=True)
+        logging.info("Activation email sent to %s.", ", ".join(recipients))
+    except Exception:
+        # Keep pending file so startup can retry when email settings are fixed.
+        logging.exception("Failed to send activation email. Will retry on next startup.")
+
+
 def _run_migrations():
     from django.core.management import call_command
     call_command(
@@ -110,6 +205,8 @@ def main():
     if not sys.argv or not sys.argv[0]:
         sys.argv = ["MahilMartPOS"]
 
+    _ensure_license()
+
     if os.environ.get("MAHILMARTPOS_SKIP_MIGRATE") != "1":
         _ensure_database_exists()
 
@@ -118,6 +215,8 @@ def main():
 
     if os.environ.get("MAHILMARTPOS_SKIP_MIGRATE") != "1":
         _run_migrations()
+
+    _send_pending_activation_email()
 
     threading.Thread(target=_open_browser, daemon=True).start()
     from django.core.management import execute_from_command_line
