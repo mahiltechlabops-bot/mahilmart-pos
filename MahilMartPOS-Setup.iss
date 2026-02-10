@@ -56,6 +56,11 @@ begin
   Result := Uppercase(Result);
 end;
 
+function NormalizeUpper(Value: string): string;
+begin
+  Result := Uppercase(Trim(Value));
+end;
+
 function BuildChecksumValue(Seed: string; Multiplier, Offset: Integer): Integer;
 var
   I: Integer;
@@ -83,7 +88,7 @@ begin
   end;
 end;
 
-function GenerateLicenseKey(Email, MachineId, IssuedAt: string): string;
+function GenerateLicenseKey(Email, MachineId: string): string;
 var
   Seed: string;
   PartA: Integer;
@@ -91,7 +96,7 @@ var
   PartC: Integer;
   PartD: Integer;
 begin
-  Seed := Uppercase(Trim(Email)) + '|' + Uppercase(Trim(MachineId)) + '|' + Trim(IssuedAt);
+  Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId);
   PartA := BuildChecksumValue(Seed, 3, 11);
   PartB := BuildChecksumValue(Seed, 7, 19);
   PartC := (PartA * 31 + PartB * 17 + Length(Seed) * 97) mod 16777215;
@@ -108,11 +113,13 @@ begin
     wpSelectDir,
     'License Activation',
     'Activate your installation',
-    'Enter the email address to bind this installation. A one-time license key will be generated for this machine.'
+    'Enter your email address to bind this installation.' + #13#10 + 'Machine ID: ' + GetMachineId
   );
   LicensePage.Add('Email:', False);
   if FileExists(LicensePath) then
+  begin
     LicensePage.Values[0] := GetIniString('license', 'email', '', LicensePath);
+  end;
 
   DbPage := CreateInputQueryPage(
     wpSelectDir,
@@ -133,11 +140,14 @@ begin
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  EnteredEmail: string;
 begin
   Result := True;
   if CurPageID = LicensePage.ID then
   begin
-    if Pos('@', LicensePage.Values[0]) = 0 then
+    EnteredEmail := Trim(LicensePage.Values[0]);
+    if Pos('@', EnteredEmail) = 0 then
     begin
       MsgBox('A valid email address is required for license activation.', mbError, MB_OK);
       Result := False;
@@ -170,6 +180,7 @@ var
   ActivationNoticeContent: string;
   MachineId: string;
   IssuedAt: string;
+  GeneratedKey: string;
 begin
   if CurStep = ssInstall then
   begin
@@ -193,12 +204,13 @@ begin
     begin
       MachineId := GetMachineId;
       IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+      GeneratedKey := GenerateLicenseKey(LicensePage.Values[0], MachineId);
       LicenseContent :=
         '[license]' + #13#10 +
         'email=' + LicensePage.Values[0] + #13#10 +
         'machine_id=' + MachineId + #13#10 +
         'issued_at=' + IssuedAt + #13#10 +
-        'license_key=' + GenerateLicenseKey(LicensePage.Values[0], MachineId, IssuedAt) + #13#10;
+        'license_key=' + GeneratedKey + #13#10;
       SaveStringToFile(LicensePath, LicenseContent, False);
 
       ActivationNoticeContent :=
@@ -206,7 +218,7 @@ begin
         'email=' + LicensePage.Values[0] + #13#10 +
         'machine_id=' + MachineId + #13#10 +
         'issued_at=' + IssuedAt + #13#10 +
-        'license_key=' + GenerateLicenseKey(LicensePage.Values[0], MachineId, IssuedAt) + #13#10;
+        'license_key=' + GeneratedKey + #13#10;
       SaveStringToFile(ActivationNoticePath, ActivationNoticeContent, False);
     end
     else

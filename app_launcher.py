@@ -94,8 +94,7 @@ def _ensure_database_exists():
         admin_conn.close()
 
 
-def _generate_license_key(email, machine_id, issued_at):
-    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}|{issued_at.strip()}"
+def _build_checksum_key(seed):
     modulus = 16777215
 
     def checksum(multiplier, offset):
@@ -109,6 +108,16 @@ def _generate_license_key(email, machine_id, issued_at):
     part_c = (part_a * 31 + part_b * 17 + len(seed) * 97) % modulus
     part_d = (part_a + part_b + part_c + len(seed) * 13) % modulus
     return f"{part_a:06X}{part_b:06X}{part_c:06X}{part_d:06X}"
+
+
+def _generate_license_key(email, machine_id):
+    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}"
+    return _build_checksum_key(seed)
+
+
+def _generate_transition_license_key(email, machine_id, issued_at):
+    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}|{issued_at.strip()}"
+    return _build_checksum_key(seed)
 
 
 def _generate_legacy_license_key(email, machine_id, issued_at):
@@ -143,13 +152,20 @@ def _ensure_license():
         logging.error("License machine_id %s does not match current machine %s.", machine_id, current_machine)
         raise SystemExit("License not valid for this machine.")
 
-    expected_key = _generate_license_key(email, machine_id, issued_at)
-    legacy_expected_key = _generate_legacy_license_key(email, machine_id, issued_at)
-    if stored_key not in {expected_key, legacy_expected_key}:
+    expected_key = _generate_license_key(email, machine_id)
+    transition_key = _generate_transition_license_key(email, machine_id, issued_at) if issued_at else ""
+    legacy_expected_key = _generate_legacy_license_key(email, machine_id, issued_at) if issued_at else ""
+
+    valid_keys = {expected_key}
+    if transition_key:
+        valid_keys.add(transition_key)
+    if legacy_expected_key:
+        valid_keys.add(legacy_expected_key)
+
+    if stored_key not in valid_keys:
         logging.error(
-            "License integrity check failed. Expected %s or %s, found %s.",
-            expected_key,
-            legacy_expected_key,
+            "License integrity check failed. Expected one of %s, found %s.",
+            ", ".join(sorted(valid_keys)),
             stored_key,
         )
         raise SystemExit("License validation failed.")
