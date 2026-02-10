@@ -61,6 +61,7 @@ def _ensure_database_exists():
         "password": db.get("PASSWORD"),
         "host": host,
         "port": port,
+        "connect_timeout": int(os.environ.get("MAHILMARTPOS_DB_CONNECT_TIMEOUT", "5")),
     }
     try:
         conn = psycopg2.connect(**connect_kwargs)
@@ -112,7 +113,7 @@ def _build_checksum_key(seed):
 
 def _generate_license_key(email, machine_id):
     seed = f"{email.strip().upper()}|{machine_id.strip().upper()}"
-    return _build_checksum_key(seed)
+    return _build_checksum_key(seed)[:10]
 
 
 def _generate_transition_license_key(email, machine_id, issued_at):
@@ -193,23 +194,23 @@ def _send_pending_activation_email():
         logging.error("Activation notice file missing required fields: %s", notice_path)
         return
 
-    from django.conf import settings
-    from django.core.mail import send_mail
+    from django.core.mail import get_connection, send_mail
 
-    try:
-        from MahilMartPOS_App.utils.email_config import apply_email_settings
-        apply_email_settings()
-    except Exception:
-        logging.exception("Failed to apply dynamic email settings. Falling back to static settings.")
-
-    recipients = ["mahiltechlab.ops@gmail.com"]
-
-    from_email = (getattr(settings, "DEFAULT_FROM_EMAIL", None) or "").strip()
-    if not from_email:
-        from_email = (getattr(settings, "EMAIL_HOST_USER", None) or "").strip()
-    if not from_email:
-        logging.warning("Activation email skipped because sender is not configured.")
+    license_email = (os.environ.get("MAHILMARTPOS_LICENSE_ALERT_EMAIL") or "mahiltechlab.ops@gmail.com").strip()
+    license_app_password = (
+        os.environ.get("MAHILMARTPOS_LICENSE_ALERT_APP_PASSWORD") or "fbopbtqzaqvedzkg"
+    ).strip()
+    if not license_email or not license_app_password:
+        logging.warning("Activation email skipped because dedicated license email credentials are missing.")
         return
+
+    recipients = [license_email]
+    from_email = license_email
+    smtp_timeout_raw = os.environ.get("MAHILMARTPOS_LICENSE_EMAIL_TIMEOUT", "8").strip()
+    try:
+        smtp_timeout = float(smtp_timeout_raw)
+    except ValueError:
+        smtp_timeout = 8.0
 
     subject = "MahilMart POS License Activated"
     body = (
@@ -221,7 +222,17 @@ def _send_pending_activation_email():
     )
 
     try:
-        send_mail(subject, body, from_email, recipients, fail_silently=False)
+        connection = get_connection(
+            backend="django.core.mail.backends.smtp.EmailBackend",
+            host="smtp.gmail.com",
+            port=587,
+            username=license_email,
+            password=license_app_password,
+            use_tls=True,
+            timeout=smtp_timeout,
+            fail_silently=False,
+        )
+        send_mail(subject, body, from_email, recipients, fail_silently=False, connection=connection)
         notice_path.unlink(missing_ok=True)
         logging.info("Activation email sent to %s.", ", ".join(recipients))
     except Exception:
@@ -241,6 +252,17 @@ def _run_migrations():
     )
 
 
+def _has_pending_migrations():
+    from django.db import connections, DEFAULT_DB_ALIAS
+    from django.db.migrations.executor import MigrationExecutor
+
+    connection = connections[DEFAULT_DB_ALIAS]
+    executor = MigrationExecutor(connection)
+    targets = executor.loader.graph.leaf_nodes()
+    plan = executor.migration_plan(targets)
+    return bool(plan)
+
+
 def main():
     _setup_logging()
     _ensure_stdio()
@@ -250,16 +272,24 @@ def main():
 
     _ensure_license()
 
-    if os.environ.get("MAHILMARTPOS_SKIP_MIGRATE") != "1":
+    should_migrate = os.environ.get("MAHILMARTPOS_SKIP_MIGRATE") != "1"
+    if should_migrate:
         _ensure_database_exists()
 
     from django import setup as django_setup
     django_setup()
 
-    if os.environ.get("MAHILMARTPOS_SKIP_MIGRATE") != "1":
-        _run_migrations()
+    if should_migrate:
+        try:
+            if _has_pending_migrations():
+                _run_migrations()
+            else:
+                logging.info("No pending migrations. Skipping migrate step.")
+        except Exception:
+            logging.exception("Pending migration check failed; running migrate for safety.")
+            _run_migrations()
 
-    _send_pending_activation_email()
+    threading.Thread(target=_send_pending_activation_email, daemon=True).start()
 
     threading.Thread(target=_open_browser, daemon=True).start()
     from django.core.management import execute_from_command_line

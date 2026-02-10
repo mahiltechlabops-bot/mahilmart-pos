@@ -4,6 +4,10 @@
    'C:\\Users\\Billing System '
    '2\\Documents\\GitHub\\mahilmart-pos\\MahilMartPOS\\__init__.py',
    'PYMODULE'),
+  ('MahilMartPOS.db_config',
+   'C:\\Users\\Billing System '
+   '2\\Documents\\GitHub\\mahilmart-pos\\MahilMartPOS\\db_config.py',
+   'PYMODULE'),
   ('MahilMartPOS.settings',
    'C:\\Users\\Billing System '
    '2\\Documents\\GitHub\\mahilmart-pos\\MahilMartPOS\\settings.py',

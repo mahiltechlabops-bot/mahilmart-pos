@@ -95,13 +95,15 @@ var
   PartB: Integer;
   PartC: Integer;
   PartD: Integer;
+  FullKey: string;
 begin
   Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId);
   PartA := BuildChecksumValue(Seed, 3, 11);
   PartB := BuildChecksumValue(Seed, 7, 19);
   PartC := (PartA * 31 + PartB * 17 + Length(Seed) * 97) mod 16777215;
   PartD := (PartA + PartB + PartC + Length(Seed) * 13) mod 16777215;
-  Result := ToFixedHex(PartA, 6) + ToFixedHex(PartB, 6) + ToFixedHex(PartC, 6) + ToFixedHex(PartD, 6);
+  FullKey := ToFixedHex(PartA, 6) + ToFixedHex(PartB, 6) + ToFixedHex(PartC, 6) + ToFixedHex(PartD, 6);
+  Result := Copy(FullKey, 1, 10);
 end;
 
 procedure InitializeWizard;
@@ -181,6 +183,10 @@ var
   MachineId: string;
   IssuedAt: string;
   GeneratedKey: string;
+  ExistingEmail: string;
+  ExistingMachineId: string;
+  ExistingKey: string;
+  ShouldWriteLicense: Boolean;
 begin
   if CurStep = ssInstall then
   begin
@@ -200,11 +206,25 @@ begin
 
     SaveStringToFile(ConfigPath, Content, False);
 
-    if not FileExists(LicensePath) then
+    MachineId := GetMachineId;
+    IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+    GeneratedKey := GenerateLicenseKey(LicensePage.Values[0], MachineId);
+
+    ShouldWriteLicense := True;
+    if FileExists(LicensePath) then
     begin
-      MachineId := GetMachineId;
-      IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
-      GeneratedKey := GenerateLicenseKey(LicensePage.Values[0], MachineId);
+      ExistingEmail := NormalizeUpper(GetIniString('license', 'email', '', LicensePath));
+      ExistingMachineId := NormalizeUpper(GetIniString('license', 'machine_id', '', LicensePath));
+      ExistingKey := NormalizeUpper(GetIniString('license', 'license_key', '', LicensePath));
+
+      ShouldWriteLicense :=
+        (ExistingEmail <> NormalizeUpper(LicensePage.Values[0])) or
+        (ExistingMachineId <> NormalizeUpper(MachineId)) or
+        (ExistingKey <> NormalizeUpper(GeneratedKey));
+    end;
+
+    if ShouldWriteLicense then
+    begin
       LicenseContent :=
         '[license]' + #13#10 +
         'email=' + LicensePage.Values[0] + #13#10 +
@@ -222,6 +242,6 @@ begin
       SaveStringToFile(ActivationNoticePath, ActivationNoticeContent, False);
     end
     else
-      Log('Existing license detected; preserving current license file.');
+      Log('Existing license already matches email and machine; preserving current license file.');
   end;
 end;

@@ -42,6 +42,7 @@ imports:
  &#8226;   <a href="#barcode.writer">barcode.writer</a>
  &#8226;   <a href="#codecs">codecs</a>
  &#8226;   <a href="#collections">collections</a>
+ &#8226;   <a href="#configparser">configparser</a>
  &#8226;   <a href="#copyreg">copyreg</a>
  &#8226;   <a href="#django">django</a>
  &#8226;   <a href="#django.__main__">django.__main__</a>
@@ -973,6 +974,7 @@ imports:
  &#8226;   <a href="#enum">enum</a>
  &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#genericpath">genericpath</a>
+ &#8226;   <a href="#hashlib">hashlib</a>
  &#8226;   <a href="#heapq">heapq</a>
  &#8226;   <a href="#io">io</a>
  &#8226;   <a href="#keyword">keyword</a>
@@ -983,6 +985,7 @@ imports:
  &#8226;   <a href="#operator">operator</a>
  &#8226;   <a href="#os">os</a>
  &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#posixpath">posixpath</a>
  &#8226;   <a href="#psycopg2">psycopg2</a>
  &#8226;   <a href="#psycopg2._ipaddress">psycopg2._ipaddress</a>
@@ -1811,9 +1814,29 @@ imported by:
   <a target="code" href="///C:/Users/Billing%20System%202/Documents/GitHub/mahilmart-pos/MahilMartPOS/__init__.py" type="text/plain"><tt>MahilMartPOS</tt></a>
 <span class="moduletype">Package</span>  <div class="import">
 imported by:
-    <a href="#MahilMartPOS.settings">MahilMartPOS.settings</a>
+    <a href="#MahilMartPOS.db_config">MahilMartPOS.db_config</a>
+ &#8226;   <a href="#MahilMartPOS.settings">MahilMartPOS.settings</a>
  &#8226;   <a href="#MahilMartPOS.urls">MahilMartPOS.urls</a>
  &#8226;   <a href="#MahilMartPOS.wsgi">MahilMartPOS.wsgi</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="MahilMartPOS.db_config"></a>
+  <a target="code" href="///C:/Users/Billing%20System%202/Documents/GitHub/mahilmart-pos/MahilMartPOS/db_config.py" type="text/plain"><tt>MahilMartPOS.db_config</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#MahilMartPOS">MahilMartPOS</a>
+ &#8226;   <a href="#configparser">configparser</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#MahilMartPOS.settings">MahilMartPOS.settings</a>
 
   </div>
 
@@ -1825,6 +1848,7 @@ imported by:
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
     <a href="#MahilMartPOS">MahilMartPOS</a>
+ &#8226;   <a href="#MahilMartPOS.db_config">MahilMartPOS.db_config</a>
  &#8226;   <a href="#django.contrib.messages">django.contrib.messages</a>
  &#8226;   <a href="#django.contrib.messages.constants">django.contrib.messages.constants</a>
  &#8226;   <a href="#os">os</a>
@@ -9045,7 +9069,9 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#django_extensions.management.mysql">django_extensions.management.mysql</a>
+    <a href="#MahilMartPOS.db_config">MahilMartPOS.db_config</a>
+ &#8226;   <a href="#app_launcher.py">app_launcher.py</a>
+ &#8226;   <a href="#django_extensions.management.mysql">django_extensions.management.mysql</a>
  &#8226;   <a href="#idlelib.config">idlelib.config</a>
  &#8226;   <a href="#logging.config">logging.config</a>
  &#8226;   <a href="#setuptools._distutils.dist">setuptools._distutils.dist</a>
@@ -40740,7 +40766,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#django.contrib.auth.hashers">django.contrib.auth.hashers</a>
+    <a href="#app_launcher.py">app_launcher.py</a>
+ &#8226;   <a href="#django.contrib.auth.hashers">django.contrib.auth.hashers</a>
  &#8226;   <a href="#django.contrib.staticfiles.storage">django.contrib.staticfiles.storage</a>
  &#8226;   <a href="#django.core.cache.backends.filebased">django.core.cache.backends.filebased</a>
  &#8226;   <a href="#django.core.cache.utils">django.core.cache.utils</a>
@@ -45780,7 +45807,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#MahilMartPOS.settings">MahilMartPOS.settings</a>
+    <a href="#MahilMartPOS.db_config">MahilMartPOS.db_config</a>
+ &#8226;   <a href="#MahilMartPOS.settings">MahilMartPOS.settings</a>
  &#8226;   <a href="#MahilMartPOS.wsgi">MahilMartPOS.wsgi</a>
  &#8226;   <a href="#PIL.AvifImagePlugin">PIL.AvifImagePlugin</a>
  &#8226;   <a href="#PIL.BlpImagePlugin">PIL.BlpImagePlugin</a>
@@ -46575,7 +46603,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#MahilMartPOS.settings">MahilMartPOS.settings</a>
+    <a href="#MahilMartPOS.db_config">MahilMartPOS.db_config</a>
+ &#8226;   <a href="#MahilMartPOS.settings">MahilMartPOS.settings</a>
  &#8226;   <a href="#app_launcher.py">app_launcher.py</a>
  &#8226;   <a href="#django.conf">django.conf</a>
  &#8226;   <a href="#django.contrib.admindocs.views">django.contrib.admindocs.views</a>
@@ -46838,6 +46867,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#_pyrepl.unix_console">_pyrepl.unix_console</a>
+ &#8226;   <a href="#app_launcher.py">app_launcher.py</a>
  &#8226;   <a href="#django.contrib.staticfiles.management.commands.collectstatic">django.contrib.staticfiles.management.commands.collectstatic</a>
  &#8226;   <a href="#django.db.backends.oracle.base">django.db.backends.oracle.base</a>
  &#8226;   <a href="#idlelib.autocomplete_w">idlelib.autocomplete_w</a>
