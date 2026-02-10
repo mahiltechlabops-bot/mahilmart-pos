@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs, collect_submodules
 
 datas = [('MahilMartPOS_App\\templates', 'MahilMartPOS_App\\templates'), ('staticfiles', 'staticfiles'), ('MahilMartPOS', 'MahilMartPOS'), ('MahilMartPOS_App', 'MahilMartPOS_App')]
@@ -22,6 +23,10 @@ hiddenimports += [
 ]
 hiddenimports += collect_submodules('win32com')
 binaries += collect_dynamic_libs('pywin32_system32')
+
+icon_path = os.path.join('assets', 'branding', 'app.ico')
+if not os.path.exists(icon_path):
+    icon_path = None
 
 
 a = Analysis(
@@ -58,4 +63,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=icon_path,
 )

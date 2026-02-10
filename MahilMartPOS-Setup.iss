@@ -5,6 +5,9 @@
 #define MyAppExeName "MahilMartPOS.exe"
 #define MyAppDirName "MahilMartPOS"
 #define SourceDir "."
+#ifexist "{#SourceDir}\assets\branding\app.ico"
+  #define MyAppIconFile "{#SourceDir}\assets\branding\app.ico"
+#endif
 
 [Setup]
 AppId={{7A8E2C8B-7A21-4A0E-9B58-89C2F2F8B6E0}
@@ -23,6 +26,9 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+#ifdef MyAppIconFile
+SetupIconFile={#MyAppIconFile}
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
