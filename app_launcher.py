@@ -94,6 +94,28 @@ def _ensure_database_exists():
         admin_conn.close()
 
 
+def _generate_license_key(email, machine_id, issued_at):
+    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}|{issued_at.strip()}"
+    modulus = 16777215
+
+    def checksum(multiplier, offset):
+        total = 0
+        for index, char in enumerate(seed, start=1):
+            total = (total + (ord(char) + offset) * (index + multiplier)) % modulus
+        return total
+
+    part_a = checksum(3, 11)
+    part_b = checksum(7, 19)
+    part_c = (part_a * 31 + part_b * 17 + len(seed) * 97) % modulus
+    part_d = (part_a + part_b + part_c + len(seed) * 13) % modulus
+    return f"{part_a:06X}{part_b:06X}{part_c:06X}{part_d:06X}"
+
+
+def _generate_legacy_license_key(email, machine_id, issued_at):
+    seed = f"{email}|{machine_id}|{issued_at}"
+    return hashlib.sha1(seed.encode()).hexdigest().upper()[:24]
+
+
 def _ensure_license():
     license_path = Path(os.environ.get("PROGRAMDATA", r"C:\\ProgramData")) / "MahilMartPOS" / "license.ini"
     if not license_path.exists():
@@ -121,10 +143,15 @@ def _ensure_license():
         logging.error("License machine_id %s does not match current machine %s.", machine_id, current_machine)
         raise SystemExit("License not valid for this machine.")
 
-    seed = f"{email}|{machine_id}|{issued_at}"
-    expected_key = hashlib.sha1(seed.encode()).hexdigest().upper()[:24]
-    if expected_key != stored_key:
-        logging.error("License integrity check failed. Expected %s, found %s.", expected_key, stored_key)
+    expected_key = _generate_license_key(email, machine_id, issued_at)
+    legacy_expected_key = _generate_legacy_license_key(email, machine_id, issued_at)
+    if stored_key not in {expected_key, legacy_expected_key}:
+        logging.error(
+            "License integrity check failed. Expected %s or %s, found %s.",
+            expected_key,
+            legacy_expected_key,
+            stored_key,
+        )
         raise SystemExit("License validation failed.")
 
     logging.info("License validated for %s on machine %s.", email, machine_id)

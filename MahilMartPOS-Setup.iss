@@ -50,17 +50,53 @@ var
 
 function GetMachineId: string;
 begin
-  Result := GetComputerNameString();
+  Result := Trim(GetEnv('COMPUTERNAME'));
   if Result = '' then
-    Result := GetSHA1OfString(GetDateTimeString('yyyymmddhhnnss', '', ''));
+    Result := GetDateTimeString('yyyymmddhhnnss', '', '');
+  Result := Uppercase(Result);
+end;
+
+function BuildChecksumValue(Seed: string; Multiplier, Offset: Integer): Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 1 to Length(Seed) do
+  begin
+    Result := (Result + (Ord(Seed[I]) + Offset) * (I + Multiplier)) mod 16777215;
+  end;
+end;
+
+function ToFixedHex(Value, Width: Integer): string;
+var
+  HexChars: string;
+  I: Integer;
+  Digit: Integer;
+begin
+  HexChars := '0123456789ABCDEF';
+  Result := '';
+  for I := 1 to Width do
+  begin
+    Digit := Value mod 16;
+    Result := Copy(HexChars, Digit + 1, 1) + Result;
+    Value := Value div 16;
+  end;
 end;
 
 function GenerateLicenseKey(Email, MachineId, IssuedAt: string): string;
 var
   Seed: string;
+  PartA: Integer;
+  PartB: Integer;
+  PartC: Integer;
+  PartD: Integer;
 begin
-  Seed := Email + '|' + MachineId + '|' + IssuedAt;
-  Result := Uppercase(Copy(GetSHA1OfString(Seed), 1, 24));
+  Seed := Uppercase(Trim(Email)) + '|' + Uppercase(Trim(MachineId)) + '|' + Trim(IssuedAt);
+  PartA := BuildChecksumValue(Seed, 3, 11);
+  PartB := BuildChecksumValue(Seed, 7, 19);
+  PartC := (PartA * 31 + PartB * 17 + Length(Seed) * 97) mod 16777215;
+  PartD := (PartA + PartB + PartC + Length(Seed) * 13) mod 16777215;
+  Result := ToFixedHex(PartA, 6) + ToFixedHex(PartB, 6) + ToFixedHex(PartC, 6) + ToFixedHex(PartD, 6);
 end;
 
 procedure InitializeWizard;
