@@ -115,13 +115,15 @@ begin
     wpSelectDir,
     'License Activation',
     'Activate your installation',
-    'Enter your email address to bind this installation.' + #13#10 + 'Machine ID: ' + GetMachineId
+    'Enter your email and license key for this installation.' + #13#10 + 'Machine ID: ' + GetMachineId
   );
   LicensePage.Add('Email:', False);
+  LicensePage.Add('License Key:', False);
   if FileExists(LicensePath) then
   begin
     LicensePage.Values[0] := GetIniString('license', 'email', '', LicensePath);
   end;
+  LicensePage.Values[1] := '';
 
   DbPage := CreateInputQueryPage(
     wpSelectDir,
@@ -144,14 +146,35 @@ end;
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
   EnteredEmail: string;
+  EnteredKey: string;
+  MachineId: string;
 begin
   Result := True;
   if CurPageID = LicensePage.ID then
   begin
     EnteredEmail := Trim(LicensePage.Values[0]);
+    EnteredKey := NormalizeUpper(LicensePage.Values[1]);
+    MachineId := GetMachineId;
     if Pos('@', EnteredEmail) = 0 then
     begin
       MsgBox('A valid email address is required for license activation.', mbError, MB_OK);
+      Result := False;
+      exit;
+    end;
+    if EnteredKey = '' then
+    begin
+      MsgBox('License key is required.', mbError, MB_OK);
+      Result := False;
+      exit;
+    end;
+    if EnteredKey <> GenerateLicenseKey(EnteredEmail, MachineId) then
+    begin
+      MsgBox(
+        'Invalid license key for this machine.' + #13#10 +
+        'Machine ID: ' + MachineId,
+        mbError,
+        MB_OK
+      );
       Result := False;
       exit;
     end;
@@ -182,11 +205,7 @@ var
   ActivationNoticeContent: string;
   MachineId: string;
   IssuedAt: string;
-  GeneratedKey: string;
-  ExistingEmail: string;
-  ExistingMachineId: string;
-  ExistingKey: string;
-  ShouldWriteLicense: Boolean;
+  EnteredKey: string;
 begin
   if CurStep = ssInstall then
   begin
@@ -208,40 +227,22 @@ begin
 
     MachineId := GetMachineId;
     IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
-    GeneratedKey := GenerateLicenseKey(LicensePage.Values[0], MachineId);
+    EnteredKey := NormalizeUpper(LicensePage.Values[1]);
 
-    ShouldWriteLicense := True;
-    if FileExists(LicensePath) then
-    begin
-      ExistingEmail := NormalizeUpper(GetIniString('license', 'email', '', LicensePath));
-      ExistingMachineId := NormalizeUpper(GetIniString('license', 'machine_id', '', LicensePath));
-      ExistingKey := NormalizeUpper(GetIniString('license', 'license_key', '', LicensePath));
+    LicenseContent :=
+      '[license]' + #13#10 +
+      'email=' + LicensePage.Values[0] + #13#10 +
+      'machine_id=' + MachineId + #13#10 +
+      'issued_at=' + IssuedAt + #13#10 +
+      'license_key=' + EnteredKey + #13#10;
+    SaveStringToFile(LicensePath, LicenseContent, False);
 
-      ShouldWriteLicense :=
-        (ExistingEmail <> NormalizeUpper(LicensePage.Values[0])) or
-        (ExistingMachineId <> NormalizeUpper(MachineId)) or
-        (ExistingKey <> NormalizeUpper(GeneratedKey));
-    end;
-
-    if ShouldWriteLicense then
-    begin
-      LicenseContent :=
-        '[license]' + #13#10 +
-        'email=' + LicensePage.Values[0] + #13#10 +
-        'machine_id=' + MachineId + #13#10 +
-        'issued_at=' + IssuedAt + #13#10 +
-        'license_key=' + GeneratedKey + #13#10;
-      SaveStringToFile(LicensePath, LicenseContent, False);
-
-      ActivationNoticeContent :=
-        '[activation]' + #13#10 +
-        'email=' + LicensePage.Values[0] + #13#10 +
-        'machine_id=' + MachineId + #13#10 +
-        'issued_at=' + IssuedAt + #13#10 +
-        'license_key=' + GeneratedKey + #13#10;
-      SaveStringToFile(ActivationNoticePath, ActivationNoticeContent, False);
-    end
-    else
-      Log('Existing license already matches email and machine; preserving current license file.');
+    ActivationNoticeContent :=
+      '[activation]' + #13#10 +
+      'email=' + LicensePage.Values[0] + #13#10 +
+      'machine_id=' + MachineId + #13#10 +
+      'issued_at=' + IssuedAt + #13#10 +
+      'license_key=' + EnteredKey + #13#10;
+    SaveStringToFile(ActivationNoticePath, ActivationNoticeContent, False);
   end;
 end;
