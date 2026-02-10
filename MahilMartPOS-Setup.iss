@@ -52,7 +52,7 @@ function GetMachineId: string;
 begin
   Result := Trim(GetEnv('COMPUTERNAME'));
   if Result = '' then
-    Result := GetDateTimeString('yyyymmddhhnnss', '', '');
+    Result := GetDateTimeString('yyyymmddhhnnss', '-', ':');
   Result := Uppercase(Result);
 end;
 
@@ -192,7 +192,7 @@ begin
     if not FileExists(LicensePath) then
     begin
       MachineId := GetMachineId;
-      IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '', '');
+      IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
       LicenseContent :=
         '[license]' + #13#10 +
         'email=' + LicensePage.Values[0] + #13#10 +
