@@ -146,7 +146,7 @@
             <div class="mongo-warning">{{ mongo_warning }}</div>
           {% endif %}
 
-          <form method="post">
+          <form method="post" id="license_form">
             {% csrf_token %}
             <input type="hidden" name="generate_license" value="1">
 
@@ -157,9 +157,10 @@
 
             <div class="mb-3">
               <label class="form-label">Machine ID <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="machine_id" required
+              <input type="text" class="form-control" id="machine_id_input" name="machine_id" required
                      value="{{ machine_id_value }}" placeholder="Example: DESKTOP-8H2K9D1">
-              <div class="form-text">Use the Machine ID shown in customer installer (like DESKTOP-21GCBUA). Do not use POS-UUID from browser.</div>
+              <div class="form-text" id="machine_id_help">Use the Machine ID shown in customer installer (like DESKTOP-21GCBUA). Do not use POS-UUID from browser.</div>
+              <div class="text-danger small mt-1 d-none" id="machine_id_error"></div>
             </div>
 
             <div class="mb-3">
@@ -177,7 +178,7 @@
               <textarea class="form-control" rows="2" name="note">{{ note_value }}</textarea>
             </div>
 
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" id="generate_key_btn">
               <i class="fas fa-bolt me-1"></i> Generate Key
             </button>
             <div class="form-text mt-2">Output format: 32 characters with uppercase, lowercase, numbers, and 2 special characters.</div>
@@ -236,4 +237,74 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("license_form");
+  const machineInput = document.getElementById("machine_id_input");
+  const errorBox = document.getElementById("machine_id_error");
+  const generateButton = document.getElementById("generate_key_btn");
+
+  if (!form || !machineInput || !errorBox || !generateButton) return;
+
+  const browserUuidPattern = /^POS-[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/;
+  const installerMachinePattern = /^[A-Z0-9._-]{3,64}$/;
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.classList.remove("d-none");
+    machineInput.classList.add("is-invalid");
+    generateButton.disabled = true;
+  }
+
+  function clearError() {
+    errorBox.textContent = "";
+    errorBox.classList.add("d-none");
+    machineInput.classList.remove("is-invalid");
+    generateButton.disabled = false;
+  }
+
+  function normalizeMachineId(value) {
+    return (value || "").toUpperCase().replace(/\s+/g, "").trim();
+  }
+
+  function validateMachineId(autoMode) {
+    const normalized = normalizeMachineId(machineInput.value);
+    machineInput.value = normalized;
+
+    if (!normalized) {
+      clearError();
+      return false;
+    }
+
+    if (browserUuidPattern.test(normalized)) {
+      if (autoMode) {
+        machineInput.value = "";
+      }
+      showError("POS-UUID browser ID is not allowed. Paste installer Machine ID (DESKTOP-...).");
+      return false;
+    }
+
+    if (!installerMachinePattern.test(normalized)) {
+      showError("Machine ID format invalid. Use only letters, numbers, dot, underscore, or hyphen.");
+      return false;
+    }
+
+    clearError();
+    return true;
+  }
+
+  machineInput.addEventListener("input", function () {
+    validateMachineId(false);
+  });
+
+  form.addEventListener("submit", function (event) {
+    if (!validateMachineId(false)) {
+      event.preventDefault();
+    }
+  });
+
+  validateMachineId(true);
+});
+</script>
 {% endblock %}

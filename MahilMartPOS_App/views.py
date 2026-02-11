@@ -1007,6 +1007,7 @@ def license_manager_view(request):
                 "Enter a valid Machine ID (3-64 chars: letters, numbers, dot, underscore, hyphen).",
             )
         elif is_browser_style_machine_id(machine_id):
+            context["machine_id_value"] = ""
             messages.error(
                 request,
                 "Do not use POS-UUID browser ID. Use installer Machine ID shown in setup (example: DESKTOP-21GCBUA).",
