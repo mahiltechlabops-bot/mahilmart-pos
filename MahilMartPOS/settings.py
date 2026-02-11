@@ -29,8 +29,8 @@ SECRET_KEY = 'django-insecure-m$j%wqpm)dqy8!erkd_^9hh#4-f29io_)_@zf&+68d1b81fc*)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-#ALLOWED_HOSTS = ['*']  # LAN only; restrict this list if exposed to the internet
-ALLOWED_HOSTS = ['192.168.0.105','127.0.0.1','192.168.0.123','192.168.0.165','192.168.0.128','192.168.1.130']
+# Allow all hosts so the packaged app works on any LAN/WAN IP without manual edits.
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 

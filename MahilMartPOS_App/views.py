@@ -1220,11 +1220,37 @@ def permission_settings_view(request):
 
     users = User.objects.filter(is_superuser=False)
 
+    alias_map = {}
+    for alias_obj in ComputerAlias.objects.all().order_by("computer_name"):
+        machine_name = (alias_obj.computer_name or "").strip()
+        if not machine_name:
+            continue
+        alias_map[machine_name] = (alias_obj.alias_name or "").strip()
+
+    login_machines = {
+        (machine_name or "").strip()
+        for machine_name in LoginLog.objects.values_list("computer_name", flat=True).distinct()
+        if (machine_name or "").strip()
+    }
+
+    machine_names = sorted(set(alias_map.keys()) | set(login_machines))
+    registered_computers = []
+    for machine_name in machine_names:
+        alias_name = alias_map.get(machine_name, "")
+        registered_computers.append(
+            {
+                "computer_name": machine_name,
+                "alias_name": alias_name or machine_name,
+                "is_seen_in_logs": machine_name in login_machines,
+            }
+        )
+
     return render(request, "permission_settings.html", {
         "users": users,
         "selected_user": selected_user,
         "items": items,
         "perm": perm,
+        "registered_computers": registered_computers,
     })
 
 

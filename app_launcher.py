@@ -73,6 +73,45 @@ def _get_server_host_port():
     return bind_host, browser_host, port
 
 
+def _set_runtime_allowed_hosts(bind_host, browser_host):
+    def _clean_host(value):
+        host_value = (value or "").strip().lower()
+        if not host_value:
+            return ""
+        if "://" in host_value:
+            host_value = host_value.split("://", 1)[1]
+        host_value = host_value.split("/", 1)[0].strip()
+        if host_value.startswith("["):
+            end_index = host_value.find("]")
+            if end_index > 0:
+                return host_value[1:end_index].strip()
+        if host_value.count(":") == 1:
+            host_value = host_value.split(":", 1)[0]
+        return host_value.strip()
+
+    host_candidates = {
+        "127.0.0.1",
+        "localhost",
+        bind_host,
+        browser_host,
+        _detect_local_ip(),
+    }
+    existing_hosts = (os.environ.get("MAHILMARTPOS_ALLOWED_HOSTS") or "").strip()
+    if existing_hosts:
+        host_candidates.update(existing_hosts.split(","))
+
+    normalized_hosts = sorted(
+        host
+        for host in {_clean_host(item) for item in host_candidates}
+        if host and host not in ("0.0.0.0", "::")
+    )
+
+    if normalized_hosts:
+        os.environ["MAHILMARTPOS_ALLOWED_HOSTS"] = ",".join(normalized_hosts)
+    os.environ["MAHILMARTPOS_ALLOW_ALL_HOSTS"] = "1"
+    logging.info("Launcher allowed hosts: %s", os.environ.get("MAHILMARTPOS_ALLOWED_HOSTS", ""))
+
+
 def _open_browser(browser_host, port):
     time.sleep(1.5)
     webbrowser.open(f"http://{browser_host}:{port}/")
@@ -377,6 +416,9 @@ def main():
 
     _ensure_license()
 
+    bind_host, browser_host, port = _get_server_host_port()
+    _set_runtime_allowed_hosts(bind_host, browser_host)
+
     should_migrate = os.environ.get("MAHILMARTPOS_SKIP_MIGRATE") != "1"
     if should_migrate:
         _ensure_database_exists()
@@ -394,7 +436,6 @@ def main():
             logging.exception("Pending migration check failed; running migrate for safety.")
             _run_migrations()
 
-    bind_host, browser_host, port = _get_server_host_port()
     threading.Thread(target=_open_browser, args=(browser_host, port), daemon=True).start()
     from django.core.management import execute_from_command_line
     execute_from_command_line(["manage.py", "runserver", f"{bind_host}:{port}", "--noreload"])
