@@ -13,9 +13,21 @@ import platform
 _STDIO_STREAM = None
 
 
-def _open_browser():
+def _get_server_host_port():
+    host = (os.environ.get("MAHILMARTPOS_HOST") or "127.0.0.1").strip()
+    if not host:
+        host = "127.0.0.1"
+
+    port = (os.environ.get("MAHILMARTPOS_PORT") or "8002").strip()
+    if not port.isdigit():
+        port = "8002"
+
+    return host, port
+
+
+def _open_browser(host, port):
     time.sleep(1.5)
-    webbrowser.open("http://127.0.0.1:8000/")
+    webbrowser.open(f"http://{host}:{port}/")
 
 
 def _setup_logging():
@@ -334,9 +346,10 @@ def main():
             logging.exception("Pending migration check failed; running migrate for safety.")
             _run_migrations()
 
-    threading.Thread(target=_open_browser, daemon=True).start()
+    host, port = _get_server_host_port()
+    threading.Thread(target=_open_browser, args=(host, port), daemon=True).start()
     from django.core.management import execute_from_command_line
-    execute_from_command_line(["manage.py", "runserver", "127.0.0.1:8000", "--noreload"])
+    execute_from_command_line(["manage.py", "runserver", f"{host}:{port}", "--noreload"])
 
 
 if __name__ == "__main__":
