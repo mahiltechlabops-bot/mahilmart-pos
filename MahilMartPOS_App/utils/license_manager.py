@@ -66,6 +66,17 @@ def is_machine_id_valid(machine_id):
     return re.fullmatch(r"[A-Z0-9._-]{3,64}", value) is not None
 
 
+def is_browser_style_machine_id(machine_id):
+    value = normalize_machine_id(machine_id)
+    return (
+        re.fullmatch(
+            r"POS-[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}",
+            value,
+        )
+        is not None
+    )
+
+
 def get_license_email():
     email = (os.environ.get("MAHILMARTPOS_LICENSE_EMAIL") or DEFAULT_LICENSE_EMAIL).strip().lower()
     return email or DEFAULT_LICENSE_EMAIL

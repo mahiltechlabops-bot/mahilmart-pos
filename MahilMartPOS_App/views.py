@@ -77,6 +77,7 @@ from .utils.license_manager import (
     fetch_recent_generated_licenses,
     generate_machine_license_key,
     get_license_email,
+    is_browser_style_machine_id,
     is_machine_id_valid,
     normalize_machine_id,
     store_generated_license,
@@ -1004,6 +1005,11 @@ def license_manager_view(request):
             messages.error(
                 request,
                 "Enter a valid Machine ID (3-64 chars: letters, numbers, dot, underscore, hyphen).",
+            )
+        elif is_browser_style_machine_id(machine_id):
+            messages.error(
+                request,
+                "Do not use POS-UUID browser ID. Use installer Machine ID shown in setup (example: DESKTOP-21GCBUA).",
             )
         else:
             generated_key = generate_machine_license_key(machine_id)
