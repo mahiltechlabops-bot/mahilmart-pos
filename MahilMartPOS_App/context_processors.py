@@ -55,6 +55,7 @@ def base_context(request):
                 allow_payments = True
                 allow_expenses = True
                 allow_settings = True
+                allow_license_manager = True
             perm = FullPerm()
 
         elif user.is_staff:
@@ -82,6 +83,7 @@ def base_context(request):
             allow_payments = False
             allow_expenses = False
             allow_settings = False
+            allow_license_manager = False
         perm = DummyPerm()
 
     return {

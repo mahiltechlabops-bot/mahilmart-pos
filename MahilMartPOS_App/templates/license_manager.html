@@ -121,6 +121,23 @@
     vertical-align: middle;
 }
 
+.license-toggle-btn {
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.license-toggle-btn.is-on {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1e3a8a;
+}
+
 @media (max-width: 1080px) {
     .license-grid {
         grid-template-columns: 1fr;
@@ -145,6 +162,11 @@
           {% if mongo_warning %}
             <div class="mongo-warning">{{ mongo_warning }}</div>
           {% endif %}
+          {% if not can_generate_license %}
+            <div class="alert alert-info py-2 px-3 mb-3">
+              Read-only access enabled. You can view keys, but only super admin can generate keys.
+            </div>
+          {% endif %}
 
           <form method="post" id="license_form">
             {% csrf_token %}
@@ -158,34 +180,62 @@
             <div class="mb-3">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <label class="form-label mb-0">Machine ID <span class="text-danger">*</span></label>
-                {% if local_machine_id %}
+                {% if local_machine_id and can_generate_license %}
                   <button type="button" class="btn btn-sm btn-outline-secondary" id="use_local_machine_btn">
                     Use This PC ID: {{ local_machine_id }}
                   </button>
                 {% endif %}
               </div>
               <input type="text" class="form-control" id="machine_id_input" name="machine_id" required
+                     {% if not can_generate_license %}disabled{% endif %}
                      value="{{ machine_id_value }}" placeholder="Example: DESKTOP-8H2K9D1">
-              <div class="form-text" id="machine_id_help">Use the Machine ID shown in customer installer (like DESKTOP-21GCBUA). Do not use POS-UUID from browser.</div>
+              <div class="form-text" id="machine_id_help">Default Machine ID: {{ default_machine_id }}. Use installer Machine ID (DESKTOP-...). Do not use POS-UUID from browser.</div>
+              <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                <span class="badge {% if machine_id_page_access %}text-bg-success{% elif machine_id_page_access is None %}text-bg-secondary{% else %}text-bg-danger{% endif %}">
+                  HTML Page Access:
+                  {% if machine_id_page_access is None %}
+                    Unknown
+                  {% elif machine_id_page_access %}
+                    ON
+                  {% else %}
+                    OFF
+                  {% endif %}
+                </span>
+                <button type="submit"
+                        name="manage_machine_access"
+                        value="allow"
+                        class="btn btn-sm btn-outline-success"
+                        {% if not can_generate_license %}disabled{% endif %}>
+                  Page ON
+                </button>
+                <button type="submit"
+                        name="manage_machine_access"
+                        value="deny"
+                        class="btn btn-sm btn-outline-danger"
+                        {% if not can_generate_license %}disabled{% endif %}>
+                  Page OFF
+                </button>
+              </div>
+              <div class="form-text">Toggle decides if this Machine ID can open License Manager HTML page.</div>
               <div class="text-danger small mt-1 d-none" id="machine_id_error"></div>
             </div>
 
             <div class="mb-3">
               <label class="form-label">Customer Name</label>
-              <input type="text" class="form-control" name="customer_name" value="{{ customer_name_value }}">
+              <input type="text" class="form-control" name="customer_name" value="{{ customer_name_value }}" {% if not can_generate_license %}disabled{% endif %}>
             </div>
 
             <div class="mb-3">
               <label class="form-label">Customer Email</label>
-              <input type="email" class="form-control" name="contact_email" value="{{ contact_email_value }}">
+              <input type="email" class="form-control" name="contact_email" value="{{ contact_email_value }}" {% if not can_generate_license %}disabled{% endif %}>
             </div>
 
             <div class="mb-3">
               <label class="form-label">Note</label>
-              <textarea class="form-control" rows="2" name="note">{{ note_value }}</textarea>
+              <textarea class="form-control" rows="2" name="note" {% if not can_generate_license %}disabled{% endif %}>{{ note_value }}</textarea>
             </div>
 
-            <button type="submit" class="btn btn-primary" id="generate_key_btn">
+            <button type="submit" class="btn btn-primary" id="generate_key_btn" {% if not can_generate_license %}disabled{% endif %}>
               <i class="fas fa-bolt me-1"></i> Generate Key
             </button>
             <div class="form-text mt-2">Output format: 32 characters with uppercase, lowercase, numbers, and 2 special characters.</div>
@@ -215,26 +265,42 @@
             <div class="step-item"><strong>Step 4:</strong> Same key remains valid for that same machine.</div>
           </div>
 
-          <h5 class="mt-4">Recent Generated Keys</h5>
+          <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+            <h5 class="mb-0">Recent Generated Keys</h5>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button type="button"
+                      id="show_machine_id_toggle"
+                      class="license-toggle-btn is-on"
+                      data-on="1">
+                Machine ID: ON
+              </button>
+              <button type="button"
+                      id="key_machine_only_toggle"
+                      class="license-toggle-btn"
+                      data-on="0">
+                Key + Machine Only: OFF
+              </button>
+            </div>
+          </div>
           <div class="table-wrap">
             <table class="table table-sm table-striped align-middle">
               <thead>
                 <tr>
                   <th>Key</th>
-                  <th>Machine</th>
-                  <th>Customer</th>
-                  <th>Generated At</th>
-                  <th>By</th>
+                  <th class="license-machine-col">Machine</th>
+                  <th class="license-extra-col">Customer</th>
+                  <th class="license-extra-col">Generated At</th>
+                  <th class="license-extra-col">By</th>
                 </tr>
               </thead>
               <tbody>
                 {% for item in recent_licenses %}
                   <tr>
                     <td class="fw-semibold">{{ item.license_key }}</td>
-                    <td>{{ item.machine_id }}</td>
-                    <td>{{ item.customer_name|default:"-" }}</td>
-                    <td>{{ item.generated_at|date:"Y-m-d H:i" }}</td>
-                    <td>{{ item.generated_by|default:"-" }}</td>
+                    <td class="license-machine-col">{{ item.machine_id }}</td>
+                    <td class="license-extra-col">{{ item.customer_name|default:"-" }}</td>
+                    <td class="license-extra-col">{{ item.generated_at|date:"Y-m-d H:i" }}</td>
+                    <td class="license-extra-col">{{ item.generated_by|default:"-" }}</td>
                   </tr>
                 {% empty %}
                   <tr>
@@ -259,6 +325,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const useLocalButton = document.getElementById("use_local_machine_btn");
   const copyGeneratedKeyButton = document.getElementById("copy_generated_key_btn");
   const generatedForMachine = document.getElementById("generated_for_machine");
+  const keyMachineOnlyToggleButton = document.getElementById("key_machine_only_toggle");
+  const showMachineIdToggleButton = document.getElementById("show_machine_id_toggle");
 
   if (!form || !machineInput || !errorBox || !generateButton) return;
 
@@ -346,6 +414,55 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
+
+  function setToggleState(button, isOn, onText, offText) {
+    if (!button) return;
+    button.dataset.on = isOn ? "1" : "0";
+    button.textContent = isOn ? onText : offText;
+    if (isOn) {
+      button.classList.add("is-on");
+    } else {
+      button.classList.remove("is-on");
+    }
+  }
+
+  function applyKeyMachineTableMode() {
+    const hideExtra = !!(keyMachineOnlyToggleButton && keyMachineOnlyToggleButton.dataset.on === "1");
+    const showMachine = !showMachineIdToggleButton || showMachineIdToggleButton.dataset.on === "1";
+    document.querySelectorAll(".license-extra-col").forEach(function (cell) {
+      if (hideExtra) {
+        cell.classList.add("d-none");
+      } else {
+        cell.classList.remove("d-none");
+      }
+    });
+    document.querySelectorAll(".license-machine-col").forEach(function (cell) {
+      if (showMachine) {
+        cell.classList.remove("d-none");
+      } else {
+        cell.classList.add("d-none");
+      }
+    });
+  }
+
+  if (keyMachineOnlyToggleButton) {
+    keyMachineOnlyToggleButton.addEventListener("click", function () {
+      const next = !(keyMachineOnlyToggleButton.dataset.on === "1");
+      setToggleState(keyMachineOnlyToggleButton, next, "Key + Machine Only: ON", "Key + Machine Only: OFF");
+      applyKeyMachineTableMode();
+    });
+  }
+  if (showMachineIdToggleButton) {
+    showMachineIdToggleButton.addEventListener("click", function () {
+      const next = !(showMachineIdToggleButton.dataset.on === "1");
+      setToggleState(showMachineIdToggleButton, next, "Machine ID: ON", "Machine ID: OFF");
+      applyKeyMachineTableMode();
+    });
+  }
+
+  setToggleState(showMachineIdToggleButton, true, "Machine ID: ON", "Machine ID: OFF");
+  setToggleState(keyMachineOnlyToggleButton, false, "Key + Machine Only: ON", "Key + Machine Only: OFF");
+  applyKeyMachineTableMode();
 
   validateMachineId(true);
 });

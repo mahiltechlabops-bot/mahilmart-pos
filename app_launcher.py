@@ -8,26 +8,74 @@ from pathlib import Path
 import configparser
 import hashlib
 import platform
+import socket
 
 
 _STDIO_STREAM = None
 
 
+def _detect_local_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe_socket:
+            probe_socket.connect(("8.8.8.8", 80))
+            local_ip = probe_socket.getsockname()[0].strip()
+            if local_ip:
+                return local_ip
+    except OSError:
+        pass
+
+    try:
+        local_ip = socket.gethostbyname(socket.gethostname()).strip()
+        if local_ip:
+            return local_ip
+    except OSError:
+        pass
+
+    return "127.0.0.1"
+
+
+def _normalize_port(value):
+    candidate = (value or "").strip()
+    if not candidate.isdigit():
+        return "8002"
+
+    numeric_port = int(candidate)
+    if numeric_port < 1 or numeric_port > 65535:
+        return "8002"
+
+    return str(numeric_port)
+
+
 def _get_server_host_port():
-    host = (os.environ.get("MAHILMARTPOS_HOST") or "127.0.0.1").strip()
-    if not host:
-        host = "127.0.0.1"
+    fixed_host = (os.environ.get("MAHILMARTPOS_HOST") or "").strip()
+    bind_host = (os.environ.get("MAHILMARTPOS_BIND_HOST") or "").strip()
+    browser_host = (os.environ.get("MAHILMARTPOS_BROWSER_HOST") or "").strip()
+    port = _normalize_port(os.environ.get("MAHILMARTPOS_PORT") or "8002")
 
-    port = (os.environ.get("MAHILMARTPOS_PORT") or "8002").strip()
-    if not port.isdigit():
-        port = "8002"
+    if fixed_host:
+        bind_host = fixed_host
+        browser_host = fixed_host
+    else:
+        if not bind_host:
+            bind_host = "0.0.0.0"
+        if not browser_host:
+            if bind_host in ("0.0.0.0", "::"):
+                browser_host = _detect_local_ip()
+            else:
+                browser_host = bind_host
 
-    return host, port
+    logging.info(
+        "Launcher network config: bind_host=%s, browser_host=%s, port=%s",
+        bind_host,
+        browser_host,
+        port,
+    )
+    return bind_host, browser_host, port
 
 
-def _open_browser(host, port):
+def _open_browser(browser_host, port):
     time.sleep(1.5)
-    webbrowser.open(f"http://{host}:{port}/")
+    webbrowser.open(f"http://{browser_host}:{port}/")
 
 
 def _setup_logging():
@@ -346,10 +394,10 @@ def main():
             logging.exception("Pending migration check failed; running migrate for safety.")
             _run_migrations()
 
-    host, port = _get_server_host_port()
-    threading.Thread(target=_open_browser, args=(host, port), daemon=True).start()
+    bind_host, browser_host, port = _get_server_host_port()
+    threading.Thread(target=_open_browser, args=(browser_host, port), daemon=True).start()
     from django.core.management import execute_from_command_line
-    execute_from_command_line(["manage.py", "runserver", f"{host}:{port}", "--noreload"])
+    execute_from_command_line(["manage.py", "runserver", f"{bind_host}:{port}", "--noreload"])
 
 
 if __name__ == "__main__":

@@ -881,6 +881,7 @@ class LoginLog(models.Model):
 class ComputerAlias(models.Model):
     computer_name = models.CharField(max_length=200, unique=True)
     alias_name = models.CharField(max_length=100)
+    license_manager_page_access = models.BooleanField(null=True, blank=True, default=None)
 
     def __str__(self):
         return f"{self.alias_name} ({self.computer_name})"
@@ -936,6 +937,7 @@ class CashierPermission(models.Model):
     allow_logs = models.BooleanField(default=False)
     allow_company = models.BooleanField(default=False)
     allow_settings = models.BooleanField(default=False)
+    allow_license_manager = models.BooleanField(default=False)
     allow_config_view = models.BooleanField(default=False)
 
     def __str__(self):
@@ -963,6 +965,7 @@ class SupervisorPermission(models.Model):
     allow_logs = models.BooleanField(default=False)
     allow_company = models.BooleanField(default=False)
     allow_settings = models.BooleanField(default=False)
+    allow_license_manager = models.BooleanField(default=False)
     allow_config_view = models.BooleanField(default=False)
 
     def __str__(self):

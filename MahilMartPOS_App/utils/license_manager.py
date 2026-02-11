@@ -1,6 +1,8 @@
+import json
 import os
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 
 
 DEFAULT_LICENSE_EMAIL = "mahiltechlab.ops@gmail.com"
@@ -9,6 +11,8 @@ DEFAULT_MONGO_URI = (
 )
 DEFAULT_MONGO_DB = "mahilmart_pos"
 DEFAULT_MONGO_COLLECTION = "license_keys"
+LOCAL_CACHE_DIR = Path.home() / "MahilMartPOS"
+LOCAL_CACHE_FILE = LOCAL_CACHE_DIR / "license_keys_cache.json"
 
 
 def _build_checksum_value(seed, multiplier, offset):
@@ -99,18 +103,129 @@ def _open_mongo_client():
         client.admin.command("ping")
         return client, None
     except Exception as exc:
-        return None, str(exc)
+        return None, _sanitize_mongo_error_message(str(exc))
+
+
+def _sanitize_mongo_error_message(error_text):
+    lowered = (error_text or "").lower()
+    if "ssl handshake failed" in lowered or "tlsv1_alert_internal_error" in lowered:
+        return (
+            "MongoDB TLS connection failed. Check internet/firewall, Atlas IP Access List, and "
+            "whether your network blocks Atlas TLS."
+        )
+    if "authentication failed" in lowered:
+        return "MongoDB authentication failed. Check username/password in MAHILMARTPOS_LICENSE_MONGO_URI."
+    if "timed out" in lowered or "timeout" in lowered:
+        return "MongoDB connection timed out. Check internet and Atlas cluster status."
+    if "dns" in lowered:
+        return "MongoDB DNS lookup failed. Check network DNS and SRV record access."
+    compact = (error_text or "").strip().replace("\r", " ").replace("\n", " ")
+    if len(compact) > 220:
+        compact = compact[:220].rstrip() + "..."
+    return compact or "Unknown MongoDB connection error."
+
+
+def _offline_warning(showing_cache=False):
+    if showing_cache:
+        return "Cloud sync offline. Using local cache."
+    return "Cloud sync offline. No local cache yet."
+
+
+def _to_jsonable(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return value
+
+
+def _read_local_cache():
+    if not LOCAL_CACHE_FILE.exists():
+        return []
+    try:
+        with LOCAL_CACHE_FILE.open("r", encoding="utf-8") as file_obj:
+            data = json.load(file_obj)
+        if isinstance(data, list):
+            return data
+    except (OSError, json.JSONDecodeError):
+        pass
+    return []
+
+
+def _write_local_cache(items):
+    LOCAL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    with LOCAL_CACHE_FILE.open("w", encoding="utf-8") as file_obj:
+        json.dump(items, file_obj, ensure_ascii=True, indent=2)
+
+
+def _parse_cached_datetime(value):
+    if isinstance(value, datetime):
+        return value
+    text = (value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed
+    except ValueError:
+        return None
+
+
+def _save_local_generated_license(document):
+    items = _read_local_cache()
+    key = (document.get("license_key") or "").strip()
+    if not key:
+        return False, "Local cache save failed: missing license key."
+
+    normalized_items = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if (item.get("license_key") or "").strip() == key:
+            continue
+        normalized_items.append(item)
+
+    cache_record = {
+        "license_key": key,
+        "machine_id": (document.get("machine_id") or "").strip(),
+        "customer_name": (document.get("customer_name") or "").strip(),
+        "contact_email": (document.get("contact_email") or "").strip(),
+        "generated_by": (document.get("generated_by") or "").strip(),
+        "generated_at": _to_jsonable(document.get("generated_at")),
+        "status": (document.get("status") or "generated").strip(),
+        "source": (document.get("source") or "license_manager_page").strip(),
+    }
+    normalized_items.insert(0, cache_record)
+    try:
+        _write_local_cache(normalized_items[:200])
+        return True, "License saved to local cache."
+    except OSError as exc:
+        return False, f"Local cache save failed: {exc}"
+
+
+def _fetch_recent_local_licenses(limit):
+    items = _read_local_cache()
+    results = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        result_item = {
+            "license_key": (item.get("license_key") or "").strip(),
+            "machine_id": (item.get("machine_id") or "").strip(),
+            "customer_name": (item.get("customer_name") or "").strip(),
+            "contact_email": (item.get("contact_email") or "").strip(),
+            "generated_by": (item.get("generated_by") or "").strip(),
+            "generated_at": _parse_cached_datetime(item.get("generated_at")),
+            "status": (item.get("status") or "generated").strip(),
+        }
+        results.append(result_item)
+        if len(results) >= max(1, int(limit)):
+            break
+    return results
 
 
 def store_generated_license(machine_id, license_key, generated_by, customer_name="", contact_email="", note=""):
     client, error_message = _open_mongo_client()
-    if client is None:
-        return False, f"MongoDB save failed: {error_message}"
-
-    db_name = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB") or DEFAULT_MONGO_DB).strip()
-    collection_name = (
-        os.environ.get("MAHILMARTPOS_LICENSE_MONGO_COLLECTION") or DEFAULT_MONGO_COLLECTION
-    ).strip()
     now_utc = datetime.now(timezone.utc)
 
     document = {
@@ -126,6 +241,17 @@ def store_generated_license(machine_id, license_key, generated_by, customer_name
         "source": "license_manager_page",
     }
 
+    if client is None:
+        is_cached, cache_message = _save_local_generated_license(document)
+        if is_cached:
+            return True, "Saved locally (cloud sync offline)."
+        return False, f"Cloud sync offline. {cache_message}"
+
+    db_name = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB") or DEFAULT_MONGO_DB).strip()
+    collection_name = (
+        os.environ.get("MAHILMARTPOS_LICENSE_MONGO_COLLECTION") or DEFAULT_MONGO_COLLECTION
+    ).strip()
+
     try:
         collection = client[db_name][collection_name]
         collection.update_one(
@@ -140,7 +266,10 @@ def store_generated_license(machine_id, license_key, generated_by, customer_name
         )
         return True, "License saved to MongoDB."
     except Exception as exc:
-        return False, f"MongoDB save failed: {exc}"
+        is_cached, cache_message = _save_local_generated_license(document)
+        if is_cached:
+            return True, "Saved locally (cloud sync offline)."
+        return False, f"Cloud sync offline. {cache_message}"
     finally:
         client.close()
 
@@ -148,7 +277,10 @@ def store_generated_license(machine_id, license_key, generated_by, customer_name
 def fetch_recent_generated_licenses(limit=20):
     client, error_message = _open_mongo_client()
     if client is None:
-        return [], f"MongoDB unavailable: {error_message}"
+        local_records = _fetch_recent_local_licenses(limit)
+        if local_records:
+            return local_records, _offline_warning(showing_cache=True)
+        return [], _offline_warning(showing_cache=False)
 
     db_name = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB") or DEFAULT_MONGO_DB).strip()
     collection_name = (
@@ -176,6 +308,9 @@ def fetch_recent_generated_licenses(limit=20):
         )
         return list(cursor), ""
     except Exception as exc:
-        return [], f"MongoDB load failed: {exc}"
+        local_records = _fetch_recent_local_licenses(limit)
+        if local_records:
+            return local_records, _offline_warning(showing_cache=True)
+        return [], _offline_warning(showing_cache=False)
     finally:
         client.close()
