@@ -1,0 +1,74 @@
+<style>
+/* SWITCH TOGGLE STYLE */
+.switch-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 22px;
+}
+
+.switch-wrapper input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: #ccc;
+    border-radius: 22px;
+    top: 0; left: 0; right: 0; bottom: 0;
+    transition: .3s;
+}
+
+.switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .3s;
+}
+
+input:checked + .switch-slider {
+    background-color: #2e3b4e;
+}
+
+input:checked + .switch-slider:before {
+    transform: translateX(20px);
+}
+
+/* GROUP ROW STYLE */
+.group-toggle {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+</style>
+
+
+
+{% for g in groups %}
+  <div class="group-toggle">
+    <span>{{ g.name }}</span>
+  </div>
+{% empty %}
+  <div class="text-muted">No groups available.</div>
+{% endfor %}
+
+
+
+<script>
+// CSRF helper
+function getCSRFToken() {
+    return document.querySelector("[name=csrfmiddlewaretoken]").value;
+}
+
+// No toggle for auth groups
+</script>

@@ -1,240 +1,268 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Purchase Payment Details</title>
-    <style>
-        body {
-            font-family: "Segoe UI", Arial, sans-serif;
-            background-color: #f9fafb;
-            margin: 0;
-            padding: 0;
-        }
-        h2 {
-            text-align: center;
-            margin: 30px 0;
-            color: #2d3748;
-            font-size: 28px;
-        }
-        .table-container {
-            max-width: 1700px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: center;
-            font-size: 14px;
-        }
-        thead {
-            background-color: #1e3a8a;
-            color: white;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-        th, td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #f8fafc;
-        }
-        tbody tr:hover {
-            background-color: #edf2f7;
-            transition: 0.2s;
-        }
-        .status-paid {
-            color: #16a34a;
-            font-weight: bold;
-        }
-        .status-unpaid {
-            color: #dc2626;
-            font-weight: bold;
-        }
-        .status-partial {
-            color: #d97706;
-            font-weight: bold;
-        }
-        .btn-container {
-            text-align: center;
-            margin-top: 25px;
-        }
-        .back-btn {
-            padding: 10px 25px;
-            background: linear-gradient(to right, #2563eb, #1d4ed8);
-            border: none;
-            color: white;
-            font-size: 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.3s ease-in-out;
-        }
-        .back-btn:hover {
-            background: linear-gradient(to right, #1d4ed8, #1e40af);
-        }
-        .status-pending {
-            background-color: #f8d7da;
-            color: #721c24;
-            font-weight: bold;
-            text-align: center;
-        }
+<style>
+:root{
+  --primary:#0b1c3f;
+  --primary-2:#12326b;
+  --accent:#4f46e5;
+  --accent-soft:#eef2ff;
+  --muted:#6b7280;
+  --card:#ffffff;
+  --bg:#f4f7fb;
+  --success:#10b981;
+  --danger:#ef4444;
+  --radius:14px;
+  --shadow:0 10px 30px rgba(15,23,42,.08);
+}
 
-        .status-completed {
-            background-color: #d4edda;
-            color: #155724;
-            font-weight: bold;
-            text-align: center;
-        }
+body{background:var(--bg);}
 
-        .modal-backdrop {
-            z-index: 1040 !important;
-            }
-            .modal {
-            z-index: 1050 !important;
-            }
-    </style>
-</head>
-<body>
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Purchase Payment Details</h2>   
+/* HEADER */
+.page-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+.title-badge{
+  font-size:1.35rem;
+  font-weight:800;
+  color:var(--primary);
+}
+
+/* FILTER BAR */
+.filters{
+  display:grid;
+  grid-template-columns:
+    minmax(220px, 1.4fr)
+    minmax(160px, 1fr)
+    minmax(160px, 1fr)
+    auto
+    auto;
+  gap:16px;
+  align-items:end;
+  background:linear-gradient(180deg,#ffffff,#f8fafc);
+  padding:16px;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+
+.filters label{
+  font-size:.75rem;
+  font-weight:700;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+
+.input, select{
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+}
+
+.input:focus, select:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+
+.btn{
+  height:42px;
+  padding:0 22px;
+  font-weight:700;
+  border-radius:10px;
+}
+
+.btn-primary{
+  background:linear-gradient(90deg,#4f46e5,#4338ca);
+  color:#fff;
+}
+.btn-ghost{
+  background:#fff;
+  border:1px solid #e5e7eb;
+}
+
+/* TABLE */
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.table-responsive{overflow:auto;}
+table{width:100%;min-width:1400px;}
+thead th{
+  background:linear-gradient(180deg,var(--primary),var(--primary-2));
+  color:#fff;
+  padding:14px 12px;
+  font-size:.8rem;
+  text-transform:uppercase;
+}
+tbody td{
+  padding:14px 12px;
+  border-bottom:1px solid #eef2f7;
+  font-size:.92rem;
+}
+tbody tr:hover{background:#f8fafc;}
+
+.invoice-link{
+  color:var(--accent);
+  font-weight:800;
+  text-decoration:none;
+}
+
+.status-badge{
+  padding:6px 14px;
+  border-radius:999px;
+  font-size:.75rem;
+  font-weight:800;
+}
+.status-pending{background:#fee2e2;color:#991b1b;}
+.status-completed{background:#dcfce7;color:#065f46;}
+
+/* MODAL */
+.modal-content{
+  border-radius:18px;
+  color: white;
+}
+.modal-header{
+  background:linear-gradient(180deg,var(--primary),var(--primary-2));
+  color:#ffffff;
+}
+/* FORCE MODAL TABLE HEADER TO WHITE */
+#productsModal table thead th{
+  
+  color:#ffffff !important;
+}
+  
+
+</style>
+
+<!-- HEADER -->
+<div class="page-header">
+  <div>
+    <h2 class="title-badge">View Purchase 1</h2>
+    <div class="small-note">Invoices, products, payments & balances</div>
+  </div>
+
+  <div>
+    <input id="quickSearch" class="input" placeholder="Search invoice / supplier / product">
+    <button id="exportCsv" class="btn btn-primary">Export CSV</button>
+    <a href="{% url 'purchase' %}">
+      <button type="button" class="btn btn-ghost">Back</button>
+    </a>
+  </div>
 </div>
 
-
-<form method="get" id="filterForm" class="mb-3" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-    <label>Supplier:</label>
-    <select name="supplier" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ccc;">
-        <option value="">All</option>
-        {% for supplier in suppliers %}
-            <option value="{{ supplier.id }}" {% if selected_supplier == supplier.id|stringformat:"s" %}selected{% endif %}>
-                {{ supplier.name }}
-            </option>
-        {% endfor %}
+<!-- FILTER -->
+<form method="get" id="filterForm" class="filters">
+  <div>
+    <label>Supplier</label>
+    <select name="supplier" class="input">
+      <option value="">All</option>
+      {% for supplier in suppliers %}
+        <option value="{{ supplier.id }}" {% if selected_supplier == supplier.id|stringformat:"s" %}selected{% endif %}>
+          {{ supplier.name }}
+        </option>
+      {% endfor %}
     </select>
+  </div>
 
-    <label>Start Date:</label>
-    <input type="date" name="start_date" id="start_date" value="{{ start_date }}" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ccc;">
+  <div>
+    <label>Start</label>
+    <input type="date" name="start_date" value="{{ start_date }}" class="input">
+  </div>
 
-    <label>End Date:</label>
-    <input type="date" name="end_date" id="end_date" value="{{ end_date }}" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ccc;">
+  <div>
+    <label>End</label>
+    <input type="date" name="end_date" value="{{ end_date }}" class="input">
+  </div>
 
-
-    <button type="submit" style="
-        padding: 6px 15px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: 0.3s;
-    " 
-    onmouseover="this.style.backgroundColor='#45a049';" 
-    onmouseout="this.style.backgroundColor='#4CAF50';">
-        Filter
-    </button>
-     <div style="margin-left: auto;">
-        <a href="{% url 'purchase' %}">
-            <button type="button" class="back-btn" style="padding: 6px 15px; background: linear-gradient(to right, #2563eb, #1d4ed8); color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s;">
-                Back
-            </button>
-        </a>
-    </div>
+  <button class="btn btn-primary">Filter</button>
+  <a href="{% url 'purchase_items' %}">
+    <button type="button" class="btn btn-ghost">Reset</button>
+  </a>
 </form>
 
-<div class="table-container">
+<!-- TABLE -->
+<div class="card" style="margin-top:18px">
+  <div class="table-responsive">
     <table>
-        <thead>
-            <tr>         
-                <th>S.no</th>      
-                <th>Purchase ID</th>
-                <th>Supplier ID</th>
-                <th>Invoice No</th>
-                <th>Subtotal amount</th>
-                <th>Tax</th>
-                <th>Discount</th>
-                <th>Total Invoice Amount</th>               
-                <th>Amount Paid</th>
-                <th>Outstanding Amount</th>                                          
-                <th>Payment Mode</th>
-                <th>Payment Rate</th>
-                <th>Payment Reference</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>                
-            <td>{{ forloop.counter }}</td>
-            <td>{{ item.purchase.id }}</td>
-            <td>{{ item.purchase.supplier.name }}</td>
-            <td>
-                <a href="#" class="invoice-link" data-invoice="{{ item.purchase.invoice_no }}">
-                    {{ item.purchase.invoice_no }}
-                </a>
-            </td>          
-            <td>{{ item.purchase.subtotal }}</td>
-            <td>{{ item.purchase.tax }}</td>
-            <td>{{ item.purchase.discount }}</td>
-            <td>{{ item.purchase.total_amount }}</td>
-            <td>{{ item.purchase.amount_paid }}</td>
-            <td>{{ item.purchase.outstanding_amount }}</td>
-            <td>{{ item.purchase.payment_mode }}</td>
-            <td>{{ item.purchase.payment_rate }}</td>
-            <td>{{ item.purchase.payment_reference }}</td>
-            <td class="
-                {% if item.purchase.outstanding_amount > 0 %}
-                    status-pending
-                {% else %}
-                    status-completed
-                {% endif %}
-            ">
-                {% if item.purchase.outstanding_amount > 0 %}
-                    Pending
-                {% else %}
-                    Completed
-                {% endif %}
-            </td>
-            </tr>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>ID</th>
+          <th>Supplier</th>
+          <th>Invoice</th>
+          <th>Products</th>
+          <th>Total</th>
+          <th>Paid</th>
+          <th>Outstanding</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {% for purchase in purchases %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ purchase.id }}</td>
+          <td>{{ purchase.supplier.name }}</td>
+          <td>
+            <a href="#" class="invoice-link" data-invoice="{{ purchase.invoice_no }}">
+              {{ purchase.invoice_no }}
+            </a>
+            <button class="btn btn-ghost" onclick="copyInvoice(event,'{{ purchase.invoice_no }}')">Copy</button>
+          </td>
+          <td>
+            {% for pi in purchase.items.all %}
+              {{ pi.item_name }} ({{ pi.quantity }}){% if not forloop.last %}, {% endif %}
             {% empty %}
-            <tr>
-                <td colspan="11" style="padding: 20px; color: #64748b;">No purchase payments found.</td>
-            </tr>
+              <span style="color:#9ca3af">No items</span>
             {% endfor %}
-        </tbody>
+          </td>
+          <td>{{ purchase.total_amount }}</td>
+          <td>{{ purchase.amount_paid }}</td>
+          <td>{{ purchase.outstanding_amount }}</td>
+          <td>
+            <span class="status-badge {% if purchase.outstanding_amount > 0 %}status-pending{% else %}status-completed{% endif %}">
+              {% if purchase.outstanding_amount > 0 %}Pending{% else %}Completed{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
 </div>
 
-<!-- Payment Details Modal -->
-<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl" style="max-width: 1400px !important; width: 90vw !important;">
-    <div class="modal-content" style="width: 100%; max-width: 1200px;">
+<!-- 🔥 PRODUCT MODAL (REQUIRED) -->
+<div class="modal fade" id="productsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="paymentModalLabel">Payments for Invoice</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title">
+          Products for Invoice <span id="modalInvoiceNo"></span>
+        </h5>
+        <button class="btn btn-ghost" data-bs-dismiss="modal">Close</button>
       </div>
       <div class="modal-body">
         <table class="table table-bordered">
           <thead>
             <tr>
-              <th>S.no</th>
-              <th>Payment Amount</th>
-              <th>Payment Mode</th>
-              <th>Payment Reference</th>
-              <th>Purchase ID</th>
-              <th>Payment Date</th>
-              <th>Supplier ID</th>
-              <th>Balance Amount</th>
-              <th>Total Amount</th>
+              <th>#</th>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Unit</th>
+              <th>Rate</th>
+              <th>Total</th>
+              <th>Batch</th>
+              <th>Expiry</th>
             </tr>
           </thead>
-          <tbody id="modalPaymentBody">
-            <!-- Payments will be loaded here via JS -->
+          <tbody id="productsModalBody">
+            <tr><td colspan="8" class="text-center">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -242,65 +270,66 @@
   </div>
 </div>
 
-</body>
-</html>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const invoiceLinks = document.querySelectorAll('.invoice-link');
+document.addEventListener('DOMContentLoaded',function(){
 
-    invoiceLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const invoiceNo = this.dataset.invoice;
+  const $=s=>document.querySelector(s);
+  const $$=s=>Array.from(document.querySelectorAll(s));
 
-            fetch(`/api/purchase-payments/${invoiceNo}/`)
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.getElementById('modalPaymentBody');
-                    tbody.innerHTML = '';
+  window.copyInvoice=(e,i)=>{e.preventDefault();navigator.clipboard.writeText(i);};
 
-                    data.payments.forEach((p, index) => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${index + 1}</td>
-                            <td>${p.payment_amount}</td>
-                            <td>${p.payment_mode}</td>
-                            <td>${p.payment_reference}</td>
-                            <td>${p.purchase_id}</td>
-                            <td>${p.payment_date}</td>
-                            <td>${p.supplier_id}</td>
-                            <td>${p.balance_amount}</td>
-                            <td>${p.total_amount}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
+  $('#quickSearch').addEventListener('input',e=>{
+    const q=e.target.value.toLowerCase();
+    $$('#tableBody tr').forEach(r=>{
+      r.style.display=r.innerText.toLowerCase().includes(q)?'':'none';
+    });
+  });
 
-                    // Show modal
-                    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
-                    paymentModal.show();
-                });
+  $('#exportCsv').addEventListener('click',()=>{
+    let csv=[];
+    document.querySelectorAll('table tr').forEach(r=>{
+      csv.push([...r.children].map(td=>`"${td.innerText}"`).join(','));
+    });
+    const b=new Blob([csv.join('\n')],{type:'text/csv'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);
+    a.download='purchase_payments.csv';
+    a.click();
+  });
+
+  $$('.invoice-link').forEach(l=>{
+    l.addEventListener('click',e=>{
+      e.preventDefault();
+      $('#modalInvoiceNo').innerText=l.dataset.invoice;
+      const body=$('#productsModalBody');
+      body.innerHTML='<tr><td colspan="8">Loading…</td></tr>';
+
+      fetch(`/api/purchase-products/?invoice=${l.dataset.invoice}`)
+        .then(r=>r.json())
+        .then(d=>{
+          body.innerHTML='';
+          d.items.forEach((i,n)=>{
+            body.innerHTML+=`
+              <tr>
+                <td>${n+1}</td>
+                <td>${i.item_name}</td>
+                <td>${i.quantity}</td>
+                <td>${i.unit||'-'}</td>
+                <td>${i.unit_price}</td>
+                <td>${i.total_price}</td>
+                <td>${i.batch_no||'-'}</td>
+                <td>${i.expiry_date||'-'}</td>
+              </tr>`;
+          });
         });
+
+      new bootstrap.Modal($('#productsModal')).show();
     });
+  });
+
 });
-
-
-    document.getElementById("filterForm").addEventListener("submit", function (e) {
-        const start = document.getElementById("start_date").value;
-        const end = document.getElementById("end_date").value;
-
-        if (start && end && end < start) {
-            e.preventDefault();
-            alert("⚠️ End date must be greater than or equal to Start date.");
-        }
-    });
-
-    window.addEventListener("keydown", function(e) {
-        if (e.key === "F5") {
-        e.preventDefault();
-        window.location.href = "{% url 'purchase_items' %}"; // reset on F5
-        }
-    });
 </script>
 {% endblock %}

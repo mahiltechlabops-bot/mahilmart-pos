@@ -3,266 +3,935 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Welcome | MahilMart POS</title>
+  <title>Welcome | {{ app_name|default:"MY APP" }}</title>
 
-  <!-- Bootstrap & FontAwesome -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    html, body {
-      height: 100%;
+    :root {
+      --primary: #12355b;
+      --primary-dark: #0a2540;
+      --secondary: #1f7a8c;
+      --accent: #ff7a18;
+      --accent-soft: #ffa94d;
+      --surface: rgba(255, 255, 255, 0.9);
+      --surface-strong: #ffffff;
+      --text-strong: #0f172a;
+      --text-soft: #4b5563;
+      --line: #dbe5f0;
+      --ok: #16a34a;
+      --danger: #dc2626;
+      --shadow-soft: 0 14px 36px rgba(15, 23, 42, 0.16);
+      --shadow-strong: 0 24px 52px rgba(15, 23, 42, 0.24);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --anim: 0.26s ease;
+    }
+
+    * {
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #f4f6f9, #e2ecf3);
-      display: flex;
-      flex-direction: column;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      color: var(--text-strong);
+      background:
+        radial-gradient(circle at 12% 15%, rgba(255, 122, 24, 0.20), transparent 32%),
+        radial-gradient(circle at 82% 22%, rgba(31, 122, 140, 0.20), transparent 36%),
+        linear-gradient(140deg, #edf2f7 0%, #e2e8f0 42%, #dbe5f0 100%);
+      overflow-x: hidden;
+    }
+
+    .orb-layer {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
       overflow: hidden;
     }
 
-    .app-header {
-      background-color: #2e3b4e;
-      color: white;
-      padding: 15px 20px;
-      text-align: center;
-      font-size: 1.6rem;
-      font-weight: bold;
-      letter-spacing: 1px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(1px);
+      opacity: 0.38;
+      animation: drift 16s infinite ease-in-out alternate;
     }
 
-    .login-container {
-      flex-grow: 1;
+    .orb.one {
+      width: 350px;
+      height: 350px;
+      left: -80px;
+      top: -120px;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 122, 24, 0.35), rgba(255, 122, 24, 0));
+    }
+
+    .orb.two {
+      width: 420px;
+      height: 420px;
+      right: -120px;
+      top: 18%;
+      background: radial-gradient(circle at 40% 40%, rgba(18, 53, 91, 0.35), rgba(18, 53, 91, 0));
+      animation-delay: 2s;
+    }
+
+    .orb.three {
+      width: 300px;
+      height: 300px;
+      left: 26%;
+      bottom: -140px;
+      background: radial-gradient(circle at 50% 40%, rgba(31, 122, 140, 0.35), rgba(31, 122, 140, 0));
+      animation-delay: 4s;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .top-bar {
+      padding: 14px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.32);
+      background: linear-gradient(120deg, rgba(18, 53, 91, 0.95), rgba(10, 37, 64, 0.92));
+      color: #fff;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.22);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Outfit", sans-serif;
+      font-size: 1.34rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-title i {
+      color: var(--accent-soft);
+    }
+
+    .time-date-container {
+      text-align: right;
+      min-width: 210px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      padding: 8px 14px;
+    }
+
+    .time-display {
+      font-family: "Outfit", sans-serif;
+      font-size: 1.52rem;
+      line-height: 1;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
+
+    .date-display {
+      margin-top: 2px;
+      font-size: 0.82rem;
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .content-area {
+      display: grid;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .login-layout {
+      width: min(1220px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.06fr 0.94fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .hero-panel {
+      position: relative;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: linear-gradient(125deg, #0f2f50 0%, #12355b 42%, #1f7a8c 100%);
+      box-shadow: var(--shadow-strong);
+      color: #fff;
+      padding: 34px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.8s ease-in-out;
-      position: relative;
+      justify-content: space-between;
+      min-height: 560px;
     }
 
-    .logo-circle {
-      background-color: #2e3b4e;
-      color: white;
+    .hero-panel::before {
+      content: "";
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      right: -100px;
+      top: -130px;
       border-radius: 50%;
-      width: 80px;
-      height: 80px;
-      display: flex;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0));
+    }
+
+    .hero-top {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      margin-bottom: 20px;
-      animation: bounce 1.5s infinite ease-in-out;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(255, 255, 255, 0.1);
     }
 
-    .welcome-text {
-      text-align: center;
-      margin-bottom: 30px;
+    .hero-title {
+      margin-top: 14px;
+      font-family: "Outfit", sans-serif;
+      font-size: 2.3rem;
+      line-height: 1.14;
+      font-weight: 800;
+      max-width: 560px;
     }
 
-    .welcome-text h2 {
-      font-size: 2rem;
-      color: #2e3b4e;
+    .hero-subtitle {
+      margin-top: 10px;
+      max-width: 520px;
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 0.98rem;
+    }
+
+    .hero-metrics {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.12);
+      padding: 12px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.76);
+    }
+
+    .metric-value {
+      margin-top: 5px;
+      font-family: "Outfit", sans-serif;
+      font-size: 1.24rem;
+      font-weight: 700;
+    }
+
+    .hero-bottom {
+      position: relative;
+      z-index: 1;
+      margin-top: 22px;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      background: rgba(12, 25, 38, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .hero-bottom-title {
+      font-family: "Outfit", sans-serif;
+      font-size: 1.06rem;
+      font-weight: 700;
       margin-bottom: 8px;
     }
 
-    .welcome-text p {
-      font-size: 1rem;
-      color: #555;
+    .hero-feature-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.88);
     }
 
-    .login-form {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    .hero-feature-list span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-feature-list i {
+      color: #86efac;
+      font-size: 0.85rem;
+    }
+
+    .login-column {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      justify-content: center;
+    }
+
+    .messages-wrap {
+      max-width: 520px;
       width: 100%;
-      max-width: 420px;
-      animation: slideUp 0.8s ease;
+      margin: 0 auto;
+    }
+
+    .messages-wrap .alert {
+      border-radius: 12px;
+      border: none;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      backdrop-filter: blur(8px);
+      animation: liftIn 0.8s ease;
+    }
+
+    .card-header {
+      position: relative;
+      background: linear-gradient(125deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      padding: 30px 28px 26px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .card-header::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--secondary));
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .logo-circle {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 1.5rem;
+      background: linear-gradient(140deg, var(--accent), var(--accent-soft));
+      box-shadow: 0 8px 20px rgba(255, 122, 24, 0.34);
+    }
+
+    .logo-text h1 {
+      margin: 0;
+      font-family: "Outfit", sans-serif;
+      font-size: 1.62rem;
+      font-weight: 700;
+    }
+
+    .logo-text span {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.84);
+    }
+
+    .welcome-text h2 {
+      margin: 0;
+      font-family: "Outfit", sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .welcome-text p {
+      margin-top: 4px;
+      margin-bottom: 6px;
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 0.9rem;
+    }
+
+    .current-time-small {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .card-body {
+      padding: 28px;
     }
 
     .login-form h3 {
       text-align: center;
-      margin-bottom: 20px;
-      color: #2e3b4e;
+      font-family: "Outfit", sans-serif;
+      font-size: 1.34rem;
+      margin-bottom: 22px;
+      color: var(--primary-dark);
     }
 
-    .login-form label {
-      font-weight: 500;
-      margin-top: 10px;
+    .error-message {
+      margin-bottom: 16px;
+      border-radius: 10px;
+      background: rgba(220, 38, 38, 0.1);
+      border-left: 4px solid var(--danger);
+      padding: 11px 13px;
+      color: var(--danger);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: #243447;
+    }
+
+    .input-with-icon {
+      position: relative;
+    }
+
+    .input-with-icon i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #7b8794;
     }
 
     .login-form input {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 15px;
+      padding: 13px 14px 13px 46px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      font-size: 0.95rem;
+      color: var(--text-strong);
+      background: var(--surface-strong);
+      transition: border-color var(--anim), box-shadow var(--anim), transform var(--anim);
+    }
+
+    .login-form input:focus {
+      border-color: #7aa2d4;
+      box-shadow: 0 0 0 4px rgba(18, 53, 91, 0.12);
+      outline: none;
+    }
+
+    .toggle-password {
+      left: auto;
+      right: 14px;
+      cursor: pointer;
+    }
+
+    .form-options {
+      margin-top: 2px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .checkbox-container {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .login-form button {
-      width: 100%;
-      padding: 12px;
-      background-color: #2e3b4e;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      transition: all 0.3s ease-in-out;
-    }
-
-    .login-form button:hover {
-      background-color: #1c2532;
-      transform: scale(1.02);
-    }
-
-    .error {
-      color: red;
-      text-align: center;
-      margin-top: 10px;
-    }
-
-    .content-footer {
-      background-color: #2e3b4e;
-      color: white;
-      text-align: center;
-      padding: 10px;
+      gap: 8px;
+      color: var(--text-soft);
       font-size: 0.9rem;
     }
 
-    a {
-      color: #2e3b4e;
+    .checkbox-container input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+    }
+
+    .forgot-password {
       font-size: 0.9rem;
+      color: var(--primary);
       text-decoration: none;
+      font-weight: 600;
     }
 
-    a:hover {
+    .forgot-password:hover {
+      color: var(--primary-dark);
       text-decoration: underline;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    .login-btn {
+      width: 100%;
+      border: none;
+      border-radius: 11px;
+      padding: 14px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(125deg, var(--primary), var(--primary-dark));
+      box-shadow: 0 11px 24px rgba(18, 53, 91, 0.27);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform var(--anim), box-shadow var(--anim), filter var(--anim);
     }
 
-    @keyframes slideUp {
-      from { transform: translateY(40px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 28px rgba(18, 53, 91, 0.32);
+      filter: brightness(1.05);
     }
 
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
+    .divider {
+      margin: 22px 0 16px;
+      display: flex;
+      align-items: center;
+      color: #6b7280;
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
     }
 
-    @media (max-width: 500px) {
-      .login-form {
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .divider span {
+      margin: 0 12px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .feature-item {
+      border: 1px solid #dce6f2;
+      border-radius: 10px;
+      background: #f8fbff;
+      font-size: 0.86rem;
+      color: #3d4f63;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-item i {
+      color: var(--ok);
+      font-size: 0.88rem;
+    }
+
+    .app-footer {
+      margin: 0 24px 18px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.88);
+      color: rgba(255, 255, 255, 0.94);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.84rem;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.26);
+    }
+
+    .app-footer div {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .app-footer i {
+      color: var(--accent-soft);
+    }
+
+    @keyframes drift {
+      from { transform: translateY(0px) translateX(0px); }
+      to { transform: translateY(-10px) translateX(12px); }
+    }
+
+    @keyframes liftIn {
+      from { opacity: 0; transform: translateY(26px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 1080px) {
+      .login-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-panel {
+        min-height: 360px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .top-bar {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .time-date-container {
+        width: 100%;
+        text-align: left;
+      }
+
+      .content-area {
+        padding: 14px;
+      }
+
+      .hero-panel,
+      .card-header,
+      .card-body {
         padding: 20px;
       }
 
-      .logo-circle {
-        width: 60px;
-        height: 60px;
-        font-size: 1.5rem;
+      .hero-metrics,
+      .hero-feature-list,
+      .features {
+        grid-template-columns: 1fr;
+      }
+
+      .form-options {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .app-footer {
+        margin: 0 14px 14px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="orb-layer" aria-hidden="true">
+    <div class="orb one"></div>
+    <div class="orb two"></div>
+    <div class="orb three"></div>
+  </div>
+
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand-title">
+        <i class="fas fa-cash-register"></i>
+        <span>{{ app_name|default:"MY APP" }}</span>
+      </div>
+
+      <div class="time-date-container">
+        <div class="time-display" id="liveClock">00:00:00</div>
+        <div class="date-display">
+          <i class="fas fa-calendar-alt"></i>
+          <span id="liveDate">Loading...</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content-area">
+      <div class="login-layout">
+        <section class="hero-panel">
+          <div class="hero-top">
+            <span class="hero-badge"><i class="fas fa-shield-halved"></i> Retail Control Center</span>
+            <h1 class="hero-title">Run billing, inventory, and analytics with a faster POS workflow</h1>
+            <p class="hero-subtitle">Centralized controls, secure access, and live store visibility in one dashboard.</p>
+
+            <div class="hero-metrics">
+              <div class="metric-card">
+                <div class="metric-label">Transactions</div>
+                <div class="metric-value">24x7</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Data Sync</div>
+                <div class="metric-value">Live</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Security</div>
+                <div class="metric-value">Role Based</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-bottom">
+            <div class="hero-bottom-title">System Highlights</div>
+            <div class="hero-feature-list">
+              <span><i class="fas fa-check-circle"></i> Fast invoice flow</span>
+              <span><i class="fas fa-check-circle"></i> Central inventory view</span>
+              <span><i class="fas fa-check-circle"></i> Daily sales summary</span>
+              <span><i class="fas fa-check-circle"></i> Multi-user control</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="login-column">
+          {% if messages %}
+            <div class="messages-wrap">
+              {% for msg in messages %}
+                <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+                  <i class="fas fa-{% if msg.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %} me-2"></i>
+                  <strong>{{ msg }}</strong>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="login-card">
+            <div class="card-header">
+              <div class="logo-container">
+                <div class="logo-circle">
+                  <i class="fas fa-store"></i>
+                </div>
+                <div class="logo-text">
+                  <h1>{{ app_name|default:"MY APP" }}</h1>
+                  <span>{{ app_tagline|default:"Enterprise Retail System" }}</span>
+                </div>
+              </div>
+
+              <div class="welcome-text">
+                <h2 id="greeting">Welcome</h2>
+                <p>Sign in to continue with secure access</p>
+                <div class="current-time-small">
+                  <i class="fas fa-clock"></i>
+                  <span id="currentTimeSmall">00:00</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="login-form">
+                <h3>Secure Authentication</h3>
+
+                <form method="post">
+                  {% csrf_token %}
+
+                  {% if error %}
+                    <div class="error-message">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <span>{{ error }}</span>
+                    </div>
+                  {% endif %}
+
+                  <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-with-icon">
+                      <i class="fas fa-user"></i>
+                      <input type="text" id="username" name="username" required value="{{ username|default:'' }}" placeholder="Enter your username">
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-with-icon">
+                      <i class="fas fa-lock"></i>
+                      <input type="password" id="password" name="password" required placeholder="Enter your password">
+                      <i class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
+                    </div>
+                  </div>
+
+                  <div class="form-options">
+                    <label class="checkbox-container">
+                      <input type="checkbox" id="showPassword" onclick="togglePassword()">
+                      <span>Show Password</span>
+                    </label>
+                    <a href="#" class="forgot-password">Forgot Password?</a>
+                  </div>
+
+                  <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Login to Dashboard</span>
+                  </button>
+
+                  <div class="divider">
+                    <span>Included Modules</span>
+                  </div>
+
+                  <div class="features">
+                    <div class="feature-item"><i class="fas fa-check-circle"></i><span>Real-time Inventory</span></div>
+                    <div class="feature-item"><i class="fas fa-check-circle"></i><span>Sales Analytics</span></div>
+                    <div class="feature-item"><i class="fas fa-check-circle"></i><span>Customer Management</span></div>
+                    <div class="feature-item"><i class="fas fa-check-circle"></i><span>Audit Reports</span></div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div>
+        <i class="fas fa-clock"></i>
+        <span id="footerTime">--:--:--</span>
+      </div>
+      <div>
+        <i class="fas fa-cube"></i>
+        <span>{{ app_name|default:"MY APP" }} {{ app_version|default:"v2.0.0" }}</span>
+      </div>
+      <div>
+        <i class="far fa-copyright"></i>
+        <span>2026 MahilTechLab</span>
+      </div>
+    </footer>
+  </div>
+
+  <input type="hidden" id="browser_machine_id" name="browser_machine_id">
+
+  <script>
+    function togglePassword() {
+      const pwd = document.getElementById("password");
+      const eyeIcon = document.querySelector(".toggle-password");
+      if (!pwd || !eyeIcon) return;
+
+      if (pwd.type === "password") {
+        pwd.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+      } else {
+        pwd.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
       }
     }
 
-    .checkbox-container {
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-}
+    function formatTime(value) {
+      return value < 10 ? `0${value}` : value;
+    }
 
-.checkbox-container label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+    function updateDateTime() {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+      const ampm = hours >= 12 ? "PM" : "AM";
+      const displayHours = hours % 12 || 12;
 
-.checkbox-container input[type="checkbox"] {
-  margin: 0;
-  padding: 0;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1px solid #333;
-  display: inline-block;
-  position: relative;
-}
+      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-.checkbox-container input[type="checkbox"] {
-  appearance: checkbox;
-}
+      const dayName = days[now.getDay()];
+      const monthName = months[now.getMonth()];
+      const date = now.getDate();
+      const year = now.getFullYear();
 
-  </style>
-</head>
-<body>
+      const liveClock = document.getElementById("liveClock");
+      const liveDate = document.getElementById("liveDate");
+      const currentTimeSmall = document.getElementById("currentTimeSmall");
+      const footerTime = document.getElementById("footerTime");
+      const greetingText = document.getElementById("greeting");
 
-<header class="app-header">
-  MahilMart POS
-</header>
+      if (liveClock) {
+        liveClock.textContent = `${formatTime(displayHours)}:${formatTime(minutes)}:${formatTime(seconds)}`;
+      }
+      if (liveDate) {
+        liveDate.textContent = `${dayName}, ${monthName} ${date}, ${year}`;
+      }
+      if (currentTimeSmall) {
+        currentTimeSmall.textContent = `${formatTime(displayHours)}:${formatTime(minutes)} ${ampm}`;
+      }
+      if (footerTime) {
+        footerTime.textContent = `${formatTime(hours)}:${formatTime(minutes)}:${formatTime(seconds)}`;
+      }
+      if (greetingText) {
+        if (hours < 12) {
+          greetingText.textContent = "Good Morning";
+        } else if (hours < 17) {
+          greetingText.textContent = "Good Afternoon";
+        } else {
+          greetingText.textContent = "Good Evening";
+        }
+      }
+    }
 
-<div class="login-container">
-  <div class="logo-circle">
-    <i class="fas fa-store"></i>
-  </div>
+    function generateUUID() {
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === "x" ? r : (r & 0x3 | 8);
+        return v.toString(16);
+      });
+    }
 
-  <div class="welcome-text">
-    <h2 id="greeting">Welcome</h2>
-  </div>
+    document.addEventListener("DOMContentLoaded", function() {
+      updateDateTime();
+      setInterval(updateDateTime, 1000);
 
-  <div class="login-form">
-    <h3>Sign In</h3>
-    <form method="post">
-      {% csrf_token %}
-      <label for="username">Username</label>
-      <input type="text" name="username" id="username" required value="{{ username|default:'' }}">
+      let id = localStorage.getItem("POS_DEVICE_ID");
+      if (!id) {
+        id = "POS-" + generateUUID();
+        localStorage.setItem("POS_DEVICE_ID", id);
+      }
 
-      <label for="password">Password</label>
-      <input type="password" name="password" id="password" required>
+      const browserMachineInput = document.getElementById("browser_machine_id");
+      if (browserMachineInput) {
+        browserMachineInput.value = id;
+      }
 
-      <div class="checkbox-container">
-        <label><input type="checkbox" onclick="togglePassword()"> Show Password</label>
-      </div>
+      const loginBtn = document.querySelector(".login-btn");
+      if (loginBtn) {
+        loginBtn.addEventListener("mouseenter", function() {
+          this.style.transform = "translateY(-2px)";
+        });
+        loginBtn.addEventListener("mouseleave", function() {
+          this.style.transform = "translateY(0)";
+        });
+      }
 
-      <button type="submit">Login</button>
-
-      {% if error %}
-      <p class="error">{{ error }}</p>
-      {% endif %}
-    </form>
-  </div>
-</div>
-
-<footer class="content-footer d-flex justify-content-between">
-  <div>MahilMart Pro v1.0.0</div>
-  <div>© 2025 SuperMart Solutions Inc.</div>
-</footer>
-
-<script>
-  function togglePassword() {
-    const pwd = document.getElementById("password");
-    pwd.type = pwd.type === "password" ? "text" : "password";
-  }
-
-  // Dynamic greeting
-  const greetingText = document.getElementById("greeting");
-  const hour = new Date().getHours();
-  if (hour < 12) {
-    greetingText.innerText = "Good Morning ☀️";
-  } else if (hour < 15) {
-    greetingText.innerText = "Good Afternoon 🌤️";
-  } else {
-    greetingText.innerText = "Good Evening 🌙";
-  }
-</script>
+      setTimeout(() => {
+        document.querySelectorAll(".alert").forEach((alert) => {
+          alert.classList.remove("show");
+          setTimeout(() => alert.remove(), 300);
+        });
+      }, 5000);
+    });
+  </script>
 </body>
 </html>

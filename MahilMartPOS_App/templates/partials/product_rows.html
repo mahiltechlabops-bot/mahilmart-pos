@@ -1,0 +1,10 @@
+{% for product in items %}
+<tr>
+  <td>{{ forloop.counter0|add:start_index|add:1 }}</td>
+  <td>{{ product.item_name }}</td>
+  <td>{{ product.code }}</td>
+  <td>{{ product.group }}</td>
+  <td>{{ product.brand }}</td>
+  <td>{{ product.unit }}</td>
+</tr>
+{% endfor %}

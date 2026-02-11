@@ -160,7 +160,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="app-content">
+<div class="page-section">
   <div class="card p-4 mx-auto container-fluid">
     <h3><i class="fas fa-truck-loading"></i> New Purchase</h3>
 
@@ -174,10 +174,10 @@
           Item creation
         </a>
         <a href="{% url 'purchase_items' %}" class="btn btn-primary btn-sm">
-          Purchase Payment Details
+          View Purchase 1
         </a>
         <a href="{% url 'purchase_list' %}" class="btn btn-primary btn-sm">
-          View Purchase Details
+          View Purchase 2
         </a>
          <a href="{% url 'purchase_update_tracking' %}" class="btn btn-primary btn-sm">
           View Purchase Update Tracking Details
@@ -345,7 +345,7 @@
     </div>       
   </div>
   
-</main>
+</div>
 {% endblock %}
 {% block extra_js %}
 <script>
@@ -438,10 +438,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const rows = document.querySelectorAll('#productTableBody tr');
 
-    // Stop if no rows are present
+    // Allow clearing all items for an existing invoice
     if (rows.length === 0) {
-      alert("Please add at least one product before saving the purchase.");
-      return;
+      if (!confirm("No items found. This will remove all items for this invoice. Continue?")) {
+        return;
+      }
     }
 
      // Validation: every row must have values (expiry date optional)
@@ -716,19 +717,24 @@ function updateTotals() {
   let discountTotal = 0;
 
   document.querySelectorAll('#productTableBody tr').forEach(row => {
-    subtotal += parseFloat(row.querySelector('.total').value) || 0;
-    discountTotal += parseFloat(row.querySelector('.discount').value) || 0;
-    const tax = parseFloat(row.querySelector('.tax').value) || 0;
-    const discounted = (parseFloat(row.querySelector('.total').value) || 0) - discountTotal;
-    taxTotal += discounted * (tax / 100); 
+    const totalVal = parseFloat(row.querySelector('.total').value) || 0;
+    const discountVal = parseFloat(row.querySelector('.discount').value) || 0;
+    const taxRate = parseFloat(row.querySelector('.tax').value) || 0;
+
+    subtotal += totalVal;
+    discountTotal += discountVal;
+
+    const taxable = totalVal - discountVal;
+    const taxForRow = taxable * (taxRate / 100);
+    taxTotal += taxForRow;
   });
 
-  const total = subtotal - discountTotal + taxTotal;
+  const grandTotal = subtotal - discountTotal + taxTotal;
 
   document.getElementById('subtotal').textContent = subtotal.toFixed(2);
   document.getElementById('discount').textContent = discountTotal.toFixed(2);
   document.getElementById('tax').textContent = taxTotal.toFixed(2);
-  document.getElementById('total').textContent = total.toFixed(2);
+  document.getElementById('total').textContent = grandTotal.toFixed(2);
 }
 
 function deleteRow(btn) {

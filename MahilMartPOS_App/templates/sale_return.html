@@ -1,34 +1,75 @@
 {% extends "base.html" %}
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
 {% block extra_css %}
-<style>
-  .modal-backdrop {
-      z-index: 1040 !important;
-  }
-  .modal {
-      z-index: 1050 !important;
-  }
+<style> 
+
+/* ---------------------------------------------------------
+   BACKGROUND BLUR FOR MODAL BACKDROP
+--------------------------------------------------------- */
+.modal-backdrop.show {
+    backdrop-filter: blur(6px) !important;
+    background-color: rgba(0, 0, 0, 0.30) !important;
+}
+
+/* ---------------------------------------------------------
+   MODAL (Bootstrap handles centering)
+--------------------------------------------------------- */
+#returnDetailsModal .modal-dialog {
+    max-width: 75% !important;
+}
+
+/* ---------------------------------------------------------
+   POPUP STYLING
+--------------------------------------------------------- */
+#returnDetailsModal .modal-content {
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25) !important;
+    overflow: hidden !important;
+}
+
+/* ---------------------------------------------------------
+   TABLE SCROLL INSIDE MODAL
+--------------------------------------------------------- */
+#returnDetailsModal .modal-body {
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 20px !important;
+}
+
+/* ---------------------------------------------------------
+   TABLE STYLING
+--------------------------------------------------------- */
+#returnItemsTable th,
+#returnItemsTable td {
+    white-space: normal !important;
+    word-break: break-word !important;
+    padding: 10px !important;
+}
+
 </style>
+</style>
+
+
 {% endblock %}
 
 {% block content %}
-<main class="app-content" id="mainContent">
+<div class="page-section form-page">
+  <div class="form-wrap">
+<div class="page-section" id="mainContent">
   <div class="container mt-4">
 
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <!-- Left side: Title -->
         <h3 class="mb-0" style="color: #770b0b;">
             <i class="fas fa-undo-alt me-2"></i> View Returns
         </h3>
 
-        <!-- Right side: Buttons -->
         <div>
-            <button class="btn btn-primary btn-sm" id="saleReturnBtn">
+            <button type="button" class="btn btn-primary btn-sm" id="saleReturnBtn">
                 <i class="fas fa-plus me-1"></i> Sale Return
             </button>
+
             <a href="{% url 'sale_return' %}" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back
             </a>
@@ -36,8 +77,8 @@
     </div>
 
     <!-- Returns List -->
-    <div id="viewReturnsSection">
-     <form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center" onsubmit="return validateDateRange()">
+    <div id="viewReturnsSection" {% if billing %}style="display:none;"{% endif %}>
+     <form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
           <input type="date" id="start_date" name="start_date" class="form-control" style="max-width: 160px;"
                 value="{{ request.GET.start_date|default_if_none:'' }}">
           <input type="date" id="end_date" name="end_date" class="form-control" style="max-width: 160px;"
@@ -74,7 +115,8 @@
               <td>₹{{ return.total_refund_amount|floatformat:2 }}</td>
               <td>{{ return.return_reason }}</td>
               <td>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-view-return" data-id="{{ return.id }}" title="View Details">
+                <button type="button" class="btn btn-sm btn-outline-primary btn-view-return"
+                  data-id="{{ return.id }}">
                   <i class="fas fa-eye"></i>
                 </button>
               </td>
@@ -87,83 +129,28 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Pagination -->
-      {% if is_paginated %}
-      <nav class="mt-3">
-        <ul class="pagination justify-content-end">
-          {% if page_obj.has_previous %}
-          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
-          {% else %}
-          <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-          {% endif %}
-
-          {% for num in paginator.page_range %}
-          {% if page_obj.number == num %}
-          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-          {% else %}
-          <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-          {% endif %}
-          {% endfor %}
-
-          {% if page_obj.has_next %}
-          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
-          {% else %}
-          <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-          {% endif %}
-        </ul>
-      </nav>
-      {% endif %}
-    </div>
-
-    <!-- Sale Return Detail Modal -->
-    <div class="modal fade" id="returnDetailsModal" tabindex="-1" aria-labelledby="returnDetailsModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl" style="max-width: 1400px !important; width: 90vw !important;">
-        <div class="modal-content" style="width: 100%; max-width: 1200px;">
-          <div class="modal-header">
-            <h5 class="modal-title" id="returnDetailsModalLabel">Sale Return Details</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <table class="table table-bordered table-striped" id="returnItemsTable">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Item Name</th>
-                  <th>Unit</th>
-                  <th>Qty</th>
-                  <th>MRP</th>
-                  <th>Price</th>
-                  <th>Return Qty</th>
-                  <th>Return Amount</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Sale Return Section -->
-    <div id="saleReturnSection" style="display: none;" class="card p-4 mt-4">
+    <div id="saleReturnSection" class="card p-4 mt-4" {% if not billing %}style="display:none;"{% endif %}>
+
       <h2 class="mb-4">Sale Return</h2>
 
-      <!-- Fetch Bill Form -->
-      <form method="post" class="mb-4" style="color: #160a3363;">
+      <!-- Fetch Bill -->
+      <form method="post" class="mb-4">
         {% csrf_token %}
         <div class="row g-3">
           <div class="col-md-3">
             <label class="form-label">Customer Name</label>
-            <input type="text" class="form-control" name="customer_name" value="{{ request.POST.customer_name|default_if_none:'' }}">
+            <input type="text" class="form-control" name="customer_name" value="{{ customer_name }}">
           </div>
           <div class="col-md-3">
             <label class="form-label">Phone Number</label>
-            <input type="text" class="form-control" name="customer_phone" value="{{ request.POST.customer_phone|default_if_none:'' }}">
+            <input type="text" class="form-control" name="customer_phone" value="{{ customer_phone }}">
           </div>
-          <div class="col-md-2">
+          <div class="col-md-3">
             <label class="form-label">Bill Number</label>
-            <input type="text" class="form-control" name="bill_no" value="{{ request.POST.bill_no|default_if_none:'' }}">
+            <input type="text" class="form-control" name="bill_no" value="{{ bill_no }}">
           </div>
           <div class="col-md-2 align-self-end">
             <button type="submit" name="fetch_bill" class="btn btn-primary w-100">Fetch Bill</button>
@@ -181,7 +168,7 @@
         <input type="hidden" name="billing_id" value="{{ billing.id }}">
 
         <div class="card mb-4">
-          <div class="card-body" style="color:#000;">
+          <div class="card-body">
             <h3>Billing Info</h3>
             <div class="row">
               <div class="col-md-3"><strong>Bill No:</strong> {{ billing.bill_no }}</div>
@@ -189,16 +176,11 @@
               <div class="col-md-3"><strong>Customer:</strong> {{ billing.customer.name }}</div>
               <div class="col-md-3"><strong>Phone:</strong> {{ billing.customer.cell }}</div>
             </div>
-            <div class="row">
-              <div class="col-md-3"><strong>Total Amount:</strong> ₹{{ billing.received|floatformat:2 }}</div>
-              <div class="col-md-3"><strong>Balance:</strong> ₹{{ billing.balance|floatformat:2 }}</div>
-              <div class="col-md-3"><strong>Sale Type:</strong> {{ billing.sale_type }}</div>
-            </div>
           </div>
         </div>
 
         <h3>Items Purchased</h3>
-        <div class="table-responsive">
+        <div class="modal-body">
           <table class="table table-bordered table-striped">
             <thead class="table-dark">
               <tr>
@@ -225,7 +207,8 @@
                 <td>₹{{ item.selling_price|floatformat:2 }}</td>
                 <td>₹{{ item.amount|floatformat:2 }}</td>
                 <td>
-                  <input type="number" name="return_qty_{{ item.id }}" min="0" max="{{ item.qty }}" step="0.01" value="0" class="form-control return-qty" style="width: 80px;">
+                  <input type="number" name="return_qty_{{ item.id }}" min="0" max="{{ item.qty }}"
+                    step="0.01" class="form-control" style="width: 80px;">
                 </td>
               </tr>
               {% endfor %}
@@ -233,112 +216,108 @@
           </table>
         </div>
 
-        <div class="row mt-3">
-          <div class="col-md-6">
-            <label class="form-label">Return Reason</label>
-            <textarea class="form-control" name="return_reason" rows="2"></textarea>
-          </div>
-          <div class="col-md-6">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="card-title">Return Summary</h5>
-                <div id="return-summary"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <button type="submit" name="process_return" class="btn btn-primary mt-3">Process Return</button>
       </form>
       {% endif %}
     </div>
+
   </div>
-</main>
+</div>
+
+<!-- SALE RETURN DETAILS MODAL -->
+<div class="modal fade" id="returnDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Sale Return Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <table class="table table-bordered table-striped w-100" id="returnItemsTable">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Item Name</th>
+              <th>Unit</th>
+              <th>Qty</th>
+              <th>MRP</th>
+              <th>Price</th>
+              <th>Return Qty</th>
+              <th>Return Amount</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+
+
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+
+<!-- jQuery + Bootstrap JS FIX ADDED -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const qtyInputs = document.querySelectorAll('.return-qty');
+document.addEventListener("DOMContentLoaded", function () {
 
-  function updateReturnSummary() {
-    let totalItems = 0;
-    let totalAmount = 0;
-
-    qtyInputs.forEach(input => {
-      const qty = parseFloat(input.value) || 0;
-      if (qty > 0) {
-        const row = input.closest('tr');
-        const price = parseFloat(row.querySelector('td:nth-child(7)').textContent.replace('₹', '').trim());
-        totalItems += qty;
-        totalAmount += qty * price;
-      }
-    });
-
-    document.getElementById('return-summary').innerHTML = `
-      <p><strong>Items Returning:</strong> ${totalItems.toFixed(2)}</p>
-      <p><strong>Total Amount:</strong> ₹${totalAmount.toFixed(2)}</p>
-      <p><strong>Refund Amount:</strong> ₹${totalAmount.toFixed(2)}</p>
-    `;
-  }
-
-  qtyInputs.forEach(input => input.addEventListener('change', updateReturnSummary));
-  updateReturnSummary();
-});
-
-$(document).ready(function() {
-  $('.btn-view-return').on('click', function() {
-    var returnId = $(this).data('id');
-    $('#returnItemsTable tbody').empty();
-
-    $.ajax({
-      url: '{% url "sale_return_items_api" %}',
-      data: { sale_return_id: returnId },
-      success: function(data) {
-        if (data.items.length > 0) {
-          data.items.forEach(function(item) {
-            $('#returnItemsTable tbody').append(`
-              <tr>
-                <td>${item.code}</td>
-                <td>${item.item_name}</td>
-                <td>${item.unit}</td>
-                <td>${item.qty}</td>
-                <td>${item.mrp}</td>
-                <td>${item.price}</td>
-                <td>${item.return_qty}</td>
-                <td>${item.return_amount}</td>
-              </tr>
-            `);
-          });
-        } else {
-          $('#returnItemsTable tbody').append('<tr><td colspan="8" class="text-center">No items found.</td></tr>');
-        }
-        new bootstrap.Modal(document.getElementById('returnDetailsModal')).show();
-      },
-      error: function() {
-        alert('Failed to fetch return items.');
-      }
-    });
-  });
-
-  $('#saleReturnBtn').on('click', function() {
-    $('#viewReturnsSection').hide();
-    $('#saleReturnSection').show();
-  });
-});
-
-function validateDateRange() {
-    let start = document.getElementById("start_date").value;
-    let end = document.getElementById("end_date").value;
-
-    if (start && end && start > end) {
-        alert("Start date cannot be greater than End date.");
-        return false; // prevent form submission
+    const btn = document.getElementById("saleReturnBtn");
+    if (btn) {
+        btn.addEventListener("click", function () {
+            document.getElementById("viewReturnsSection").style.display = "none";
+            document.getElementById("saleReturnSection").style.display = "block";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
     }
-    return true;
-}
+
+    const returnModal = new bootstrap.Modal(
+        document.getElementById('returnDetailsModal'),
+        { backdrop: true }
+    );
+
+    $(document).on("click", ".btn-view-return", function () {
+        const returnId = $(this).data("id");
+        $("#returnItemsTable tbody").empty();
+
+        $.ajax({
+            url: "{% url 'sale_return_items_api' %}",
+            data: { sale_return_id: returnId },
+            success: function (data) {
+
+                data.items.forEach(item => {
+                    $("#returnItemsTable tbody").append(`
+                        <tr>
+                          <td>${item.code}</td>
+                          <td>${item.item_name}</td>
+                          <td>${item.unit}</td>
+                          <td>${item.qty}</td>
+                          <td>${item.mrp}</td>
+                          <td>${item.price}</td>
+                          <td>${item.return_qty}</td>
+                          <td>${item.return_amount}</td>
+                        </tr>
+                    `);
+                });
+
+                returnModal.show();
+            }
+        });
+    });
+
+});
 </script>
 {% endblock %}
+

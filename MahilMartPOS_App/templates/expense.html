@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
 <style>
     .form-container {
         font-family: Arial, sans-serif;
@@ -66,8 +68,8 @@ button[type="submit"] {
 </style>
 
 <div class="form-container">
-    <h2>Expense</h2>
-    <form method="post" enctype="multipart/form-data">
+    <h2>{% if is_edit %}Update Expense{% else %}Expense{% endif %}</h2>
+    <form method="post" enctype="multipart/form-data" {% if is_edit %}action="{% url 'expense_edit' expense.expenseid %}"{% endif %}>
         {% csrf_token %}
         <div class="form-grid">
 
@@ -78,7 +80,7 @@ button[type="submit"] {
 
             <div id="dynamic-field-container" class="form-group" style="display: none;">
                 <label id="dynamic-label" for="category_detail">Category Detail</label>
-                <input type="text" id="category_detail" name="category_detail" >
+                <input type="text" id="category_detail" name="category_detail" value="{{ form.instance.category_detail|default_if_none:'' }}">
             </div>
 
             <div class="form-group">
@@ -117,7 +119,7 @@ button[type="submit"] {
             </div>
         </div>
        <div class="form-actions">
-    <button type="submit">Save Expense</button>
+    <button type="submit">{% if is_edit %}Update Expense{% else %}Save Expense{% endif %}</button>
         <a href="{% url 'expense_list' %}" class="btn-category">View Expenses</a>
     </div>
 
@@ -126,7 +128,7 @@ button[type="submit"] {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const dateField = document.getElementById('id_datetime');
-    if (dateField) {
+    if (dateField && !dateField.value) {
         const now = new Date();
         const tzOffset = now.getTimezoneOffset() * 60000;
         const localTime = new Date(now - tzOffset).toISOString().slice(0, 16);
@@ -152,20 +154,27 @@ document.addEventListener('DOMContentLoaded', function () {
         'Miscellaneous': 'Miscellaneous'
     };
 
+    function syncCategoryDetail() {
+        const selected = categoryField.value;
+        if (categoryMap[selected]) {
+            dynamicContainer.style.display = 'flex';
+            dynamicLabel.textContent = categoryMap[selected];
+        } else {
+            dynamicContainer.style.display = 'none';
+            dynamicInput.value = '';
+        }
+    }
+
     if (categoryField) {
-        categoryField.addEventListener('change', function () {
-            const selected = categoryField.value;
-            if (categoryMap[selected]) {
-                dynamicContainer.style.display = 'flex';
-                dynamicLabel.textContent = categoryMap[selected];
-            } else {
-                dynamicContainer.style.display = 'none';
-                dynamicInput.value = '';
-            }
-        });
+        categoryField.addEventListener('change', syncCategoryDetail);
+        syncCategoryDetail();
     }
 });
 </script>
 
 
+
+  </div>
+</div>
 {% endblock %}
+

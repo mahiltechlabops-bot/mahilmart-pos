@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<main class="app-content container my-4">
+<div class="page-section my-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 style="color: #770b0b;"><i class="fas fa-boxes me-2"></i> Product Listing</h3>
   </div>
@@ -10,7 +10,8 @@
     <!-- Search by Item Code -->
     <form method="get" style="flex: 2;" class="shadow-sm p-3 rounded bg-white border">
       <div class="input-group">
-        <input type="text" name="code_query" class="form-control" placeholder="Search by item code" value="{{ request.GET.code_query }}">
+        <input type="text" name="code_query" class="form-control"
+               placeholder="Search by item code" value="{{ code_query }}">
         <button class="btn btn-primary" type="submit">Search</button>
       </div>
     </form>
@@ -18,23 +19,27 @@
     <!-- Search by Item Name -->
     <form method="get" style="flex: 2;" class="shadow-sm p-3 rounded bg-white border">
       <div class="input-group">
-        <input type="text" name="name_query" class="form-control" placeholder="Search by item name" value="{{ request.GET.name_query }}">
+        <input type="text" name="name_query" class="form-control"
+               placeholder="Search by item name" value="{{ name_query }}">
         <button class="btn btn-primary" type="submit">Search</button>
       </div>
     </form>
 
     <!-- Filter by Group -->
-    <form method="get" style="flex: 1;" class="shadow-sm p-3 rounded bg-white border d-flex align-items-center">
-      <select name="group" class="form-select me-2" style="min-width: 140px;">
+    <form method="get" style="flex: 1;"
+          class="shadow-sm p-3 rounded bg-white border d-flex align-items-center">
+      <select name="group" class="form-select me-2" style="min-width:140px;">
         <option value="">All Groups</option>
         {% for group in groups %}
-          <option value="{{ group }}" {% if group == selected_group %}selected{% endif %}>{{ group }}</option>
+          <option value="{{ group }}" {% if group == selected_group %}selected{% endif %}>
+            {{ group }}
+          </option>
         {% endfor %}
       </select>
       <button class="btn btn-primary me-3" type="submit">Filter</button>
       <a href="{% url 'products' %}" class="btn btn-secondary">Reset</a>
-      <!-- Product count label -->
-      <span class="badge bg-info text-dark px-3 py-2 fs-6" style="white-space: nowrap; user-select: none;">
+
+      <span class="badge bg-info text-dark px-3 py-2 fs-6 ms-3">
         Products: {{ product_count }}
       </span>
     </form>
@@ -44,31 +49,109 @@
     <table class="table table-striped table-hover align-middle mb-0">
       <thead class="table-light">
         <tr>
-          <th scope="col" style="width: 60px;">S.No</th>          
-          <th scope="col">Item Name</th>
-          <th scope="col">Item Code</th>
-          <th scope="col">Group</th>
-          <th scope="col">Brand</th>
-          <th scope="col">Unit</th>          
+          <th style="width: 60px;">S.No</th>
+          <th>Item Name</th>
+          <th>Item Code</th>
+          <th>Group</th>
+          <th>Brand</th>
+          <th>Unit</th>
         </tr>
       </thead>
-      <tbody>
-        {% for product in items %}
-        <tr>
-          <td>{{ forloop.counter }}</td>        
-          <td>{{ product.item_name }}</td>
-          <td>{{ product.code }}</td>
-          <td>{{ product.group }}</td>
-          <td>{{ product.brand }}</td>
-          <td>{{ product.unit }}</td>          
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="6" class="text-center py-4">No products available.</td>
-        </tr>
-        {% endfor %}
+
+      <tbody id="product-body">
+        {% include "partials/product_rows.html" with items=items start_index=start_index %}
       </tbody>
     </table>
   </div>
-</main>
+
+  <div class="text-center mt-2">
+    <span id="loading-text" style="display:none;">Loading...</span>
+  </div>
+
+  <div id="scroll-sentinel" style="height:1px;"></div>
+
+  <div class="text-center mt-2">
+    <button id="load-more-button" class="btn btn-sm btn-primary" style="display:none;">
+      Load more
+    </button>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  let page = {{ items.number }};
+  let hasNext = {{ has_next|yesno:"true,false" }};
+  let userInteracted = false;
+  let loading = false;
+
+  const tbody = document.getElementById("product-body");
+  const loadingText = document.getElementById("loading-text");
+  const sentinel = document.getElementById("scroll-sentinel");
+  const loadMoreBtn = document.getElementById("load-more-button");
+
+  function queryString() {
+    const p = new URLSearchParams(window.location.search);
+    return "&" + p.toString();
+  }
+
+  function loadMore() {
+    if (loading || !hasNext) return;
+
+    loading = true;
+    page += 1;
+    loadingText.style.display = "inline";
+
+    fetch(`?page=${page}` + queryString(), {
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(r => r.json())
+    .then(data => {
+      loadingText.style.display = "none";
+
+      if (data.html.trim()) {
+        tbody.insertAdjacentHTML("beforeend", data.html);
+      }
+
+      hasNext = data.has_next;
+      loading = false;
+
+      if (!hasNext) {
+        sentinel.style.display = "none";
+        loadMoreBtn.style.display = "none";
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      loading = false;
+      loadingText.style.display = "none";
+      loadMoreBtn.style.display = "inline-block";
+    });
+  }
+
+  function markUserInteracted() {
+    userInteracted = true;
+  }
+
+  window.addEventListener("wheel", markUserInteracted, { passive:true });
+  window.addEventListener("touchstart", markUserInteracted, { passive:true });
+  window.addEventListener("keydown", markUserInteracted);
+
+  let observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting && userInteracted) {
+        loadMore();
+      }
+    });
+  }, { rootMargin: "300px" });
+
+  observer.observe(sentinel);
+
+  loadMoreBtn.addEventListener("click", function() {
+    markUserInteracted();
+    loadMore();
+  });
+})();
+</script>
+
 {% endblock %}

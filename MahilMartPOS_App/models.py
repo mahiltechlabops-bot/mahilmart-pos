@@ -13,27 +13,60 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+    
    
+from django.db import models
+from django.db.models import Max
+
+
 class Supplier(models.Model):
-    supplier_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    supplier_id = models.CharField(
+        max_length=20,
+        unique=True,
+        editable=False
+    )
+
     name = models.CharField(max_length=100)
-    contact_person = models.CharField(max_length=100, blank=True, default="Unknown")
-    phone = models.CharField(max_length=15, default="0000000000")
-    email = models.EmailField(blank=True, default="unknown@example.com")
-    address = models.TextField(blank=True, default="N/A")
-    gst_number = models.CharField(max_length=20, blank=True, default="N/A")
-    fssai_number = models.CharField(max_length=20, blank=True, default="N/A")
-    pan_number = models.CharField(max_length=20, blank=True, default="N/A")
-    credit_terms = models.CharField(max_length=50, blank=True, default="N/A")
+    contact_person = models.CharField(max_length=100, blank=True, null=True, default="Unknown")
+    phone = models.CharField(max_length=15, blank=True, null=True, default="0000000000")
+    email = models.EmailField(blank=True, null=True, default="unknown@example.com")
+    address = models.TextField(blank=True, null=True, default="N/A")
+    gst_number = models.CharField(max_length=20, blank=True, null=True, default="N/A")
+    fssai_number = models.CharField(max_length=20, blank=True, null=True, default="N/A")
+    pan_number = models.CharField(max_length=20, blank=True, null=True, default="N/A")
+    credit_terms = models.CharField(max_length=50, blank=True, null=True, default="N/A")
     opening_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    bank_name = models.CharField(max_length=100, blank=True, default="N/A")
-    account_number = models.CharField(max_length=50, blank=True, default="N/A")
-    ifsc_code = models.CharField(max_length=20, blank=True, default="N/A")
-    status = models.CharField(max_length=20, default='Active')
-    notes = models.TextField(blank=True, default="")    
+    bank_name = models.CharField(max_length=100, blank=True, null=True, default="N/A")
+    account_number = models.CharField(max_length=50, blank=True, null=True, default="N/A")
+    ifsc_code = models.CharField(max_length=20, blank=True, null=True, default="N/A")
+    status = models.CharField(max_length=20, default="Active")
+    notes = models.TextField(blank=True, null=True, default="")
+
+    class Meta:
+        db_table = "MahilMartPOS_App_supplier"
+        ordering = ["supplier_id"]
 
     def __str__(self):
-        return self.name        
+        return f"{self.supplier_id} - {self.name}"
+
+    def save(self, *args, **kwargs):
+        if not self.supplier_id:
+            last_id = Supplier.objects.aggregate(
+                max_supplier_id=Max("supplier_id")
+            )["max_supplier_id"]
+
+            if last_id:
+                last_number = int(last_id.split("-")[1])
+                next_number = last_number + 1
+            else:
+                next_number = 1
+
+            self.supplier_id = f"SUP-{next_number:04d}"
+
+        super().save(*args, **kwargs)
+
+
+        
     
 class Customer(models.Model):
     name = models.CharField(max_length=100)
@@ -43,8 +76,15 @@ class Customer(models.Model):
     date_joined = models.DateTimeField(auto_now_add=True)
     remarks = models.TextField(blank=True, default="billing_entry")
 
+    # ✅ ADD THIS
+    total_points = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
     def __str__(self):
-        return f"{self.name} ({self.cell})"     
+        return f"{self.name} ({self.cell})"
 
 class Billing(models.Model):
     customer = models.ForeignKey('Customer', on_delete=models.SET_NULL, null=True, blank=True)
@@ -201,25 +241,64 @@ class BillingPayment(models.Model):
         return f"Payment {self.id} for {self.bill_no}"
     
 class BillType(models.Model):
-    billtype_id = models.IntegerField(unique=True)
+    billtype_id = models.IntegerField(unique=True)   # editable=True now
     billtype = models.CharField(max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.billtype_id:
+            existing = BillType.objects.values_list("billtype_id", flat=True).order_by("billtype_id")
+            n = 1
+            for i in existing:
+                if i != n:
+                    break
+                n += 1
+            self.billtype_id = n
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.billtype
+
+
     
 class PaymentMode(models.Model):
-    mode_id = models.IntegerField(unique=True)
-    mode_name = models.CharField(max_length=50, unique=True)
+    mode_id = models.IntegerField(unique=True)    # editable=True
+    mode_name = models.CharField(max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.mode_id:
+            existing = PaymentMode.objects.values_list("mode_id", flat=True).order_by("mode_id")
+            n = 1
+            for i in existing:
+                if i != n:
+                    break
+                n += 1
+            self.mode_id = n
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.mode_name
+
+
     
 class Counter(models.Model):
-    counter_id = models.IntegerField(unique=True)
-    counter_name = models.CharField(max_length=50, unique=True)
+    counter_id = models.IntegerField(unique=True)   # editable=True
+    counter_name = models.CharField(max_length=100)
+
+    def save(self, *args, **kwargs):
+        if not self.counter_id:
+            existing = Counter.objects.values_list("counter_id", flat=True).order_by("counter_id")
+            n = 1
+            for i in existing:
+                if i != n:
+                    break
+                n += 1
+            self.counter_id = n
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.counter_name
+
+
 
 class PointsConfig(models.Model):
     amount_for_one_point = models.DecimalField(max_digits=10, decimal_places=2, default=200)
@@ -303,14 +382,21 @@ class Unit(models.Model):
         return f"{self.unit_name} ({self.UQC})"
     
 class Group(models.Model):
-    group_name = models.CharField(max_length=50)
-    alias_name = models.CharField(max_length=50)
-    under = models.CharField(max_length=50)
-    print_name = models.CharField(max_length=50)
-    commodity = models.CharField(max_length=100)
+    group_name = models.CharField(max_length=100, unique=True)
+    alias_name = models.CharField(max_length=100, blank=True, null=True)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="children"
+    )
+    print_name = models.CharField(max_length=100, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.group_name
+
     
 class Brand(models.Model):
     brand_name = models.CharField(max_length=50)
@@ -463,45 +549,107 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
     
+from django.db import models
+
+from django.db import models
+
+
 class CompanyDetails(models.Model):
+
+    # ==========================
+    # ✅ BUSINESS TYPE
+    # ==========================
+    business_type = models.ForeignKey(
+        'BusinessType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="companies"
+    )
+
+    # ==========================
+    # COMPANY INFO
+    # ==========================
+    short_name = models.CharField(
+        max_length=5,
+        help_text="Short store code like MM"
+    )
+
     company_name = models.CharField(max_length=255)
     print_name = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     pincode = models.CharField(max_length=20)
     state = models.CharField(max_length=100)
     country = models.CharField(max_length=100)
+
     phone = models.CharField(max_length=20)
     mobile = models.CharField(max_length=20)
     email = models.EmailField()
     website = models.CharField(max_length=255, blank=True, null=True)
+
+    # ==========================
+    # TAX & LICENSE
+    # ==========================
     gstin = models.CharField(max_length=20)
     gst_type = models.CharField(max_length=50)
     pan_no = models.CharField(max_length=20)
     fssai_no = models.CharField(max_length=20)
     trade_license_no = models.CharField(max_length=50)
+
+    # ==========================
+    # INVOICE SETTINGS
+    # ==========================
     invoice_prefix = models.CharField(max_length=10)
     invoice_start_num = models.IntegerField(null=True, blank=True)
-    default_tax_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    default_tax_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    # ==========================
+    # BANK DETAILS
+    # ==========================
     bank_name = models.CharField(max_length=255)
     account_no = models.CharField(max_length=50)
     ifsc_code = models.CharField(max_length=20)
+
+    # ==========================
+    # FINANCIAL YEAR
+    # ==========================
     year_from = models.DateField(null=True, blank=True)
     year_to = models.DateField(null=True, blank=True)
+
+    # ==========================
+    # SYSTEM SETTINGS
+    # ==========================
     auto_backup = models.BooleanField(default=False)
     daily_backup_path = models.CharField(max_length=255, blank=True, null=True)
     printer_name = models.CharField(max_length=255, blank=True, null=True)
     auto_logout_minutes = models.IntegerField(default=0)
-    password_hash = models.CharField(max_length=255)
+
+    # ==========================
+    # TIMING
+    # ==========================
     opening_time = models.TimeField()
     closing_time = models.TimeField()
-    is_sunday_open = models.CharField(max_length=10,choices=[('Open', 'Open'), ('Closed', 'Closed')])
+    is_sunday_open = models.CharField(
+        max_length=10,
+        choices=[('Open', 'Open'), ('Closed', 'Closed')]
+    )
+
+    # ==========================
+    # ADMIN SECURITY
+    # ==========================
     admin_password = models.CharField(max_length=255, blank=True, null=True)
     confirm_password = models.CharField(max_length=255, blank=True, null=True)
     password_hash = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
-        return self.company_name
-       
+        bt = self.business_type.name if self.business_type else "Retail"
+        return f"{self.company_name} ({bt})"
+
 # purchase & purchase items
 class Purchase(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)   
@@ -714,3 +862,333 @@ class BarcodeLabelSize(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.width_mm}x{self.height_mm} mm)"
+    
+
+# -------------------------
+# USER LOGIN ACTIVITY LOG
+# -------------------------
+class LoginLog(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ip_address = models.CharField(max_length=100, null=True, blank=True)
+    computer_name = models.CharField(max_length=100, null=True, blank=True)
+    login_time = models.DateTimeField(auto_now_add=True)
+    logout_time = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.ip_address} - {self.computer_name}"
+
+
+class ComputerAlias(models.Model):
+    computer_name = models.CharField(max_length=200, unique=True)
+    alias_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.alias_name} ({self.computer_name})"
+
+class AdminSettings(models.Model):
+    company_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
+    invoice_footer = models.TextField(blank=True)
+
+    # UI / Theme
+    primary_color = models.CharField(max_length=20, default="#2e3b4e")
+    sidebar_color = models.CharField(max_length=20, default="#1f2a38")
+    accent_color = models.CharField(max_length=20, default="#4a6fa5")
+    logo = models.ImageField(upload_to="theme_logo/", null=True, blank=True)
+    mode = models.CharField(max_length=10, default="light")
+
+    def __str__(self):
+        return "Admin Settings"
+
+
+
+class CashierRestriction(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    allow_discount = models.BooleanField(default=False)
+    allow_price_edit = models.BooleanField(default=False)
+    allow_delete_bill = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Restrictions for {self.user.username}"
+    
+
+
+
+class CashierPermission(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    allow_dashboard = models.BooleanField(default=False)
+    allow_billing = models.BooleanField(default=False)
+    allow_sales_return = models.BooleanField(default=False)
+    allow_products = models.BooleanField(default=False)
+    allow_items = models.BooleanField(default=False)
+    allow_purchase = models.BooleanField(default=False)
+    allow_inventory = models.BooleanField(default=False)
+    allow_suppliers = models.BooleanField(default=False)
+    allow_barcodes = models.BooleanField(default=False)
+    allow_customers = models.BooleanField(default=False)
+    allow_payments = models.BooleanField(default=False)
+    allow_expenses = models.BooleanField(default=False)
+
+    # Admin-level
+    allow_reports = models.BooleanField(default=False)
+    allow_logs = models.BooleanField(default=False)
+    allow_company = models.BooleanField(default=False)
+    allow_settings = models.BooleanField(default=False)
+    allow_config_view = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Cashier Permissions - {self.user.username}"
+
+
+
+class SupervisorPermission(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    allow_dashboard = models.BooleanField(default=False)
+    allow_billing = models.BooleanField(default=False)
+    allow_sales_return = models.BooleanField(default=False)
+    allow_products = models.BooleanField(default=False)
+    allow_items = models.BooleanField(default=False)
+    allow_purchase = models.BooleanField(default=False)
+    allow_inventory = models.BooleanField(default=False)
+    allow_suppliers = models.BooleanField(default=False)
+    allow_barcodes = models.BooleanField(default=False)
+    allow_customers = models.BooleanField(default=False)
+    allow_payments = models.BooleanField(default=False)
+    allow_expenses = models.BooleanField(default=False)
+
+    allow_reports = models.BooleanField(default=False)
+    allow_logs = models.BooleanField(default=False)
+    allow_company = models.BooleanField(default=False)
+    allow_settings = models.BooleanField(default=False)
+    allow_config_view = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Supervisor Permissions - {self.user.username}"
+
+
+from django.db import models
+
+class MigrationLog(models.Model):
+    mssql_table = models.CharField(max_length=255)
+    postgres_table = models.CharField(max_length=255)
+    migrated_rows = models.IntegerField(default=0)
+    status = models.CharField(max_length=20)
+    error_message = models.TextField(blank=True, null=True)
+
+    # store column mapping freely (no unique constraints)
+    column_mapping = models.JSONField(null=True, blank=True)
+
+    migrated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # IMPORTANT: remove ANY unique_together
+        constraints = []      # <----- REMOVE UNIQUE constraint completely
+        indexes = []          # <----- optional, cleaner future migrations
+
+    def __str__(self):
+        return f"{self.mssql_table} -> {self.postgres_table}"
+
+
+
+from django.db import models
+from django.contrib.auth.models import User
+
+
+class ActivityLog(models.Model):
+    ACTION_CHOICES = [
+        ("LOGIN", "Login"),
+        ("LOGOUT", "Logout"),
+        ("CREATE", "Create"),
+        ("UPDATE", "Update"),
+        ("DELETE", "Delete"),
+        ("VIEW", "View"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    username = models.CharField(max_length=150)
+    role = models.CharField(max_length=100, blank=True)
+
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    module = models.CharField(max_length=100)
+    description = models.TextField()
+
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    device_name = models.CharField(max_length=255, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.username} - {self.action} - {self.module}"\
+        
+
+
+
+class BusinessType(models.Model):
+    BUSINESS_CHOICES = [
+        ('retail', 'Retail'),
+        ('medical', 'Medical Shop'),
+        ('book', 'Book Stall'),
+    ]
+
+    name = models.CharField(max_length=20, choices=BUSINESS_CHOICES, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+    
+
+class Medicine(models.Model):
+    item = models.OneToOneField(Item, on_delete=models.CASCADE)
+    salt_composition = models.CharField(max_length=255)
+    manufacturer = models.CharField(max_length=255)
+    schedule_type = models.CharField(
+        max_length=10,
+        choices=[
+            ('OTC', 'OTC'),
+            ('H', 'Schedule H'),
+            ('H1', 'Schedule H1'),
+            ('X', 'Schedule X')
+        ]
+    )
+    prescription_required = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.item.item_name
+
+
+class MedicineBatch(models.Model):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    batch_no = models.CharField(max_length=100)
+    expiry_date = models.DateField()
+    mrp = models.DecimalField(max_digits=10, decimal_places=2)
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def is_expired(self):
+        return self.expiry_date < timezone.now().date()
+
+    def __str__(self):
+        return f"{self.item.item_name} - {self.batch_no}"
+
+
+class Prescription(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    doctor_name = models.CharField(max_length=255)
+    prescription_date = models.DateField()
+    file = models.FileField(upload_to='prescriptions/', blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.customer.name} - {self.doctor_name}"
+
+
+class Book(models.Model):
+    item = models.OneToOneField(Item, on_delete=models.CASCADE)
+    author = models.CharField(max_length=255)
+    publisher = models.CharField(max_length=255)
+    isbn = models.CharField(max_length=20, unique=True)
+    edition = models.CharField(max_length=50)
+    subject = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.item.item_name
+
+# models.py
+from django.db import models
+from django.contrib.auth.models import User
+
+class Company(models.Model):
+    company_name = models.CharField(max_length=255)
+    short_name = models.CharField(max_length=10)
+    print_name = models.CharField(max_length=255, blank=True, null=True)
+
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="companies_created"
+    )
+    updated_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="companies_updated"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.company_name
+
+
+class CompanyActivity(models.Model):
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="activities"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    action = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.action} - {self.company.company_name}"
+
+
+
+
+
+
+class EmailConfig(models.Model):
+    email_host = models.CharField(max_length=200, default="smtp.gmail.com")
+    email_port = models.PositiveIntegerField(default=587)
+    use_tls = models.BooleanField(default=True)
+    email_host_user = models.EmailField()
+    email_host_password = models.CharField(max_length=255)
+    default_from_email = models.EmailField()
+    alert_recipients = models.CharField(max_length=500, blank=True, null=True)
+    alert_enabled = models.BooleanField(default=True)
+    access_denied_alert_enabled = models.BooleanField(default=True)
+    low_stock_alert_enabled = models.BooleanField(default=True)
+    no_stock_alert_enabled = models.BooleanField(default=True)
+
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.email_host_user
+
+
+class EmailLog(models.Model):
+    STATUS_CHOICES = [
+        ("sent", "Sent"),
+        ("failed", "Failed"),
+    ]
+
+    EVENT_CHOICES = [
+        ("access_denied", "Access Denied"),
+        ("test", "Test Email"),
+        ("system", "System"),
+    ]
+
+    event_type = models.CharField(max_length=50, choices=EVENT_CHOICES, default="system")
+    subject = models.CharField(max_length=255)
+    recipients = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="sent")
+    error_message = models.TextField(blank=True, null=True)
+    triggered_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    request_path = models.CharField(max_length=255, blank=True, null=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.event_type} - {self.subject} ({self.status})"

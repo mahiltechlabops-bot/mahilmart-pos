@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Create New User{% endblock %}
+{% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
+
+<style>
+:root {
+  --primary: #2e3b4e;
+  --primary-dark: #1f2a38;
+  --border: #d4d4d4;
+  --text: #222;
+  --white: #fff;
+}
+
+.form-box {
+  max-width: 600px;
+  margin: 50px auto;
+  background: var(--white);
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  font-family: 'Poppins', sans-serif;
+}
+.form-box label { font-weight: 600; margin-top: 14px; display:block; }
+
+.form-box input,
+.form-box select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.form-box button {
+  margin-top: 15px;
+  width: 100%;
+  padding: 12px;
+  background: var(--primary);
+  color:white;
+  border-radius: 10px;
+  border:none;
+  cursor:pointer;
+}
+
+.group-btn {
+  margin-top: 10px;
+  width: 100%;
+  background: #556;
+}
+.group-btn:hover { background:#334; }
+
+/* Modal */
+#groupModal {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.4);
+  display:none; justify-content:center; align-items:center;
+  z-index:2000;
+}
+#groupModalContent {
+  background:white;
+  width:450px;
+  padding:20px;
+  border-radius:12px;
+}
+.group-toggle { padding:7px 0; border-bottom:1px solid #eee; }
+
+/* STATUS SWITCH */
+.switch-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 22px;
+}
+.switch-wrapper input { opacity: 0; width: 0; height: 0; }
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: #ccc;
+    border-radius: 22px;
+    top:0; left:0; right:0; bottom:0;
+    transition: .3s;
+}
+.switch-slider:before {
+    content:"";
+    position:absolute;
+    width:18px; height:18px;
+    background:white;
+    border-radius:50%;
+    left:2px; bottom:2px;
+    transition:.3s;
+}
+input:checked + .switch-slider { background:#2e3b4e; }
+input:checked + .switch-slider:before { transform:translateX(20px); }
+select, option {
+  color: #222;
+  background: #fff;
+}
+
+</style>
+
+
+
+<div class="form-box">
+  <h2>Create New User</h2>
+
+  <form method="POST" id="userForm">
+    {% csrf_token %}
+
+    <label>Username</label>
+    <input type="text" name="username" required>
+
+    <label>Email</label>
+    <input type="email" name="email">
+
+    <label>Password</label>
+    <input type="password" name="password" required>
+
+    <!-- ROLE SELECTION -->
+    <label>Role <span style="color:red">*</span></label>
+    <select name="role" id="roleSelect" required>
+      <option value="">-- Select Role --</option>
+      <option value="admin">Admin</option>
+      <option value="staff">Supervisor</option>
+      <option value="normal">Cashier</option>
+    </select>
+
+    <!-- GROUP SELECTION -->
+    <label>Group <span style="color:red">*</span></label>
+    <select name="group" id="groupSelect" required>
+      <option value="">-- Select Group --</option>
+      {% for g in groups %}
+        <option value="{{ g.id }}">{{ g.name }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="button" class="group-btn" onclick="openGroupModal()">➕ Create Group</button>
+
+    <button type="submit">Create User</button>
+  </form>
+</div>
+
+
+
+
+
+<!-- GROUP MODAL -->
+<div id="groupModal">
+  <div id="groupModalContent">
+    <h4>Create Group</h4>
+
+    <input type="text" id="newGroupName" class="form-control" placeholder="Enter group name...">
+
+    <button class="group-btn" onclick="saveGroup()">Save Group</button>
+
+    <hr>
+    <h5>Existing Groups</h5>
+    <div id="groupListContainer"></div>
+
+    <button class="group-btn" style="background:#333;" onclick="closeGroupModal()">Close</button>
+  </div>
+</div>
+
+
+
+
+
+<script>
+/* MODAL CONTROL */
+function openGroupModal() {
+    document.getElementById("groupModal").style.display = "flex";
+    loadGroups();
+}
+function closeGroupModal() {
+    document.getElementById("groupModal").style.display = "none";
+}
+
+/* GET CSRF TOKEN (Correct way for JS) */
+function getCSRFToken() {
+    return document.querySelector("[name=csrfmiddlewaretoken]").value;
+}
+
+/* LOAD EXISTING GROUPS INTO MODAL */
+function loadGroups() {
+    fetch("/ajax/get-groups/")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("groupListContainer").innerHTML = data.html;
+    });
+}
+
+/* CREATE NEW GROUP */
+function saveGroup() {
+    const name = document.getElementById("newGroupName").value.trim();
+    if (!name) {
+        alert("Enter group name");
+        return;
+    }
+
+    fetch("/ajax/create-group/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken()
+        },
+        body: JSON.stringify({ group_name: name })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Add to dropdown
+            const select = document.getElementById("groupSelect");
+            const opt = document.createElement("option");
+            opt.value = data.id;
+            opt.textContent = data.name;
+            select.appendChild(opt);
+            select.value = data.id;
+
+            loadGroups();  // refresh modal list
+            document.getElementById("newGroupName").value = "";
+        } else {
+            alert(data.message);
+        }
+    });
+}
+
+/* TOGGLE GROUP STATUS */
+function toggleGroup(id) {
+    fetch("/ajax/toggle-group/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken()
+        },
+        body: JSON.stringify({ id: id })
+    });
+}
+</script>
+
+
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Email Preview{% endblock %}
+
+{% block content %}
+<style>
+    .preview-wrapper {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+
+    .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .preview-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .preview-actions a {
+        margin-right: 8px;
+    }
+
+    .btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        color: #111827;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+
+    .meta-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 18px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        font-size: 14px;
+    }
+
+    .meta-card div {
+        margin-bottom: 6px;
+    }
+
+    .email-preview {
+        background: #f5f7fb;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px dashed #cbd5f5;
+    }
+
+    .email-card {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        padding: 25px;
+        font-family: Arial, sans-serif;
+    }
+
+    .email-card h2 {
+        color: #d9534f;
+        text-align: center;
+        margin-top: 0;
+    }
+
+    .email-card table {
+        width: 100%;
+        font-size: 14px;
+        color: #333;
+    }
+
+    .email-card td {
+        padding: 4px 0;
+    }
+</style>
+
+<div class="preview-wrapper">
+    <div class="preview-header">
+        <div class="preview-title">Access Denied Email Preview</div>
+        <div class="preview-actions">
+            <a class="btn btn-primary" href="{% url 'email_settings' %}">Email Settings</a>
+            <a class="btn" href="{% url 'email_view' %}">View Config</a>
+            <a class="btn" href="{% url 'email_logs' %}">Email Logs</a>
+        </div>
+    </div>
+
+    <div class="meta-card">
+        <div><strong>From:</strong> {{ from_email|default:"Not configured" }}</div>
+        <div><strong>To:</strong> {{ recipients_display }}</div>
+        <div><strong>Template:</strong> Access Denied Alert</div>
+    </div>
+
+    <div class="email-preview">
+        <div class="email-card">
+            <h2>Access Denied Alert</h2>
+            <p style="text-align:center; font-size:14px; color:#666;">
+                A restricted page was accessed in <strong>MahilMart POS</strong>
+            </p>
+
+            <hr style="margin:20px 0;">
+
+            <table>
+                <tr><td><strong>User:</strong></td><td>DemoUser (Preview)</td></tr>
+                <tr><td><strong>Authenticated:</strong></td><td>True</td></tr>
+                <tr><td><strong>IP Address:</strong></td><td>192.168.0.10</td></tr>
+                <tr><td><strong>Attempted Page:</strong></td><td>/restricted/</td></tr>
+                <tr><td><strong>Request Method:</strong></td><td>GET</td></tr>
+                <tr><td><strong>Date & Time:</strong></td><td>2026-02-03 10:15:00</td></tr>
+            </table>
+
+            <hr style="margin:20px 0;">
+
+            <div style="padding:10px; background:#f0f4ff; border-radius:8px;">
+                <strong>GET Data:</strong>
+                <pre style="font-size:12px; color:#555;">{'next': '/restricted/'}</pre>
+            </div>
+
+            <br>
+
+            <div style="padding:10px; background:#f9f1f0; border-radius:8px;">
+                <strong>POST Data:</strong>
+                <pre style="font-size:12px; color:#555;">{}</pre>
+            </div>
+
+            <p style="font-size:12px; text-align:center; color:#777; margin-top:18px;">
+                This alert is generated automatically by <strong>MahilMart POS</strong>.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

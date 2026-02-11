@@ -95,7 +95,7 @@
             <td>{{ item.whole_rate_2 }}</td>
             <td>{{ item.min_stock }}</td>        
             <td style="white-space: nowrap;">
-                <button class="btn btn-sm btn-primary" disabled>Edit</button>
+                <a href="{% url 'edit_item' item.id %}" class="btn btn-sm btn-primary">Edit</a>
                 
                 <form method="post" action="{% url 'delete_item' item.id %}" 
                     style="display:inline; margin:0; padding:0;">

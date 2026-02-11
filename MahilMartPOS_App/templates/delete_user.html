@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Delete User{% endblock %}
+
+{% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
+<style>
+  .delete-container {
+    max-width: 600px;
+    margin: 60px auto;
+    padding: 30px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  .delete-container h2 {
+    color: #cc2e4e;
+    margin-bottom: 20px;
+  }
+
+  .delete-container p {
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    color: #444;
+  }
+
+  .delete-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .delete-actions button, .delete-actions a {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    transition: all 0.3s ease;
+  }
+
+  .btn-cancel {
+    background: #6c757d;
+    color: white;
+  }
+
+  .btn-cancel:hover {
+    background: #5a6268;
+  }
+
+  .btn-confirm {
+    background: #dc3545;
+    color: white;
+  }
+
+  .btn-confirm:hover {
+    background: #c82333;
+  }
+</style>
+
+<div class="delete-container">
+  <h2>Confirm Deletion</h2>
+  <p>Are you sure you want to permanently delete user <strong>{{ user.username }}</strong>?</p>
+
+  <form method="post" class="delete-actions">
+    {% csrf_token %}
+    <a href="{% user' %}" class="btn-cancel">Cancel</a>
+    <button type="submit" class="btn-confirm">🗑 Delete</button>
+  </form>
+</div>
+
+  </div>
+</div>
+{% endblock %}
+

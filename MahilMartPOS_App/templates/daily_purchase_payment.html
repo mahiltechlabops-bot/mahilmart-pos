@@ -3,6 +3,8 @@
 {% block title %}Daily Purchase Information{% endblock %}
 
 {% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
     <h2>Daily Purchase Information</h2>
     <div class="mb-3 text-end">
         <a href="{% url 'purchase_payment_list' %}" class="btn btn-secondary">
@@ -147,4 +149,7 @@
         }
     });
 </script>
+
+  </div>
+</div>
 {% endblock %}
