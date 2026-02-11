@@ -53,15 +53,10 @@ const
 
 var
   DbPage: TInputQueryWizardPage;
-  LicenseEmailPage: TInputQueryWizardPage;
   LicenseKeyPage: TInputQueryWizardPage;
   LicensePath: string;
   ActivationNoticePath: string;
-  PendingEmail: string;
-  PendingMachineId: string;
-  PendingIssuedAt: string;
-  PendingLicenseKey: string;
-  KeyEmailSent: Boolean;
+  CurrentMachineId: string;
 
 function GetMachineId: string;
 begin
@@ -87,115 +82,115 @@ begin
   end;
 end;
 
-function ToFixedHex(Value, Width: Integer): string;
-var
-  HexChars: string;
-  I: Integer;
-  Digit: Integer;
+function IsUpperChar(C: Char): Boolean;
 begin
-  HexChars := '0123456789ABCDEF';
-  Result := '';
-  for I := 1 to Width do
-  begin
-    Digit := Value mod 16;
-    Result := Copy(HexChars, Digit + 1, 1) + Result;
-    Value := Value div 16;
-  end;
+  Result := (C >= 'A') and (C <= 'Z');
 end;
 
-function GenerateLicenseKey(Email, MachineId, IssuedAt: string): string;
+function IsLowerChar(C: Char): Boolean;
+begin
+  Result := (C >= 'a') and (C <= 'z');
+end;
+
+function IsDigitChar(C: Char): Boolean;
+begin
+  Result := (C >= '0') and (C <= '9');
+end;
+
+function IsSpecialChar(C: Char): Boolean;
+begin
+  Result := Pos(C, '@#$%&*!?') > 0;
+end;
+
+function IsValidLicenseFormat(Value: string): Boolean;
+var
+  HasUpper: Boolean;
+  HasLower: Boolean;
+  HasDigit: Boolean;
+  SpecialCount: Integer;
+  I: Integer;
+begin
+  Value := Trim(Value);
+  if Length(Value) <> 32 then
+  begin
+    Result := False;
+    exit;
+  end;
+
+  HasUpper := False;
+  HasLower := False;
+  HasDigit := False;
+  SpecialCount := 0;
+
+  for I := 1 to Length(Value) do
+  begin
+    if IsUpperChar(Value[I]) then
+      HasUpper := True
+    else if IsLowerChar(Value[I]) then
+      HasLower := True
+    else if IsDigitChar(Value[I]) then
+      HasDigit := True
+    else if IsSpecialChar(Value[I]) then
+      SpecialCount := SpecialCount + 1
+    else
+    begin
+      Result := False;
+      exit;
+    end;
+  end;
+
+  Result := HasUpper and HasLower and HasDigit and (SpecialCount >= 2);
+end;
+
+function GenerateLicenseKey(Email, MachineId: string): string;
 var
   Seed: string;
-  PartA: Integer;
-  PartB: Integer;
-  PartC: Integer;
-  PartD: Integer;
-  FullKey: string;
+  State: Integer;
+  BaseKey: string;
+  Charset: string;
+  SpecialSet: string;
+  SpecialA: string;
+  SpecialB: string;
+  I: Integer;
 begin
-  Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId) + '|' + Trim(IssuedAt);
-  PartA := BuildChecksumValue(Seed, 3, 11);
-  PartB := BuildChecksumValue(Seed, 7, 19);
-  PartC := (PartA * 31 + PartB * 17 + Length(Seed) * 97) mod 16777215;
-  PartD := (PartA + PartB + PartC + Length(Seed) * 13) mod 16777215;
-  FullKey := ToFixedHex(PartA, 6) + ToFixedHex(PartB, 6) + ToFixedHex(PartC, 6) + ToFixedHex(PartD, 6);
-  Result := Copy(FullKey, 1, 10);
-end;
+  Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId);
+  State := (BuildChecksumValue(Seed, 3, 11) + BuildChecksumValue(Seed, 7, 19) + Length(Seed) * 97) mod 16777215;
 
-function EscapePSSingleQuoted(Value: string): string;
-begin
-  Result := Value;
-  StringChangeEx(Result, '''', '''''', True);
-end;
+  BaseKey := '';
+  for I := 0 to 29 do
+  begin
+    State := (State * 73 + 19 + I * 131) mod 16777215;
+    if (I mod 3) = 0 then
+      Charset := 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+    else if (I mod 3) = 1 then
+      Charset := 'abcdefghijkmnopqrstuvwxyz'
+    else
+      Charset := '23456789';
 
-function SendLicenseKeyEmail(MachineId, IssuedAt, LicenseKey: string): Boolean;
-var
-  ScriptPath: string;
-  ScriptContent: string;
-  ResultCode: Integer;
-  EmailAddress: string;
-  AppPassword: string;
-begin
-  EmailAddress := FixedLicenseEmail;
-  AppPassword := 'fbopbtqzaqvedzkg';
-  ScriptPath := ExpandConstant('{tmp}\send_license_key.ps1');
+    BaseKey := BaseKey + Copy(Charset, (State mod Length(Charset)) + 1, 1);
+  end;
 
-  ScriptContent :=
-    '$ErrorActionPreference = ''Stop''' + #13#10 +
-    '$toEmail = ''' + EscapePSSingleQuoted(EmailAddress) + '''' + #13#10 +
-    '$appPassword = ''' + EscapePSSingleQuoted(AppPassword) + '''' + #13#10 +
-    '$machineId = ''' + EscapePSSingleQuoted(MachineId) + '''' + #13#10 +
-    '$issuedAt = ''' + EscapePSSingleQuoted(IssuedAt) + '''' + #13#10 +
-    '$licenseKey = ''' + EscapePSSingleQuoted(LicenseKey) + '''' + #13#10 +
-    '$sec = ConvertTo-SecureString $appPassword -AsPlainText -Force' + #13#10 +
-    '$cred = New-Object System.Management.Automation.PSCredential($toEmail, $sec)' + #13#10 +
-    '$body = "MahilMart POS license key generated.`r`n`r`nMachine ID: $machineId`r`nIssued At: $issuedAt`r`nLicense Key: $licenseKey`r`n"' + #13#10 +
-    '$msg = New-Object System.Net.Mail.MailMessage' + #13#10 +
-    '$msg.From = $toEmail' + #13#10 +
-    '$msg.To.Add($toEmail)' + #13#10 +
-    '$msg.Subject = "MahilMart POS License Key"' + #13#10 +
-    '$msg.Body = $body' + #13#10 +
-    '$smtp = New-Object System.Net.Mail.SmtpClient(''smtp.gmail.com'', 587)' + #13#10 +
-    '$smtp.EnableSsl = $true' + #13#10 +
-    '$smtp.Credentials = $cred' + #13#10 +
-    '$smtp.Timeout = 15000' + #13#10 +
-    '$smtp.Send($msg)' + #13#10;
+  SpecialSet := '@#$%&*!?';
+  State := (State * 73 + 17) mod 16777215;
+  SpecialA := Copy(SpecialSet, (State mod Length(SpecialSet)) + 1, 1);
+  State := (State * 73 + 29) mod 16777215;
+  SpecialB := Copy(SpecialSet, (State mod Length(SpecialSet)) + 1, 1);
 
-  SaveStringToFile(ScriptPath, ScriptContent, False);
-  Result := Exec(
-    ExpandConstant('{cmd}'),
-    '/C powershell -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '"',
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ResultCode
-  ) and (ResultCode = 0);
+  Result := Copy(BaseKey, 1, 10) + SpecialA + Copy(BaseKey, 11, 10) + SpecialB + Copy(BaseKey, 21, 10);
 end;
 
 procedure InitializeWizard;
 begin
   LicensePath := ExpandConstant('{commonappdata}\MahilMartPOS\license.ini');
   ActivationNoticePath := ExpandConstant('{commonappdata}\MahilMartPOS\license_activation_pending.ini');
-  PendingEmail := '';
-  PendingMachineId := '';
-  PendingIssuedAt := '';
-  PendingLicenseKey := '';
-  KeyEmailSent := False;
-
-  LicenseEmailPage := CreateInputQueryPage(
-    wpSelectDir,
-    'License Email',
-    'Send license key',
-    'License email is fixed in read-only mode.' + #13#10 + 'Machine ID: ' + GetMachineId
-  );
-  LicenseEmailPage.Add('Email:', False);
-  LicenseEmailPage.Values[0] := FixedLicenseEmail;
-  LicenseEmailPage.Edits[0].ReadOnly := True;
+  CurrentMachineId := GetMachineId;
 
   LicenseKeyPage := CreateInputQueryPage(
-    LicenseEmailPage.ID,
-    'License Validation',
-    'Enter received key',
-    'Enter the license key sent by email (read-only mail) for this machine.'
+    wpSelectDir,
+    'License Activation',
+    'Enter license key',
+    'Use the 32-character license key generated in Admin > License Manager.' + #13#10 +
+    'Machine ID: ' + CurrentMachineId
   );
   LicenseKeyPage.Add('License Key:', False);
   LicenseKeyPage.Values[0] := '';
@@ -220,60 +215,40 @@ end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
-  EnteredEmail: string;
   EnteredKey: string;
-  MachineId: string;
+  ExpectedKey: string;
 begin
   Result := True;
-  if CurPageID = LicenseEmailPage.ID then
-  begin
-    EnteredEmail := FixedLicenseEmail;
-    LicenseEmailPage.Values[0] := EnteredEmail;
-
-    if PendingEmail <> NormalizeUpper(EnteredEmail) then
-      KeyEmailSent := False;
-
-    if not KeyEmailSent then
-    begin
-      PendingEmail := NormalizeUpper(EnteredEmail);
-      PendingMachineId := GetMachineId;
-      PendingIssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
-      PendingLicenseKey := GenerateLicenseKey(EnteredEmail, PendingMachineId, PendingIssuedAt);
-      if not SendLicenseKeyEmail(PendingMachineId, PendingIssuedAt, PendingLicenseKey) then
-      begin
-        MsgBox('Unable to send license key email. Check internet and try again.', mbError, MB_OK);
-        Result := False;
-        exit;
-      end;
-      KeyEmailSent := True;
-      MsgBox('License key sent to ' + FixedLicenseEmail + '. Enter key on next page.', mbInformation, MB_OK);
-    end;
-  end;
   if CurPageID = LicenseKeyPage.ID then
   begin
-    EnteredKey := NormalizeUpper(LicenseKeyPage.Values[0]);
-    MachineId := GetMachineId;
+    EnteredKey := Trim(LicenseKeyPage.Values[0]);
+    ExpectedKey := GenerateLicenseKey(FixedLicenseEmail, CurrentMachineId);
     if EnteredKey = '' then
     begin
       MsgBox('License key is required.', mbError, MB_OK);
       Result := False;
       exit;
     end;
-    if not KeyEmailSent then
+    if not IsValidLicenseFormat(EnteredKey) then
     begin
-      MsgBox('License key was not sent yet. Go back and send email first.', mbError, MB_OK);
+      MsgBox(
+        'License key format invalid.' + #13#10 +
+        'Required: 32 characters with uppercase, lowercase, numbers, and at least 2 special characters.',
+        mbError,
+        MB_OK
+      );
       Result := False;
       exit;
     end;
-    if MachineId <> PendingMachineId then
+    if EnteredKey <> ExpectedKey then
     begin
-      MsgBox('Machine changed during setup. Go back and send key email again.', mbError, MB_OK);
-      Result := False;
-      exit;
-    end;
-    if EnteredKey <> PendingLicenseKey then
-    begin
-      MsgBox('Invalid license key for this machine.', mbError, MB_OK);
+      MsgBox(
+        'Invalid license key for this machine.' + #13#10 +
+        'Machine ID: ' + CurrentMachineId + #13#10 +
+        'Generate key from your admin License Manager page.',
+        mbError,
+        MB_OK
+      );
       Result := False;
       exit;
     end;
@@ -325,15 +300,9 @@ begin
     SaveStringToFile(ConfigPath, Content, False);
 
     EnteredEmail := FixedLicenseEmail;
-    MachineId := PendingMachineId;
-    if MachineId = '' then
-      MachineId := GetMachineId;
-    IssuedAt := PendingIssuedAt;
-    if IssuedAt = '' then
-      IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
-    EnteredKey := NormalizeUpper(LicenseKeyPage.Values[0]);
-    if EnteredKey = '' then
-      EnteredKey := PendingLicenseKey;
+    MachineId := CurrentMachineId;
+    IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+    EnteredKey := Trim(LicenseKeyPage.Values[0]);
 
     LicenseContent :=
       '[license]' + #13#10 +

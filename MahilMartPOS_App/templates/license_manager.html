@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block style %}
+<style>
+.license-shell {
+    padding: 16px;
+}
+
+.license-hero {
+    border-radius: 20px;
+    padding: 24px;
+    color: #fff;
+    background: linear-gradient(120deg, #0f2f50 0%, #12355b 45%, #1f7a8c 100%);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.22);
+}
+
+.license-hero h2 {
+    font-weight: 800;
+    margin: 12px 0 6px;
+}
+
+.license-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.license-grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: 16px;
+}
+
+.panel {
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #dbe4ef;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    padding: 20px;
+}
+
+.panel h5 {
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+
+.fixed-email {
+    font-weight: 600;
+    color: #0f172a;
+    background: #f6f9fd;
+}
+
+.license-key-box {
+    border-radius: 14px;
+    border: 1px dashed #93a8c2;
+    background: #f8fbff;
+    padding: 16px;
+}
+
+.license-key-text {
+    font-family: "Consolas", "Menlo", monospace;
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #12355b;
+    margin: 8px 0;
+    word-break: break-all;
+}
+
+.steps {
+    display: grid;
+    gap: 10px;
+}
+
+.step-item {
+    border: 1px solid #dbe4ef;
+    border-radius: 12px;
+    background: #f8fbff;
+    padding: 10px 12px;
+    color: #334155;
+    font-size: 14px;
+}
+
+.mongo-warning {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    color: #92400e;
+    font-size: 13px;
+}
+
+.table-wrap {
+    margin-top: 12px;
+    border-radius: 12px;
+    border: 1px solid #dbe4ef;
+    overflow: auto;
+}
+
+.table-wrap table {
+    margin: 0;
+}
+
+.table-wrap thead th {
+    background: #f1f6fc;
+    color: #1e293b;
+    font-size: 13px;
+}
+
+.table-wrap tbody td {
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+@media (max-width: 1080px) {
+    .license-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
+    <div class="license-shell">
+      <div class="license-hero">
+        <span class="license-badge"><i class="fas fa-key"></i> License Manager</span>
+        <h2>Generate customer setup keys from admin panel</h2>
+        <p class="mb-0">No installer email flow. Generate by machine ID and use the key directly during setup.</p>
+      </div>
+
+      <div class="license-grid">
+        <div class="panel">
+          <h5>Generate License Key</h5>
+          {% if mongo_warning %}
+            <div class="mongo-warning">{{ mongo_warning }}</div>
+          {% endif %}
+
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="generate_license" value="1">
+
+            <div class="mb-3">
+              <label class="form-label">License Email (fixed)</label>
+              <input type="text" class="form-control fixed-email" value="{{ fixed_license_email }}" readonly>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Machine ID <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="machine_id" required
+                     value="{{ machine_id_value }}" placeholder="Example: DESKTOP-8H2K9D1">
+              <div class="form-text">Get this from customer setup page (Machine ID line).</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Customer Name</label>
+              <input type="text" class="form-control" name="customer_name" value="{{ customer_name_value }}">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Customer Email</label>
+              <input type="email" class="form-control" name="contact_email" value="{{ contact_email_value }}">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Note</label>
+              <textarea class="form-control" rows="2" name="note">{{ note_value }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-bolt me-1"></i> Generate Key
+            </button>
+            <div class="form-text mt-2">Output format: 32 characters with uppercase, lowercase, numbers, and 2 special characters.</div>
+          </form>
+
+          {% if generated_key %}
+            <div class="license-key-box mt-3">
+              <small class="text-muted">Generated key for machine:</small>
+              <div class="fw-semibold">{{ machine_id_value }}</div>
+              <div class="license-key-text">{{ generated_key }}</div>
+              <small class="text-muted">Enter this key in customer installer.</small>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="panel">
+          <h5>Setup Usage</h5>
+          <div class="steps mb-3">
+            <div class="step-item"><strong>Step 1:</strong> Customer opens installer and copies Machine ID.</div>
+            <div class="step-item"><strong>Step 2:</strong> Generate key here using that Machine ID.</div>
+            <div class="step-item"><strong>Step 3:</strong> Customer enters key in installer and continues setup.</div>
+            <div class="step-item"><strong>Step 4:</strong> Same key remains valid for that same machine.</div>
+          </div>
+
+          <h5 class="mt-4">Recent Generated Keys</h5>
+          <div class="table-wrap">
+            <table class="table table-sm table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Machine</th>
+                  <th>Customer</th>
+                  <th>Generated At</th>
+                  <th>By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in recent_licenses %}
+                  <tr>
+                    <td class="fw-semibold">{{ item.license_key }}</td>
+                    <td>{{ item.machine_id }}</td>
+                    <td>{{ item.customer_name|default:"-" }}</td>
+                    <td>{{ item.generated_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ item.generated_by|default:"-" }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-center text-muted py-3">No keys found in MongoDB yet.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

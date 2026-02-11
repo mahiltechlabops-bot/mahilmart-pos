@@ -73,6 +73,14 @@ from django.utils import timezone
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from types import SimpleNamespace
+from .utils.license_manager import (
+    fetch_recent_generated_licenses,
+    generate_machine_license_key,
+    get_license_email,
+    is_machine_id_valid,
+    normalize_machine_id,
+    store_generated_license,
+)
 
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -961,6 +969,69 @@ def pos_theme_view(request):
             return redirect("pos_theme")
 
     return render(request, "pos_theme.html", {"settings": settings})
+
+
+@allow_settings
+@login_required(login_url="home")
+def license_manager_view(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Only super admin can generate license keys.")
+        return redirect("access_denied")
+
+    context = {
+        "fixed_license_email": get_license_email(),
+        "generated_key": "",
+        "machine_id_value": "",
+        "customer_name_value": "",
+        "contact_email_value": "",
+        "note_value": "",
+        "recent_licenses": [],
+        "mongo_warning": "",
+    }
+
+    if request.method == "POST" and "generate_license" in request.POST:
+        machine_id = normalize_machine_id(request.POST.get("machine_id"))
+        customer_name = (request.POST.get("customer_name") or "").strip()
+        contact_email = (request.POST.get("contact_email") or "").strip()
+        note = (request.POST.get("note") or "").strip()
+
+        context["machine_id_value"] = machine_id
+        context["customer_name_value"] = customer_name
+        context["contact_email_value"] = contact_email
+        context["note_value"] = note
+
+        if not is_machine_id_valid(machine_id):
+            messages.error(
+                request,
+                "Enter a valid Machine ID (3-64 chars: letters, numbers, dot, underscore, hyphen).",
+            )
+        else:
+            generated_key = generate_machine_license_key(machine_id)
+            context["generated_key"] = generated_key
+            is_saved, save_message = store_generated_license(
+                machine_id=machine_id,
+                license_key=generated_key,
+                generated_by=request.user.username,
+                customer_name=customer_name,
+                contact_email=contact_email,
+                note=note,
+            )
+            if is_saved:
+                messages.success(
+                    request,
+                    f"License key generated: {generated_key} for machine {machine_id}",
+                )
+            else:
+                messages.warning(
+                    request,
+                    f"Key generated ({generated_key}), but MongoDB save failed: {save_message}",
+                )
+
+    recent_licenses, warning = fetch_recent_generated_licenses(30)
+    context["recent_licenses"] = recent_licenses
+    context["mongo_warning"] = warning
+
+    return render(request, "license_manager.html", context)
 
 
 @allow_settings

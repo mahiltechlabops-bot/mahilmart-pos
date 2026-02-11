@@ -95,23 +95,56 @@ def _ensure_database_exists():
         admin_conn.close()
 
 
+def _build_checksum_value(seed, multiplier, offset):
+    total = 0
+    modulus = 16777215
+    for index, char in enumerate(seed, start=1):
+        total = (total + (ord(char) + offset) * (index + multiplier)) % modulus
+    return total
+
+
 def _build_checksum_key(seed):
     modulus = 16777215
-
-    def checksum(multiplier, offset):
-        total = 0
-        for index, char in enumerate(seed, start=1):
-            total = (total + (ord(char) + offset) * (index + multiplier)) % modulus
-        return total
-
-    part_a = checksum(3, 11)
-    part_b = checksum(7, 19)
+    part_a = _build_checksum_value(seed, 3, 11)
+    part_b = _build_checksum_value(seed, 7, 19)
     part_c = (part_a * 31 + part_b * 17 + len(seed) * 97) % modulus
     part_d = (part_a + part_b + part_c + len(seed) * 13) % modulus
     return f"{part_a:06X}{part_b:06X}{part_c:06X}{part_d:06X}"
 
 
 def _generate_license_key(email, machine_id):
+    uppercase_chars = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    lowercase_chars = "abcdefghijkmnopqrstuvwxyz"
+    number_chars = "23456789"
+    special_chars = "@#$%&*!?"
+    modulus = 16777215
+    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}"
+    state = (
+        _build_checksum_value(seed, 3, 11)
+        + _build_checksum_value(seed, 7, 19)
+        + len(seed) * 97
+    ) % modulus
+
+    base_chars = []
+    for index in range(30):
+        state = (state * 73 + 19 + index * 131) % modulus
+        if index % 3 == 0:
+            charset = uppercase_chars
+        elif index % 3 == 1:
+            charset = lowercase_chars
+        else:
+            charset = number_chars
+        base_chars.append(charset[state % len(charset)])
+
+    base_key = "".join(base_chars)
+    state = (state * 73 + 17) % modulus
+    special_a = special_chars[state % len(special_chars)]
+    state = (state * 73 + 29) % modulus
+    special_b = special_chars[state % len(special_chars)]
+    return f"{base_key[:10]}{special_a}{base_key[10:20]}{special_b}{base_key[20:]}"
+
+
+def _generate_legacy_short_license_key(email, machine_id):
     seed = f"{email.strip().upper()}|{machine_id.strip().upper()}"
     return _build_checksum_key(seed)[:10]
 
@@ -147,9 +180,10 @@ def _ensure_license():
     email = section.get("email", "").strip()
     machine_id = section.get("machine_id", "").strip()
     issued_at = section.get("issued_at", "").strip()
-    stored_key = section.get("license_key", "").strip().upper()
+    stored_key_raw = section.get("license_key", "").strip()
+    stored_key_upper = stored_key_raw.upper()
 
-    if not email or not stored_key or not machine_id:
+    if not email or not stored_key_raw or not machine_id:
         logging.error("License file missing required fields.")
         raise SystemExit("License incomplete. Please reinstall and activate this copy.")
 
@@ -159,23 +193,26 @@ def _ensure_license():
         raise SystemExit("License not valid for this machine.")
 
     expected_key = _generate_license_key(email, machine_id)
+    legacy_short_key = _generate_legacy_short_license_key(email, machine_id)
     staged_key = _generate_staged_license_key(email, machine_id, issued_at) if issued_at else ""
     transition_key = _generate_transition_license_key(email, machine_id, issued_at) if issued_at else ""
     legacy_expected_key = _generate_legacy_license_key(email, machine_id, issued_at) if issued_at else ""
 
-    valid_keys = {expected_key}
+    valid_keys_sensitive = {expected_key}
+    valid_keys_upper = {legacy_short_key}
     if staged_key:
-        valid_keys.add(staged_key)
+        valid_keys_upper.add(staged_key)
     if transition_key:
-        valid_keys.add(transition_key)
+        valid_keys_upper.add(transition_key)
     if legacy_expected_key:
-        valid_keys.add(legacy_expected_key)
+        valid_keys_upper.add(legacy_expected_key)
 
-    if stored_key not in valid_keys:
+    if stored_key_raw not in valid_keys_sensitive and stored_key_upper not in valid_keys_upper:
         logging.error(
-            "License integrity check failed. Expected one of %s, found %s.",
-            ", ".join(sorted(valid_keys)),
-            stored_key,
+            "License integrity check failed. Expected one of %s (case-sensitive) or %s (legacy uppercase), found %s.",
+            ", ".join(sorted(valid_keys_sensitive)),
+            ", ".join(sorted(valid_keys_upper)),
+            stored_key_raw,
         )
         raise SystemExit("License validation failed.")
 
@@ -296,8 +333,6 @@ def main():
         except Exception:
             logging.exception("Pending migration check failed; running migrate for safety.")
             _run_migrations()
-
-    threading.Thread(target=_send_pending_activation_email, daemon=True).start()
 
     threading.Thread(target=_open_browser, daemon=True).start()
     from django.core.management import execute_from_command_line
