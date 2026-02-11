@@ -170,7 +170,7 @@ def _ensure_license():
         logging.error("License file not found at %s", license_path)
         raise SystemExit("License not found. Please reinstall and activate this copy.")
 
-    parser = configparser.ConfigParser()
+    parser = configparser.ConfigParser(interpolation=None)
     parser.read(license_path)
     if "license" not in parser:
         logging.error("License file missing [license] section.")
@@ -224,7 +224,7 @@ def _send_pending_activation_email():
     if not notice_path.exists():
         return
 
-    parser = configparser.ConfigParser()
+    parser = configparser.ConfigParser(interpolation=None)
     parser.read(notice_path)
     if "activation" not in parser:
         logging.error("Activation notice file missing [activation] section: %s", notice_path)

@@ -30,7 +30,7 @@ def _candidate_paths():
 
 
 def _load_ini(path: Path) -> dict:
-    parser = configparser.ConfigParser()
+    parser = configparser.ConfigParser(interpolation=None)
     try:
         parser.read(path)
     except (OSError, configparser.Error):
