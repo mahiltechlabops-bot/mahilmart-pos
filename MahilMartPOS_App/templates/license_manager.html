@@ -156,7 +156,14 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Machine ID <span class="text-danger">*</span></label>
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label mb-0">Machine ID <span class="text-danger">*</span></label>
+                {% if local_machine_id %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="use_local_machine_btn">
+                    Use This PC ID: {{ local_machine_id }}
+                  </button>
+                {% endif %}
+              </div>
               <input type="text" class="form-control" id="machine_id_input" name="machine_id" required
                      value="{{ machine_id_value }}" placeholder="Example: DESKTOP-8H2K9D1">
               <div class="form-text" id="machine_id_help">Use the Machine ID shown in customer installer (like DESKTOP-21GCBUA). Do not use POS-UUID from browser.</div>
@@ -184,14 +191,19 @@
             <div class="form-text mt-2">Output format: 32 characters with uppercase, lowercase, numbers, and 2 special characters.</div>
           </form>
 
-          {% if generated_key %}
-            <div class="license-key-box mt-3">
-              <small class="text-muted">Generated key for machine:</small>
-              <div class="fw-semibold">{{ machine_id_value }}</div>
-              <div class="license-key-text">{{ generated_key }}</div>
-              <small class="text-muted">Enter this key in customer installer.</small>
-            </div>
-          {% endif %}
+          <div class="license-key-box mt-3" id="generated_key_panel">
+            <small class="text-muted">Generated key for machine:</small>
+            <div class="fw-semibold" id="generated_for_machine">{{ machine_id_value|default:local_machine_id|default:"-" }}</div>
+            <div class="license-key-text" id="generated_key_text">{% if generated_key %}{{ generated_key }}{% else %}Not generated yet{% endif %}</div>
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary mt-2"
+                    id="copy_generated_key_btn"
+                    data-key="{{ generated_key }}"
+                    {% if not generated_key %}disabled{% endif %}>
+              <i class="fas fa-copy me-1"></i> Copy Key
+            </button>
+            <small class="text-muted d-block mt-1">After clicking Generate Key, value appears here for installer.</small>
+          </div>
         </div>
 
         <div class="panel">
@@ -244,6 +256,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const machineInput = document.getElementById("machine_id_input");
   const errorBox = document.getElementById("machine_id_error");
   const generateButton = document.getElementById("generate_key_btn");
+  const useLocalButton = document.getElementById("use_local_machine_btn");
+  const copyGeneratedKeyButton = document.getElementById("copy_generated_key_btn");
+  const generatedForMachine = document.getElementById("generated_for_machine");
 
   if (!form || !machineInput || !errorBox || !generateButton) return;
 
@@ -271,6 +286,9 @@ document.addEventListener("DOMContentLoaded", function () {
   function validateMachineId(autoMode) {
     const normalized = normalizeMachineId(machineInput.value);
     machineInput.value = normalized;
+    if (generatedForMachine) {
+      generatedForMachine.textContent = normalized || "-";
+    }
 
     if (!normalized) {
       clearError();
@@ -298,11 +316,36 @@ document.addEventListener("DOMContentLoaded", function () {
     validateMachineId(false);
   });
 
+  if (useLocalButton) {
+    useLocalButton.addEventListener("click", function () {
+      const localText = useLocalButton.textContent || "";
+      const splitIndex = localText.indexOf(":");
+      const localMachineId = splitIndex >= 0 ? localText.slice(splitIndex + 1).trim() : "";
+      if (localMachineId) {
+        machineInput.value = localMachineId;
+        validateMachineId(false);
+      }
+    });
+  }
+
   form.addEventListener("submit", function (event) {
     if (!validateMachineId(false)) {
       event.preventDefault();
     }
   });
+
+  if (copyGeneratedKeyButton) {
+    copyGeneratedKeyButton.addEventListener("click", async function () {
+      const key = copyGeneratedKeyButton.getAttribute("data-key") || "";
+      if (!key) return;
+      try {
+        await navigator.clipboard.writeText(key);
+        copyGeneratedKeyButton.innerHTML = '<i class="fas fa-check me-1"></i> Copied';
+      } catch (error) {
+        copyGeneratedKeyButton.innerHTML = '<i class="fas fa-times me-1"></i> Copy Failed';
+      }
+    });
+  }
 
   validateMachineId(true);
 });

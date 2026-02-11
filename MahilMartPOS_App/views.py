@@ -1,6 +1,7 @@
 import json
 import os,datetime
 import re
+import platform
 from django.db import models
 from decimal import Decimal
 from django.contrib import messages
@@ -979,10 +980,15 @@ def license_manager_view(request):
         messages.error(request, "Only super admin can generate license keys.")
         return redirect("access_denied")
 
+    local_machine_id = (
+        platform.node().strip().upper() or os.environ.get("COMPUTERNAME", "").strip().upper()
+    )
+
     context = {
         "fixed_license_email": get_license_email(),
         "generated_key": "",
-        "machine_id_value": "",
+        "machine_id_value": local_machine_id,
+        "local_machine_id": local_machine_id,
         "customer_name_value": "",
         "contact_email_value": "",
         "note_value": "",

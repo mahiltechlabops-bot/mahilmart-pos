@@ -1079,9 +1079,16 @@
     // Attach machine-id to every form
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll("form").forEach(form => {
+            // Do not override forms that already provide their own installer machine_id.
+            if (form.querySelector('input[name="machine_id"]')) {
+                return;
+            }
+            if (form.querySelector('input[name="browser_machine_id"]')) {
+                return;
+            }
             let input = document.createElement("input");
             input.type = "hidden";
-            input.name = "machine_id";
+            input.name = "browser_machine_id";
             input.value = id;
             form.appendChild(input);
         });
