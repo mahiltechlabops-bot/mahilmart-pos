@@ -194,6 +194,7 @@
             {% endif %}
         {% endif %}
 
+        {% if request.user.is_superuser %}
         <div class="settings-card-box" onclick="location.href='{% url 'permission_settings' %}'">
             <div class="settings-icon">
                 <i class="fa fa-user-shield"></i>
@@ -204,6 +205,7 @@
             </div>
             <span class="settings-card-link">Manage <i class="fa fa-arrow-right"></i></span>
         </div>
+        {% endif %}
 
         <div class="settings-card-box" onclick="location.href='{% url 'user' %}'">
             <div class="settings-icon">

@@ -1159,6 +1159,14 @@ def license_manager_view(request):
 
 @allow_settings
 def permission_settings_view(request):
+    if not request.user.is_superuser:
+        if request.method == "POST" and request.headers.get("Content-Type") == "application/json":
+            return JsonResponse(
+                {"status": "forbidden", "message": "Only super admin can change permission settings."},
+                status=403,
+            )
+        messages.error(request, "Only super admin can access Permission Settings.")
+        return redirect("access_denied")
 
     # -----------------------
     # AJAX auto-save handler
@@ -1215,7 +1223,7 @@ def permission_settings_view(request):
         "Payments": "allow_payments",
         "Expenses": "allow_expenses",
         "Settings": "allow_settings",
-        "License Manager": "allow_license_manager",
+        
     }
 
     users = User.objects.filter(is_superuser=False)
