@@ -307,17 +307,14 @@ procedure InitializeWizard;
 var
   ConfigDir: string;
   DbConfigPath: string;
-  ExistingAppPath: string;
 begin
   ConfigDir := ExpandConstant('{commonappdata}\MahilMartPOS');
   LicensePath := ConfigDir + '\license.ini';
   ServerConfigPath := ConfigDir + '\server_config.ini';
   ActivationNoticePath := ConfigDir + '\license_activation_pending.ini';
   DbConfigPath := ConfigDir + '\db_config.ini';
-  ExistingAppPath := ExpandConstant('{app}\{#MyAppExeName}');
   CurrentMachineId := GetMachineId;
   IsUpdateInstall :=
-    FileExists(ExistingAppPath) or
     FileExists(LicensePath) or
     FileExists(DbConfigPath) or
     FileExists(ServerConfigPath);
