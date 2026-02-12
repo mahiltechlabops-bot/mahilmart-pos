@@ -7,11 +7,13 @@ import webbrowser
 from pathlib import Path
 import configparser
 import hashlib
+import ipaddress
 import platform
 import socket
 
 
 _STDIO_STREAM = None
+_AUTO_HOST_KEYWORDS = {"auto", "dhcp", "current", "system"}
 
 
 def _detect_local_ip():
@@ -34,6 +36,102 @@ def _detect_local_ip():
     return "127.0.0.1"
 
 
+def _normalize_host_value(value):
+    host_value = (value or "").strip()
+    if not host_value:
+        return ""
+    if "://" in host_value:
+        host_value = host_value.split("://", 1)[1]
+    host_value = host_value.split("/", 1)[0].strip()
+    if host_value.startswith("["):
+        end_index = host_value.find("]")
+        if end_index > 0:
+            return host_value[1:end_index].strip()
+    if host_value.count(":") == 1:
+        left, right = host_value.split(":", 1)
+        if right.isdigit():
+            host_value = left
+    return host_value.strip()
+
+
+def _split_hosts(value):
+    tokens = []
+    seen = set()
+    raw_value = str(value or "").replace(";", ",")
+    for item in raw_value.split(","):
+        host = _normalize_host_value(item)
+        if host and host not in seen:
+            seen.add(host)
+            tokens.append(host)
+    return tokens
+
+
+def _resolve_auto_host_tokens(value):
+    raw_tokens = _split_hosts(value)
+    if not raw_tokens:
+        return ""
+
+    resolved = []
+    detected_local_ip = _detect_local_ip()
+    for token in raw_tokens:
+        normalized = token.strip().lower()
+        if normalized in _AUTO_HOST_KEYWORDS:
+            if detected_local_ip and detected_local_ip not in resolved:
+                resolved.append(detected_local_ip)
+            continue
+        if token not in resolved:
+            resolved.append(token)
+
+    return ",".join(resolved)
+
+
+def _resolve_local_ipv4_addresses():
+    addresses = {"127.0.0.1", _detect_local_ip()}
+    try:
+        _, _, host_ips = socket.gethostbyname_ex(socket.gethostname())
+        for ip in host_ips:
+            ip = (ip or "").strip()
+            if ip:
+                addresses.add(ip)
+    except OSError:
+        pass
+
+    try:
+        for item in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = (item[4][0] or "").strip()
+            if ip:
+                addresses.add(ip)
+    except OSError:
+        pass
+
+    return {value for value in addresses if value}
+
+
+def _is_host_local(host, local_ipv4_set):
+    normalized = _normalize_host_value(host).lower()
+    if not normalized:
+        return False
+    if normalized in {"localhost", "127.0.0.1", "::1", "0.0.0.0", "::"}:
+        return True
+
+    try:
+        parsed = ipaddress.ip_address(normalized)
+        if parsed.version == 4:
+            return normalized in local_ipv4_set
+        return parsed.is_loopback
+    except ValueError:
+        pass
+
+    try:
+        resolved = {
+            (item[4][0] or "").strip()
+            for item in socket.getaddrinfo(normalized, None, socket.AF_INET)
+        }
+        return any(ip and ip in local_ipv4_set for ip in resolved)
+    except OSError:
+        return False
+
+
 def _normalize_port(value):
     candidate = (value or "").strip()
     if not candidate.isdigit():
@@ -46,15 +144,101 @@ def _normalize_port(value):
     return str(numeric_port)
 
 
+def _candidate_server_config_paths():
+    env_path = (os.environ.get("MAHILMARTPOS_SERVER_CONFIG") or "").strip()
+    if env_path:
+        yield Path(env_path)
+
+    project_root = Path(__file__).resolve().parent
+    yield project_root / "server_config.ini"
+    yield project_root / "server_config.local.ini"
+
+    programdata = os.environ.get("PROGRAMDATA")
+    if programdata:
+        yield Path(programdata) / "MahilMartPOS" / "server_config.ini"
+
+    yield Path.home() / "MahilMartPOS" / "server_config.ini"
+
+
+def _load_server_config():
+    for path in _candidate_server_config_paths():
+        if not path or not path.is_file():
+            continue
+
+        parser = configparser.ConfigParser(interpolation=None)
+        try:
+            parser.read(path)
+        except (OSError, configparser.Error):
+            continue
+
+        if not parser.has_section("server"):
+            continue
+
+        section = parser["server"]
+        data = {
+            "host": section.get("host", "").strip(),
+            "bind_host": section.get("bind_host", "").strip(),
+            "browser_host": section.get("browser_host", "").strip(),
+            "port": section.get("port", "").strip(),
+        }
+        if any(data.values()):
+            data["__path__"] = str(path)
+            return data
+    return {}
+
+
+def _apply_server_config_overrides():
+    config_data = _load_server_config()
+    if not config_data:
+        return
+
+    env_mapping = {
+        "host": "MAHILMARTPOS_HOST",
+        "bind_host": "MAHILMARTPOS_BIND_HOST",
+        "browser_host": "MAHILMARTPOS_BROWSER_HOST",
+        "port": "MAHILMARTPOS_PORT",
+    }
+    applied_items = []
+    for key, env_key in env_mapping.items():
+        value = (config_data.get(key) or "").strip()
+        if key in {"host", "bind_host", "browser_host"}:
+            value = _resolve_auto_host_tokens(value)
+        existing = (os.environ.get(env_key) or "").strip()
+        if value and not existing:
+            os.environ[env_key] = value
+            applied_items.append(f"{env_key}={value}")
+
+    if applied_items:
+        logging.info(
+            "Applied server config from %s: %s",
+            config_data.get("__path__", ""),
+            ", ".join(applied_items),
+        )
+
+
 def _get_server_host_port():
-    fixed_host = (os.environ.get("MAHILMARTPOS_HOST") or "").strip()
-    bind_host = (os.environ.get("MAHILMARTPOS_BIND_HOST") or "").strip()
-    browser_host = (os.environ.get("MAHILMARTPOS_BROWSER_HOST") or "").strip()
+    fixed_hosts = _split_hosts(_resolve_auto_host_tokens(os.environ.get("MAHILMARTPOS_HOST")))
+    bind_hosts = _split_hosts(_resolve_auto_host_tokens(os.environ.get("MAHILMARTPOS_BIND_HOST")))
+    browser_hosts = _split_hosts(_resolve_auto_host_tokens(os.environ.get("MAHILMARTPOS_BROWSER_HOST")))
+
+    fixed_host = fixed_hosts[0] if fixed_hosts else ""
+    bind_host = bind_hosts[0] if bind_hosts else ""
+    browser_host = browser_hosts[0] if browser_hosts else ""
     port = _normalize_port(os.environ.get("MAHILMARTPOS_PORT") or "8002")
+    local_ipv4_set = _resolve_local_ipv4_addresses()
 
     if fixed_host:
-        bind_host = fixed_host
-        browser_host = fixed_host
+        if not browser_host:
+            browser_host = fixed_host
+        if not bind_host:
+            bind_host = fixed_host
+        if bind_host != "0.0.0.0" and not _is_host_local(bind_host, local_ipv4_set):
+            logging.warning(
+                "Configured bind host '%s' is not local. Falling back to 0.0.0.0 while keeping browser host '%s'.",
+                bind_host,
+                browser_host,
+            )
+            bind_host = "0.0.0.0"
     else:
         if not bind_host:
             bind_host = "0.0.0.0"
@@ -63,6 +247,11 @@ def _get_server_host_port():
                 browser_host = _detect_local_ip()
             else:
                 browser_host = bind_host
+
+    if fixed_hosts:
+        existing = _split_hosts(os.environ.get("MAHILMARTPOS_ALLOWED_HOSTS"))
+        merged = existing + [host for host in fixed_hosts if host not in existing]
+        os.environ["MAHILMARTPOS_ALLOWED_HOSTS"] = ",".join(merged)
 
     logging.info(
         "Launcher network config: bind_host=%s, browser_host=%s, port=%s",
@@ -75,19 +264,7 @@ def _get_server_host_port():
 
 def _set_runtime_allowed_hosts(bind_host, browser_host):
     def _clean_host(value):
-        host_value = (value or "").strip().lower()
-        if not host_value:
-            return ""
-        if "://" in host_value:
-            host_value = host_value.split("://", 1)[1]
-        host_value = host_value.split("/", 1)[0].strip()
-        if host_value.startswith("["):
-            end_index = host_value.find("]")
-            if end_index > 0:
-                return host_value[1:end_index].strip()
-        if host_value.count(":") == 1:
-            host_value = host_value.split(":", 1)[0]
-        return host_value.strip()
+        return _normalize_host_value(value).lower()
 
     host_candidates = {
         "127.0.0.1",
@@ -96,6 +273,9 @@ def _set_runtime_allowed_hosts(bind_host, browser_host):
         browser_host,
         _detect_local_ip(),
     }
+    host_candidates.update(_split_hosts(os.environ.get("MAHILMARTPOS_HOST")))
+    host_candidates.update(_split_hosts(os.environ.get("MAHILMARTPOS_BIND_HOST")))
+    host_candidates.update(_split_hosts(os.environ.get("MAHILMARTPOS_BROWSER_HOST")))
     existing_hosts = (os.environ.get("MAHILMARTPOS_ALLOWED_HOSTS") or "").strip()
     if existing_hosts:
         host_candidates.update(existing_hosts.split(","))
@@ -114,7 +294,9 @@ def _set_runtime_allowed_hosts(bind_host, browser_host):
 
 def _open_browser(browser_host, port):
     time.sleep(1.5)
-    webbrowser.open(f"http://{browser_host}:{port}/")
+    browser_candidates = _split_hosts(browser_host)
+    target_host = browser_candidates[0] if browser_candidates else (_normalize_host_value(browser_host) or "127.0.0.1")
+    webbrowser.open(f"http://{target_host}:{port}/")
 
 
 def _setup_logging():
@@ -414,6 +596,7 @@ def main():
     if not sys.argv or not sys.argv[0]:
         sys.argv = ["MahilMartPOS"]
 
+    _apply_server_config_overrides()
     _ensure_license()
 
     bind_host, browser_host, port = _get_server_host_port()

@@ -53,8 +53,10 @@ const
 
 var
   DbPage: TInputQueryWizardPage;
+  ServerPage: TInputQueryWizardPage;
   LicenseKeyPage: TInputQueryWizardPage;
   LicensePath: string;
+  ServerConfigPath: string;
   ActivationNoticePath: string;
   CurrentMachineId: string;
 
@@ -100,6 +102,126 @@ end;
 function IsSpecialChar(C: Char): Boolean;
 begin
   Result := Pos(C, '@#$%&*!?') > 0;
+end;
+
+function IsDigitsOnly(Value: string): Boolean;
+var
+  I: Integer;
+begin
+  Value := Trim(Value);
+  if Value = '' then
+  begin
+    Result := False;
+    exit;
+  end;
+
+  for I := 1 to Length(Value) do
+  begin
+    if not ((Value[I] >= '0') and (Value[I] <= '9')) then
+    begin
+      Result := False;
+      exit;
+    end;
+  end;
+
+  Result := True;
+end;
+
+function IsValidIPv4(Value: string): Boolean;
+var
+  Remaining: string;
+  Part: string;
+  DotPos: Integer;
+  OctetCount: Integer;
+  OctetValue: Integer;
+begin
+  Value := Trim(Value);
+  if Value = '' then
+  begin
+    Result := False;
+    exit;
+  end;
+
+  Remaining := Value;
+  OctetCount := 0;
+
+  while True do
+  begin
+    DotPos := Pos('.', Remaining);
+    if DotPos = 0 then
+      Part := Remaining
+    else
+      Part := Copy(Remaining, 1, DotPos - 1);
+
+    if (Part = '') or (Length(Part) > 3) or (not IsDigitsOnly(Part)) then
+    begin
+      Result := False;
+      exit;
+    end;
+
+    OctetValue := StrToIntDef(Part, -1);
+    if (OctetValue < 0) or (OctetValue > 255) then
+    begin
+      Result := False;
+      exit;
+    end;
+
+    OctetCount := OctetCount + 1;
+    if DotPos = 0 then
+      break;
+
+    Remaining := Copy(Remaining, DotPos + 1, Length(Remaining) - DotPos);
+  end;
+
+  Result := OctetCount = 4;
+end;
+
+function IsValidIPv4List(Value: string): Boolean;
+var
+  Remaining: string;
+  Part: string;
+  SepPos: Integer;
+begin
+  Value := Trim(Value);
+  if Value = '' then
+  begin
+    Result := False;
+    exit;
+  end;
+
+  Remaining := Value;
+  while True do
+  begin
+    SepPos := Pos(',', Remaining);
+    if SepPos = 0 then
+      Part := Trim(Remaining)
+    else
+      Part := Trim(Copy(Remaining, 1, SepPos - 1));
+
+    if not IsValidIPv4(Part) then
+    begin
+      Result := False;
+      exit;
+    end;
+
+    if SepPos = 0 then
+      break;
+
+    Remaining := Copy(Remaining, SepPos + 1, Length(Remaining) - SepPos);
+    if Trim(Remaining) = '' then
+    begin
+      Result := False;
+      exit;
+    end;
+  end;
+
+  Result := True;
+end;
+
+function IsAutoHostValue(Value: string): Boolean;
+begin
+  Value := Lowercase(Trim(Value));
+  Result := (Value = 'auto') or (Value = 'dhcp') or (Value = 'current') or (Value = 'system');
 end;
 
 function IsValidLicenseFormat(Value: string): Boolean;
@@ -182,6 +304,7 @@ end;
 procedure InitializeWizard;
 begin
   LicensePath := ExpandConstant('{commonappdata}\MahilMartPOS\license.ini');
+  ServerConfigPath := ExpandConstant('{commonappdata}\MahilMartPOS\server_config.ini');
   ActivationNoticePath := ExpandConstant('{commonappdata}\MahilMartPOS\license_activation_pending.ini');
   CurrentMachineId := GetMachineId;
 
@@ -211,6 +334,15 @@ begin
   DbPage.Values[1] := '5432';
   DbPage.Values[2] := 'mmpos2';
   DbPage.Values[3] := 'postgres';
+
+  ServerPage := CreateInputQueryPage(
+    DbPage.ID,
+    'Network Settings',
+    'Configure app network access',
+    'Optional: set one or more static IPv4 addresses separated by commas, or type auto to use current system IP.'
+  );
+  ServerPage.Add('Static IP (optional):', False);
+  ServerPage.Values[0] := Trim(GetIniString('server', 'host', '', ServerConfigPath));
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -268,12 +400,28 @@ begin
       exit;
     end;
   end;
+  if CurPageID = ServerPage.ID then
+  begin
+    EnteredKey := Trim(ServerPage.Values[0]);
+    if (EnteredKey <> '') and (not IsAutoHostValue(EnteredKey)) and (not IsValidIPv4List(EnteredKey)) then
+    begin
+      MsgBox(
+        'Enter valid IPv4 address(es), comma-separated (example: 192.168.1.20,192.168.1.21), type auto, or leave blank to keep existing setting.',
+        mbError,
+        MB_OK
+      );
+      Result := False;
+      exit;
+    end;
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ConfigDir: string;
   ConfigPath: string;
+  ServerContent: string;
+  StaticHost: string;
   Content: string;
   LicenseContent: string;
   MachineId: string;
@@ -286,6 +434,7 @@ begin
     ConfigDir := ExpandConstant('{commonappdata}\MahilMartPOS');
     ForceDirectories(ConfigDir);
     ConfigPath := ConfigDir + '\db_config.ini';
+    ServerConfigPath := ConfigDir + '\server_config.ini';
     LicensePath := ConfigDir + '\license.ini';
     ActivationNoticePath := ConfigDir + '\license_activation_pending.ini';
 
@@ -298,6 +447,16 @@ begin
       'password=' + DbPage.Values[4] + #13#10;
 
     SaveStringToFile(ConfigPath, Content, False);
+
+    StaticHost := Trim(ServerPage.Values[0]);
+    if StaticHost <> '' then
+    begin
+      ServerContent :=
+        '[server]' + #13#10 +
+        'host=' + StaticHost + #13#10 +
+        'port=8002' + #13#10;
+      SaveStringToFile(ServerConfigPath, ServerContent, False);
+    end;
 
     EnteredEmail := FixedLicenseEmail;
     MachineId := CurrentMachineId;
