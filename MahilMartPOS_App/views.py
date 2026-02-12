@@ -5,7 +5,7 @@ import platform
 from django.db import models
 from decimal import Decimal
 from django.contrib import messages
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.db.models import Min, Q, Sum, FloatField
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -602,6 +602,18 @@ def login_view(request):
     # REDIRECT TO DASHBOARD
     # ------------------------------------------
     return redirect("dashboard")
+
+
+@csrf_exempt
+def auto_logout_on_close(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "method_not_allowed"}, status=405)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"status": "already_logged_out"})
+
+    logout(request)
+    return JsonResponse({"status": "ok"})
 
 
 def initial_admin_setup(request):
@@ -6595,8 +6607,9 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from datetime import timedelta
+from django.utils import timezone
 
-from .models import ActivityLog
+from .models import ActivityLog, CompanyDetails
 
 
 @login_required
@@ -6627,6 +6640,10 @@ def activity_log_view(request):
     # --------------------
     sessions = []
     open_sessions = {}
+    company = CompanyDetails.objects.first()
+    configured_timeout = getattr(company, "auto_logout_minutes", 0) or 0
+    session_close_minutes = configured_timeout if configured_timeout > 0 else 30
+    now_time = timezone.now()
 
     def resolve_role(log):
         if log.role:
@@ -6647,42 +6664,55 @@ def activity_log_view(request):
 
         return "Cashier"
 
+    def append_session_entry(login_log, logout_at=None):
+        logout_time_str = None
+        duration_str = None
+        if logout_at is not None:
+            safe_logout_at = max(logout_at, login_log.created_at)
+            logout_time_str = safe_logout_at.strftime("%d-%m-%Y %H:%M:%S")
+            duration_str = _format_duration(safe_logout_at - login_log.created_at)
+
+        sessions.append({
+            "username": login_log.username,
+            "role": resolve_role(login_log),
+            "login_time": login_log.created_at.strftime("%d-%m-%Y %H:%M:%S"),
+            "logout_time": logout_time_str,
+            "duration": duration_str,
+            "ip_address": login_log.ip_address,
+        })
+
     for log in qs:
         key = (log.username, log.ip_address)
 
         if log.action == "LOGIN":
+            if key in open_sessions:
+                stale_login = open_sessions.pop(key)
+                stale_cutoff = stale_login.created_at + timedelta(minutes=session_close_minutes)
+                inferred_logout_at = min(log.created_at, stale_cutoff)
+                append_session_entry(stale_login, inferred_logout_at)
             open_sessions[key] = log
 
         elif log.action == "LOGOUT" and key in open_sessions:
             login_log = open_sessions.pop(key)
-
-            duration = log.created_at - login_log.created_at
-            duration_str = _format_duration(duration)
-
-            sessions.append({
-                "username": login_log.username,
-                "role": resolve_role(login_log),
-                "login_time": login_log.created_at.strftime("%d-%m-%Y %H:%M:%S"),
-                "logout_time": log.created_at.strftime("%d-%m-%Y %H:%M:%S"),
-                "duration": duration_str,
-                "ip_address": login_log.ip_address,
-            })
+            append_session_entry(login_log, log.created_at)
 
     # --------------------
     # Still logged-in users
     # --------------------
     for login_log in open_sessions.values():
-        sessions.append({
-            "username": login_log.username,
-            "role": resolve_role(login_log),
-            "login_time": login_log.created_at.strftime("%d-%m-%Y %H:%M:%S"),
-            "logout_time": None,
-            "duration": None,
-            "ip_address": login_log.ip_address,
-        })
+        auto_close_at = login_log.created_at + timedelta(minutes=session_close_minutes)
+        if now_time >= auto_close_at:
+            append_session_entry(login_log, auto_close_at)
+        else:
+            append_session_entry(login_log, None)
 
     # Latest sessions first
     sessions.reverse()
+
+    total_sessions = len(sessions)
+    active_sessions = sum(1 for entry in sessions if not entry["logout_time"])
+    closed_sessions = total_sessions - active_sessions
+    unique_users = len({entry["username"] for entry in sessions if entry.get("username")})
 
     # --------------------
     # Pagination
@@ -6692,9 +6722,16 @@ def activity_log_view(request):
     page_obj = paginator.get_page(page_number)
 
     users = User.objects.values_list("username", flat=True).order_by("username")
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
     context = {
         "sessions": page_obj,
         "user_list": users,
+        "total_sessions": total_sessions,
+        "active_sessions": active_sessions,
+        "closed_sessions": closed_sessions,
+        "unique_users": unique_users,
+        "query_string": query_params.urlencode(),
     }
 
     return render(request, "activity_log.html", context)

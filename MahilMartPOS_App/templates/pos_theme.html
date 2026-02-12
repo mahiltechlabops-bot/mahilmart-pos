@@ -178,7 +178,7 @@
 .preset-grid {
     margin-bottom: 20px;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
     gap: 10px;
 }
 
@@ -198,10 +198,32 @@
     box-shadow: 0 8px 15px rgba(15, 23, 42, 0.08);
 }
 
+.preset-btn.active {
+    border-color: var(--preview-accent);
+    box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.22);
+}
+
 .preset-name {
     font-size: 13px;
     font-weight: 700;
     color: #1e293b;
+}
+
+.preset-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.preset-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    background: #e2e8f0;
+    border-radius: 999px;
+    padding: 4px 10px;
 }
 
 .preset-dots {
@@ -215,6 +237,39 @@
     height: 14px;
     border-radius: 50%;
     border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+.preset-controls {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-show-more {
+    border: 1px solid #cdd9e8;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f6f9fe 100%);
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px 14px;
+    transition: all 0.22s ease;
+}
+
+.btn-show-more:hover {
+    border-color: #aebed3;
+    box-shadow: 0 8px 14px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.btn-show-more:disabled {
+    opacity: 0.72;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 .actions-row {
@@ -488,20 +543,14 @@
               </div>
             </div>
 
-            <div class="section-title">Quick Presets</div>
-            <div class="preset-grid">
-              <button type="button" class="preset-btn" data-primary="#2e3b4e" data-sidebar="#1f2a38" data-accent="#4a6fa5">
-                <div class="preset-name">Classic Steel</div>
-                <div class="preset-dots"><span style="background:#2e3b4e"></span><span style="background:#1f2a38"></span><span style="background:#4a6fa5"></span></div>
-              </button>
-              <button type="button" class="preset-btn" data-primary="#1e293b" data-sidebar="#111827" data-accent="#f97316">
-                <div class="preset-name">Grand Amber</div>
-                <div class="preset-dots"><span style="background:#1e293b"></span><span style="background:#111827"></span><span style="background:#f97316"></span></div>
-              </button>
-              <button type="button" class="preset-btn" data-primary="#134e4a" data-sidebar="#052e2b" data-accent="#0ea5a4">
-                <div class="preset-name">Emerald Pro</div>
-                <div class="preset-dots"><span style="background:#134e4a"></span><span style="background:#052e2b"></span><span style="background:#0ea5a4"></span></div>
-              </button>
+            <div class="preset-head">
+              <div class="section-title mb-0">Quick Presets</div>
+              <span id="preset_count" class="preset-count">0 combos</span>
+            </div>
+            <div class="preset-grid" id="preset_grid"></div>
+            <div class="preset-controls">
+              <span class="preview-caption">Premium palette combos for fast one-click theme switching.</span>
+              <button type="button" id="show_more_presets" class="btn-show-more">Show More (+10)</button>
             </div>
 
             <div class="actions-row">
@@ -571,6 +620,108 @@ document.addEventListener("DOMContentLoaded", () => {
     const primaryText = document.getElementById("primary_text");
     const sidebarText = document.getElementById("sidebar_text");
     const accentText = document.getElementById("accent_text");
+    const presetGrid = document.getElementById("preset_grid");
+    const presetCount = document.getElementById("preset_count");
+    const showMorePresetsBtn = document.getElementById("show_more_presets");
+    const PRESETS_PER_CLICK = 10;
+
+    function darkenHex(hex, amount) {
+        const value = (hex || "").replace("#", "");
+        if (value.length !== 6) return "#1f2a38";
+        const factor = Math.max(0, Math.min(1, 1 - amount));
+        const r = parseInt(value.slice(0, 2), 16);
+        const g = parseInt(value.slice(2, 4), 16);
+        const b = parseInt(value.slice(4, 6), 16);
+        const toHex = (channel) =>
+            Math.max(0, Math.min(255, Math.round(channel * factor)))
+                .toString(16)
+                .padStart(2, "0");
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    const featuredPresets = [
+        { name: "Classic Steel", primary: "#2e3b4e", sidebar: "#1f2a38", accent: "#4a6fa5" },
+        { name: "Grand Amber", primary: "#1e293b", sidebar: "#111827", accent: "#f97316" },
+        { name: "Emerald Pro", primary: "#134e4a", sidebar: "#052e2b", accent: "#0ea5a4" },
+    ];
+
+    const primaryPalette = [
+        "#1f2937", "#0f172a", "#334155", "#3f3f46", "#134e4a", "#0c4a6e",
+        "#1e3a8a", "#4c1d95", "#7c2d12", "#7f1d1d", "#2e1065", "#14532d",
+        "#312e81", "#3f6212", "#78350f", "#4338ca",
+    ];
+    const accentPalette = [
+        "#22c55e", "#06b6d4", "#3b82f6", "#6366f1", "#f59e0b", "#f97316",
+        "#ef4444", "#ec4899", "#14b8a6", "#84cc16", "#f43f5e", "#a855f7",
+    ];
+
+    const generatedPresets = [];
+    const TARGET_PRESET_TOTAL = 100;
+    const generatedTarget = Math.max(0, TARGET_PRESET_TOTAL - featuredPresets.length);
+    let comboIndex = 1;
+    for (const primary of primaryPalette) {
+        for (const accent of accentPalette) {
+            generatedPresets.push({
+                name: `Studio ${String(comboIndex).padStart(3, "0")}`,
+                primary,
+                sidebar: darkenHex(primary, 0.28),
+                accent,
+            });
+            comboIndex += 1;
+            if (generatedPresets.length >= generatedTarget) {
+                break;
+            }
+        }
+        if (generatedPresets.length >= generatedTarget) {
+            break;
+        }
+    }
+
+    const quickPresets = [...featuredPresets, ...generatedPresets];
+    let visiblePresetCount = PRESETS_PER_CLICK;
+
+    function renderPresets() {
+        if (!presetGrid) return;
+        const visiblePresets = quickPresets.slice(0, visiblePresetCount);
+        presetGrid.innerHTML = visiblePresets
+            .map(
+                (preset) => `
+                <button type="button" class="preset-btn" data-primary="${preset.primary}" data-sidebar="${preset.sidebar}" data-accent="${preset.accent}">
+                  <div class="preset-name">${preset.name}</div>
+                  <div class="preset-dots">
+                    <span style="background:${preset.primary}"></span>
+                    <span style="background:${preset.sidebar}"></span>
+                    <span style="background:${preset.accent}"></span>
+                  </div>
+                </button>
+                `
+            )
+            .join("");
+        if (presetCount) {
+            const shown = Math.min(visiblePresetCount, quickPresets.length);
+            presetCount.textContent = `${shown}/${quickPresets.length} combos`;
+        }
+        if (showMorePresetsBtn) {
+            const remaining = Math.max(0, quickPresets.length - visiblePresets.length);
+            showMorePresetsBtn.disabled = remaining === 0;
+            showMorePresetsBtn.textContent =
+                remaining > 0 ? `Show More (+${Math.min(PRESETS_PER_CLICK, remaining)})` : "All Presets Loaded";
+        }
+        syncPresetSelection();
+    }
+
+    function syncPresetSelection() {
+        const currentPrimary = (primaryInput.value || "").toLowerCase();
+        const currentSidebar = (sidebarInput.value || "").toLowerCase();
+        const currentAccent = (accentInput.value || "").toLowerCase();
+        document.querySelectorAll("#preset_grid .preset-btn").forEach((btn) => {
+            const isMatch =
+                (btn.dataset.primary || "").toLowerCase() === currentPrimary &&
+                (btn.dataset.sidebar || "").toLowerCase() === currentSidebar &&
+                (btn.dataset.accent || "").toLowerCase() === currentAccent;
+            btn.classList.toggle("active", isMatch);
+        });
+    }
 
     function normalizeHex(value, fallback) {
         if (!value) return fallback;
@@ -597,6 +748,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.documentElement.style.setProperty("--primary", primaryInput.value);
         document.documentElement.style.setProperty("--primary-dark", sidebarInput.value);
         document.documentElement.style.setProperty("--accent", accentInput.value);
+        syncPresetSelection();
     }
 
     function setMode(mode) {
@@ -615,15 +767,24 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => setMode(btn.dataset.mode));
     });
 
-    document.querySelectorAll(".preset-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
+    if (presetGrid) {
+        presetGrid.addEventListener("click", (event) => {
+            const btn = event.target.closest(".preset-btn");
+            if (!btn) return;
             primaryInput.value = btn.dataset.primary;
             sidebarInput.value = btn.dataset.sidebar;
             accentInput.value = btn.dataset.accent;
             updatePreview();
             applyLayoutMode(modeHidden.value || "light");
         });
-    });
+    }
+
+    if (showMorePresetsBtn) {
+        showMorePresetsBtn.addEventListener("click", () => {
+            visiblePresetCount = Math.min(quickPresets.length, visiblePresetCount + PRESETS_PER_CLICK);
+            renderPresets();
+        });
+    }
 
     document.getElementById("reset_theme_btn").addEventListener("click", () => {
         primaryInput.value = defaultColors.primary;
@@ -633,6 +794,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setMode("light");
     });
 
+    renderPresets();
     updatePreview();
     setMode(modeHidden.value || "light");
 });

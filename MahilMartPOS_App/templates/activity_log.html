@@ -1,267 +1,380 @@
 {% extends "base.html" %}
 {% block content %}
-
 <style>
-/* ===============================
-  DESIGN TOKENS
-================================ */
-:root {
-  --bg:#f5f7fb;
-  --bg-alt:#eaeef5;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#6b7280;
-  --border:#e5e7eb;
-  --primary:#2e3b4e;
-  --accent:#22c55e;
-  --danger:#ef4444;
-  --shadow:0 25px 60px rgba(15,23,42,.12);
-  --glass:rgba(255,255,255,.75);
-  --row:#ffffff;
-  --row-alt:#f8fafc;
-  --row-hover:rgba(79,70,229,.06);
-  --thead-1:#0f172a;
-  --thead-2:#020617;
+.activity-shell {
+  --panel: #ffffff;
+  --panel-soft: #f8fafc;
+  --line: #dbe3ee;
+  --text: #0f172a;
+  --muted: #64748b;
+  --ok: #16a34a;
+  --warn: #f97316;
+  --hero-a: #0f172a;
+  --hero-b: #1e293b;
+  --hero-c: #334155;
+  color: var(--text);
+  padding: 14px;
 }
 
-[data-theme="dark"] {
-  --bg:#0b1220;
-  --bg-alt:#0f172a;
-  --card:#111827;
-  --text:#e5e7eb;
-  --muted:#9ca3af;
-  --border:#1f2937;
-  --primary:#2e3b4e;
-  --accent:#22c55e;
-  --danger:#f87171;
-  --shadow:0 25px 60px rgba(0,0,0,.6);
-  --glass:rgba(17,24,39,.75);
-  --row:#0f172a;
-  --row-alt:#111827;
-  --row-hover:#1f2937;
-  --thead-1:#1f2937;
-  --thead-2:#111827;
+.activity-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 22px 24px;
+  color: #fff;
+  background: linear-gradient(120deg, var(--hero-a) 0%, var(--hero-b) 45%, var(--hero-c) 100%);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.32);
 }
 
-/* ===============================
-  LAYOUT
-================================ */
-.activity-page {
-  background:
-    radial-gradient(1200px 400px at top, rgba(79,70,229,.12), transparent),
-    linear-gradient(180deg,var(--bg),var(--bg-alt));
-  min-height:100vh;
-  padding:26px;
+.activity-hero::after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  right: -90px;
+  top: -120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
 }
 
-.activity-card {
-  background:var(--card);
-  border-radius:22px;
-  box-shadow:var(--shadow);
-  padding:26px 28px 30px;
+.activity-hero h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
 }
 
-/* ===============================
-  HEADER (GLASS)
-================================ */
-.header-bar {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:16px 20px;
-  margin:-26px -28px 24px;
-  backdrop-filter: blur(12px);
-  background:var(--glass);
-  border-bottom:1px solid var(--border);
-  border-radius:22px 22px 0 0;
+.activity-hero p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
 }
 
-.page-title {
-  font-size:28px;
-  font-weight:900;
-  color:var(--text);
-  display:flex;
-  align-items:center;
-  gap:10px;
+.hero-pills {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.page-title span {
-  font-size:14px;
-  font-weight:700;
-  color:var(--muted);
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.theme-toggle {
-  background:linear-gradient(135deg,var(--primary),#6366f1);
-  color:#fff;
-  padding:7px 16px;
-  border-radius:999px;
-  cursor:pointer;
-  font-weight:700;
-  font-size:13px;
-  box-shadow:0 8px 20px rgba(79,70,229,.35);
+.stats-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
-/* ===============================
-  FILTER CARD
-================================ */
-.filter-card {
-  background:var(--card);
-  border-radius:18px;
-  padding:18px;
-  border:1px solid var(--border);
-  margin-bottom:22px;
+.stat-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 14px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
 }
 
-.filter-card label {
-  font-size:12px;
-  font-weight:800;
-  color:var(--muted);
-  letter-spacing:.3px;
+.stat-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
-.filter-card input,
-.filter-card select {
-  border-radius:12px;
-  padding:12px 14px;
-  border:1px solid var(--border);
-  font-weight:600;
+.stat-value {
+  margin-top: 7px;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1;
 }
 
-/* ===============================
-  TABLE
-================================ */
-.table-wrapper {
-  border-radius:18px;
-  overflow:hidden;
-  box-shadow:0 14px 35px rgba(0,0,0,.08);
+.filter-panel {
+  margin-top: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+  padding: 16px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.filter-panel label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.filter-panel .form-control {
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #fff;
+}
+
+.btn-apply {
+  border: none;
+  border-radius: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.btn-reset {
+  border-radius: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  font-weight: 800;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+}
+
+.table-panel {
+  margin-top: 16px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.07);
 }
 
 .table {
-  background:var(--card);
+  margin-bottom: 0;
 }
 
 .table thead th {
-  background:linear-gradient(180deg,var(--thead-1),var(--thead-2));
-  color:#fff;
-  font-size:12px;
-  font-weight:900;
-  text-transform:uppercase;
-  letter-spacing:.6px;
-  position:sticky;
-  top:0;
-}
-
-.table tbody tr {
-  transition:all .2s ease;
-}
-
-.table tbody tr:hover {
-  background:var(--row-hover);
+  background: linear-gradient(180deg, #111827 0%, #0b1220 100%);
+  color: #f8fafc;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  font-weight: 800;
+  border: none;
+  padding: 13px 12px;
 }
 
 .table td {
-  font-size:14px;
-  color:var(--text);
-  vertical-align:middle;
-  padding:16px 14px;
-  background:var(--row);
-  border-color:var(--border);
+  vertical-align: middle;
+  border-color: #e8edf4;
+  font-size: 14px;
+  padding: 13px 12px;
+}
+
+.table tbody tr:nth-child(odd) td {
+  background: #ffffff;
 }
 
 .table tbody tr:nth-child(even) td {
-  background:var(--row-alt);
+  background: #f8fbff;
 }
 
-/* ===============================
-  SESSION BLOCK
-================================ */
-.session-box {
-  display:grid;
-  gap:6px;
+.table tbody tr:hover td {
+  background: #eef4ff;
 }
 
-.login {
-  color:var(--accent);
-  font-weight:800;
+.name-cell {
+  font-weight: 800;
+  color: #0b1324;
 }
 
-.logout {
-  color:var(--danger);
-  font-weight:800;
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
-.active-dot {
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  color:var(--accent);
-  font-weight:800;
-  font-size:13px;
+.time-chip {
+  font-weight: 700;
+  font-size: 12px;
+  color: #0f172a;
+  background: #dbeafe;
+  border-radius: 999px;
+  padding: 5px 10px;
 }
 
-.active-dot::before {
-  content:"";
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  background:var(--accent);
-  animation:pulse 1.6s infinite;
+.time-empty {
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 12px;
 }
 
-@keyframes pulse {
-  0% { box-shadow:0 0 0 0 rgba(34,197,94,.6); }
-  70% { box-shadow:0 0 0 8px rgba(34,197,94,0); }
-  100% { box-shadow:0 0 0 0 rgba(34,197,94,0); }
+.duration-chip {
+  font-weight: 800;
+  font-size: 12px;
+  color: #1d4ed8;
+  background: #e0e7ff;
+  border-radius: 999px;
+  padding: 5px 10px;
 }
 
-.duration {
-  margin-top:6px;
-  font-size:12px;
-  font-weight:900;
-  background:linear-gradient(135deg,#e0e7ff,#c7d2fe);
-  color:#312e81;
-  padding:5px 12px;
-  border-radius:999px;
-  width:max-content;
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
 }
 
-/* ===============================
-  PAGINATION
-================================ */
+.status-badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-active::before {
+  background: #22c55e;
+}
+
+.status-closed {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.status-closed::before {
+  background: #fb923c;
+}
+
+.ip-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d6e0eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 6px 8px;
+  font-family: Consolas, Menlo, monospace;
+  font-size: 12px;
+  color: #334155;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 42px 20px;
+  color: #64748b;
+}
+
+.empty-state i {
+  font-size: 30px;
+  margin-bottom: 10px;
+  color: #cbd5e1;
+}
+
+.pagination-wrap {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
 .pagination {
-  margin-top:22px;
-  justify-content:center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .page-link {
-  border-radius:12px !important;
-  margin:0 4px;
-  font-weight:800;
-  color:var(--text);
+  border-radius: 10px !important;
+  border: 1px solid #d7e1ee;
+  color: #0f172a;
+  font-weight: 700;
+  min-width: 40px;
+  text-align: center;
 }
 
 .page-item.active .page-link {
-  background:linear-gradient(135deg,var(--primary),#6366f1);
-  color:#fff;
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+@media (max-width: 1199px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .activity-shell {
+    padding: 8px;
+  }
+
+  .activity-hero h1 {
+    font-size: 24px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 
-<div class="activity-page" id="themeRoot">
-  <div class="activity-card">
-
-    <!-- HEADER -->
-    <div class="header-bar">
-      <div class="page-title">
-         Login Sessions
-        <span>Security Audit</span>
-      </div>
-      <div class="theme-toggle" onclick="toggleTheme()">Dark Mode</div>
+<div class="activity-shell page-section">
+  <section class="activity-hero">
+    <h1><i class="fas fa-shield-alt me-2"></i>Login Session Audit</h1>
+    <p>Monitor user sign-ins, logouts, and active sessions in one premium dashboard.</p>
+    <div class="hero-pills">
+      <span class="hero-pill"><i class="fas fa-lock"></i> Security Monitoring</span>
+      <span class="hero-pill"><i class="fas fa-clock"></i> Live Session Visibility</span>
+      {% if request.GET.user %}
+        <span class="hero-pill"><i class="fas fa-user"></i> Filter: {{ request.GET.user }}</span>
+      {% endif %}
     </div>
+  </section>
 
-    <!-- FILTER -->
-    <form method="get" class="filter-card row g-3 align-items-end">
-      <div class="col-md-3">
+  <section class="stats-grid">
+    <article class="stat-card">
+      <div class="stat-label">Total Sessions</div>
+      <div class="stat-value">{{ total_sessions }}</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-label">Active Sessions</div>
+      <div class="stat-value" style="color:var(--ok);">{{ active_sessions }}</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-label">Closed Sessions</div>
+      <div class="stat-value" style="color:var(--warn);">{{ closed_sessions }}</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-label">Users In Result</div>
+      <div class="stat-value">{{ unique_users }}</div>
+    </article>
+  </section>
+
+  <section class="filter-panel">
+    <div class="section-title">Filter Sessions</div>
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-6">
         <label>User</label>
         <select name="user" class="form-control">
           <option value="">All Users</option>
@@ -270,110 +383,102 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
-        <label>From</label>
+      <div class="col-lg-3 col-md-6">
+        <label>From Date</label>
         <input type="date" name="start_date" value="{{ request.GET.start_date }}" class="form-control">
       </div>
-      <div class="col-md-3">
-        <label>To</label>
+      <div class="col-lg-3 col-md-6">
+        <label>To Date</label>
         <input type="date" name="end_date" value="{{ request.GET.end_date }}" class="form-control">
       </div>
-      <div class="col-md-3">
-        <button class="btn btn-primary w-100 fw-bold">
-          Apply Filters
-        </button>
+      <div class="col-lg-1 col-md-3">
+        <button class="btn-apply" type="submit">Apply</button>
+      </div>
+      <div class="col-lg-2 col-md-3">
+        <a href="{% url 'activity_log' %}" class="btn-reset d-inline-flex align-items-center justify-content-center">Reset</a>
       </div>
     </form>
+  </section>
 
-    <!-- TABLE -->
-    <div class="table-responsive table-wrapper">
-      <table class="table table-hover mb-0">
+  <section class="table-panel">
+    <div class="table-responsive">
+      <table class="table">
         <thead>
           <tr>
             <th>User</th>
             <th>Role</th>
-            <th>Session</th>
+            <th>Login</th>
+            <th>Logout</th>
+            <th>Duration</th>
             <th>IP Address</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
-
-        {% for s in sessions %}
-        <tr>
-          <td class="fw-bold">{{ s.username }}</td>
-          <td>{{ s.role }}</td>
-          <td>
-            <div class="session-box">
-              <div class="login">Login: {{ s.login_time }}</div>
-
-              {% if s.logout_time %}
-                <div class="logout">Logout: {{ s.logout_time }}</div>
-              {% else %}
-                <div class="active-dot">Active Session</div>
-              {% endif %}
-
-              {% if s.duration %}
-                <span class="duration">Duration: {{ s.duration }}</span>
-              {% endif %}
-            </div>
-          </td>
-          <td>{{ s.ip_address }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="4" class="text-center py-5 text-muted">
-            No login sessions found
-          </td>
-        </tr>
-        {% endfor %}
-
+          {% for s in sessions %}
+            <tr>
+              <td class="name-cell">{{ s.username }}</td>
+              <td><span class="role-badge">{{ s.role }}</span></td>
+              <td><span class="time-chip">{{ s.login_time }}</span></td>
+              <td>
+                {% if s.logout_time %}
+                  <span class="time-chip">{{ s.logout_time }}</span>
+                {% else %}
+                  <span class="time-empty">Still active</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.duration %}
+                  <span class="duration-chip">{{ s.duration }}</span>
+                {% else %}
+                  <span class="time-empty">Running</span>
+                {% endif %}
+              </td>
+              <td><span class="ip-chip">{{ s.ip_address }}</span></td>
+              <td>
+                {% if s.logout_time %}
+                  <span class="status-badge status-closed">Closed</span>
+                {% else %}
+                  <span class="status-badge status-active">Active</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="empty-state">
+                <i class="fas fa-search"></i>
+                <div class="fw-bold">No login sessions found</div>
+                <div>Try changing filters or date range.</div>
+              </td>
+            </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
+  </section>
 
-    <!-- PAGINATION -->
-    {% if sessions.has_other_pages %}
-    <nav>
+  {% if sessions.has_other_pages %}
+    <div class="pagination-wrap">
       <ul class="pagination">
         {% if sessions.has_previous %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ sessions.previous_page_number }}">&lt;</a>
+            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ sessions.previous_page_number }}">&lt;</a>
           </li>
         {% endif %}
+
         {% for i in sessions.paginator.page_range %}
           <li class="page-item {% if sessions.number == i %}active{% endif %}">
-            <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ i }}">{{ i }}</a>
           </li>
         {% endfor %}
+
         {% if sessions.has_next %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ sessions.next_page_number }}">&gt;</a>
+            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ sessions.next_page_number }}">&gt;</a>
           </li>
         {% endif %}
       </ul>
-    </nav>
-    {% endif %}
-
-  </div>
+    </div>
+  {% endif %}
 </div>
-
-<script>
-function toggleTheme(){
-  const r = document.getElementById("themeRoot");
-  const isDark = r.getAttribute("data-theme") === "dark";
-  if (isDark) {
-    r.removeAttribute("data-theme");
-    localStorage.setItem("theme", "");
-  } else {
-    r.setAttribute("data-theme", "dark");
-    localStorage.setItem("theme", "dark");
-  }
-}
-(function(){
-  if(localStorage.getItem("theme") === "dark"){
-    document.getElementById("themeRoot").setAttribute("data-theme","dark");
-  }
-})();
-</script>
-
 {% endblock %}

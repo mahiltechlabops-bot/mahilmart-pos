@@ -170,6 +170,7 @@ urlpatterns = [
 
     # logout page
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('auto-logout/', views.auto_logout_on_close, name='auto_logout_on_close'),
 
     # migration
     path("db-migrate/", views.db_migration_tool, name="db_migration_tool"),
