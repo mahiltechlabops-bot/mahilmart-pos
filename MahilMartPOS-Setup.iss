@@ -20,6 +20,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppDirName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
+DisableDirPage=yes
 OutputDir={#SourceDir}\installer\output
 OutputBaseFilename=MahilMartPOS-Setup
 Compression=lzma
@@ -61,6 +62,17 @@ var
   ActivationNoticePath: string;
   CurrentMachineId: string;
   IsUpdateInstall: Boolean;
+
+function IsExistingInstallRegistered: Boolean;
+var
+  InstallLocation: string;
+  UninstallKey: string;
+begin
+  UninstallKey := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7A8E2C8B-7A21-4A0E-9B58-89C2F2F8B6E0}_is1';
+  Result :=
+    (RegQueryStringValue(HKLM, UninstallKey, 'InstallLocation', InstallLocation) and (Trim(InstallLocation) <> '')) or
+    (RegQueryStringValue(HKCU, UninstallKey, 'InstallLocation', InstallLocation) and (Trim(InstallLocation) <> ''));
+end;
 
 function GetMachineId: string;
 begin
@@ -317,7 +329,8 @@ begin
   IsUpdateInstall :=
     FileExists(LicensePath) or
     FileExists(DbConfigPath) or
-    FileExists(ServerConfigPath);
+    FileExists(ServerConfigPath) or
+    IsExistingInstallRegistered();
 
   LicenseKeyPage := CreateInputQueryPage(
     wpSelectDir,
@@ -355,13 +368,19 @@ begin
   ServerPage.Add('Static IP (optional):', False);
   ServerPage.Values[0] := Trim(GetIniString('server', 'host', '', ServerConfigPath));
 
-  if IsUpdateInstall then
-    MsgBox(
-      'Existing MahilMart POS installation detected.' + #13#10 +
-      'Setup will run in Update mode and keep existing license, database, and network settings.',
-      mbInformation,
-      MB_OK
-    );
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if not IsUpdateInstall then
+    exit;
+
+  if CurPageID = wpWelcome then
+  begin
+    WizardForm.WelcomeLabel1.Caption := 'Update MahilMart POS';
+    WizardForm.WelcomeLabel2.Caption :=
+      'Existing installation detected. Setup will update app files and keep your license, database, and network settings.';
+  end;
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
@@ -371,6 +390,7 @@ begin
     exit;
 
   Result :=
+    (PageID = wpSelectTasks) or
     ((LicenseKeyPage <> nil) and (PageID = LicenseKeyPage.ID)) or
     ((DbPage <> nil) and (PageID = DbPage.ID)) or
     ((ServerPage <> nil) and (PageID = ServerPage.ID));
