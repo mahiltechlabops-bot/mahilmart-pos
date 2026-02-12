@@ -14,7 +14,7 @@ import socket
 
 _STDIO_STREAM = None
 _AUTO_HOST_KEYWORDS = {"auto", "dhcp", "current", "system"}
-_DEFAULT_SERVER_PORT = "608"
+_DEFAULT_SERVER_PORT = "0608"
 
 
 def _detect_local_ip():

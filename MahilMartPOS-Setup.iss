@@ -50,7 +50,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Start {#MyAppName}"; Flags: pos
 [Code]
 const
   FixedLicenseEmail = 'mahiltechlab.ops@gmail.com';
-  DefaultServerPort = '608';
+  DefaultServerPort = '0608';
 
 var
   DbPage: TInputQueryWizardPage;
@@ -60,6 +60,7 @@ var
   ServerConfigPath: string;
   ActivationNoticePath: string;
   CurrentMachineId: string;
+  IsUpdateInstall: Boolean;
 
 function GetMachineId: string;
 begin
@@ -303,11 +304,23 @@ begin
 end;
 
 procedure InitializeWizard;
+var
+  ConfigDir: string;
+  DbConfigPath: string;
+  ExistingAppPath: string;
 begin
-  LicensePath := ExpandConstant('{commonappdata}\MahilMartPOS\license.ini');
-  ServerConfigPath := ExpandConstant('{commonappdata}\MahilMartPOS\server_config.ini');
-  ActivationNoticePath := ExpandConstant('{commonappdata}\MahilMartPOS\license_activation_pending.ini');
+  ConfigDir := ExpandConstant('{commonappdata}\MahilMartPOS');
+  LicensePath := ConfigDir + '\license.ini';
+  ServerConfigPath := ConfigDir + '\server_config.ini';
+  ActivationNoticePath := ConfigDir + '\license_activation_pending.ini';
+  DbConfigPath := ConfigDir + '\db_config.ini';
+  ExistingAppPath := ExpandConstant('{app}\{#MyAppExeName}');
   CurrentMachineId := GetMachineId;
+  IsUpdateInstall :=
+    FileExists(ExistingAppPath) or
+    FileExists(LicensePath) or
+    FileExists(DbConfigPath) or
+    FileExists(ServerConfigPath);
 
   LicenseKeyPage := CreateInputQueryPage(
     wpSelectDir,
@@ -344,6 +357,26 @@ begin
   );
   ServerPage.Add('Static IP (optional):', False);
   ServerPage.Values[0] := Trim(GetIniString('server', 'host', '', ServerConfigPath));
+
+  if IsUpdateInstall then
+    MsgBox(
+      'Existing MahilMart POS installation detected.' + #13#10 +
+      'Setup will run in Update mode and keep existing license, database, and network settings.',
+      mbInformation,
+      MB_OK
+    );
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if not IsUpdateInstall then
+    exit;
+
+  Result :=
+    ((LicenseKeyPage <> nil) and (PageID = LicenseKeyPage.ID)) or
+    ((DbPage <> nil) and (PageID = DbPage.ID)) or
+    ((ServerPage <> nil) and (PageID = ServerPage.ID));
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -432,6 +465,12 @@ var
 begin
   if CurStep = ssInstall then
   begin
+    if IsUpdateInstall then
+    begin
+      Log('Update mode enabled: keeping existing license/database/network config files.');
+      exit;
+    end;
+
     ConfigDir := ExpandConstant('{commonappdata}\MahilMartPOS');
     ForceDirectories(ConfigDir);
     ConfigPath := ConfigDir + '\db_config.ini';

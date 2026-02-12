@@ -12,5 +12,5 @@ cd /d "%~dp0"
 set DJANGO_SETTINGS_MODULE=MahilMartPOS.settings
 
 echo Starting MahilMart POS...
-start "" http://127.0.0.1:608/
-python manage.py runserver 0.0.0.0:608
+start "" http://127.0.0.1:0608/
+python manage.py runserver 0.0.0.0:0608
