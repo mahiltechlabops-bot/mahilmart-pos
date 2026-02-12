@@ -14,6 +14,7 @@ import socket
 
 _STDIO_STREAM = None
 _AUTO_HOST_KEYWORDS = {"auto", "dhcp", "current", "system"}
+_DEFAULT_SERVER_PORT = "608"
 
 
 def _detect_local_ip():
@@ -135,11 +136,11 @@ def _is_host_local(host, local_ipv4_set):
 def _normalize_port(value):
     candidate = (value or "").strip()
     if not candidate.isdigit():
-        return "8002"
+        return _DEFAULT_SERVER_PORT
 
     numeric_port = int(candidate)
     if numeric_port < 1 or numeric_port > 65535:
-        return "8002"
+        return _DEFAULT_SERVER_PORT
 
     return str(numeric_port)
 
@@ -224,7 +225,7 @@ def _get_server_host_port():
     fixed_host = fixed_hosts[0] if fixed_hosts else ""
     bind_host = bind_hosts[0] if bind_hosts else ""
     browser_host = browser_hosts[0] if browser_hosts else ""
-    port = _normalize_port(os.environ.get("MAHILMARTPOS_PORT") or "8002")
+    port = _normalize_port(os.environ.get("MAHILMARTPOS_PORT") or _DEFAULT_SERVER_PORT)
     local_ipv4_set = _resolve_local_ipv4_addresses()
 
     if fixed_host:

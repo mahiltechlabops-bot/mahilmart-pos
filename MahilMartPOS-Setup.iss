@@ -50,6 +50,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Start {#MyAppName}"; Flags: pos
 [Code]
 const
   FixedLicenseEmail = 'mahiltechlab.ops@gmail.com';
+  DefaultServerPort = '608';
 
 var
   DbPage: TInputQueryWizardPage;
@@ -454,7 +455,7 @@ begin
       ServerContent :=
         '[server]' + #13#10 +
         'host=' + StaticHost + #13#10 +
-        'port=8002' + #13#10;
+        'port=' + DefaultServerPort + #13#10;
       SaveStringToFile(ServerConfigPath, ServerContent, False);
     end;
 

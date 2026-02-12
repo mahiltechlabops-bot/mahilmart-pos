@@ -128,6 +128,13 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'DEBUG',
     },
+    'loggers': {
+        'pymongo': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
 }
 
 

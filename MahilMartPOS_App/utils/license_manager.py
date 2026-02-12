@@ -3,6 +3,8 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib import request as urllib_request
+from urllib.error import URLError
 
 
 DEFAULT_LICENSE_EMAIL = "mahiltechlab.ops@gmail.com"
@@ -13,6 +15,7 @@ DEFAULT_MONGO_DB = "mahilmart_pos"
 DEFAULT_MONGO_COLLECTION = "license_keys"
 LOCAL_CACHE_DIR = Path.home() / "MahilMartPOS"
 LOCAL_CACHE_FILE = LOCAL_CACHE_DIR / "license_keys_cache.json"
+_PUBLIC_IP_CACHE = None
 
 
 def _build_checksum_value(seed, multiplier, offset):
@@ -125,10 +128,59 @@ def _sanitize_mongo_error_message(error_text):
     return compact or "Unknown MongoDB connection error."
 
 
-def _offline_warning(showing_cache=False):
-    if showing_cache:
-        return "Cloud sync offline. Using local cache."
-    return "Cloud sync offline. No local cache yet."
+def _fetch_public_ip_hint():
+    global _PUBLIC_IP_CACHE
+    if _PUBLIC_IP_CACHE is not None:
+        return _PUBLIC_IP_CACHE
+
+    env_hint = (os.environ.get("MAHILMARTPOS_PUBLIC_IP_HINT") or "").strip()
+    if env_hint:
+        _PUBLIC_IP_CACHE = env_hint
+        return _PUBLIC_IP_CACHE
+
+    for url in ("https://api.ipify.org", "https://ifconfig.me/ip"):
+        try:
+            with urllib_request.urlopen(url, timeout=3) as response:
+                value = response.read().decode("utf-8", errors="ignore").strip()
+                if re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", value):
+                    _PUBLIC_IP_CACHE = value
+                    return _PUBLIC_IP_CACHE
+        except (URLError, OSError, TimeoutError):
+            continue
+
+    _PUBLIC_IP_CACHE = ""
+    return _PUBLIC_IP_CACHE
+
+
+def _offline_warning(showing_cache=False, reason=""):
+    reason_text = (reason or "").strip()
+    public_ip = _fetch_public_ip_hint()
+
+    if reason_text:
+        message = f"Cloud sync offline. {reason_text}"
+    elif showing_cache:
+        message = "Cloud sync offline. Using local cache."
+    else:
+        message = "Cloud sync offline. No local cache yet."
+
+    if public_ip:
+        message = f"{message} Atlas Network Access: whitelist public IP {public_ip}."
+
+    return message
+
+
+def _offline_save_message(reason):
+    reason_text = (reason or "").strip()
+    if not reason_text:
+        return "Saved locally (cloud sync offline)."
+    return f"Saved locally (cloud sync offline: {reason_text})."
+
+
+def _offline_save_failed_message(cache_message, reason):
+    reason_text = (reason or "").strip()
+    if reason_text:
+        return f"Cloud sync offline ({reason_text}). {cache_message}"
+    return f"Cloud sync offline. {cache_message}"
 
 
 def _to_jsonable(value):
@@ -244,8 +296,8 @@ def store_generated_license(machine_id, license_key, generated_by, customer_name
     if client is None:
         is_cached, cache_message = _save_local_generated_license(document)
         if is_cached:
-            return True, "Saved locally (cloud sync offline)."
-        return False, f"Cloud sync offline. {cache_message}"
+            return True, _offline_save_message(error_message)
+        return False, _offline_save_failed_message(cache_message, error_message)
 
     db_name = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB") or DEFAULT_MONGO_DB).strip()
     collection_name = (
@@ -266,10 +318,11 @@ def store_generated_license(machine_id, license_key, generated_by, customer_name
         )
         return True, "License saved to MongoDB."
     except Exception as exc:
+        fallback_reason = _sanitize_mongo_error_message(str(exc))
         is_cached, cache_message = _save_local_generated_license(document)
         if is_cached:
-            return True, "Saved locally (cloud sync offline)."
-        return False, f"Cloud sync offline. {cache_message}"
+            return True, _offline_save_message(fallback_reason)
+        return False, _offline_save_failed_message(cache_message, fallback_reason)
     finally:
         client.close()
 
@@ -279,8 +332,8 @@ def fetch_recent_generated_licenses(limit=20):
     if client is None:
         local_records = _fetch_recent_local_licenses(limit)
         if local_records:
-            return local_records, _offline_warning(showing_cache=True)
-        return [], _offline_warning(showing_cache=False)
+            return local_records, _offline_warning(showing_cache=True, reason=error_message)
+        return [], _offline_warning(showing_cache=False, reason=error_message)
 
     db_name = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB") or DEFAULT_MONGO_DB).strip()
     collection_name = (
@@ -308,9 +361,10 @@ def fetch_recent_generated_licenses(limit=20):
         )
         return list(cursor), ""
     except Exception as exc:
+        fallback_reason = _sanitize_mongo_error_message(str(exc))
         local_records = _fetch_recent_local_licenses(limit)
         if local_records:
-            return local_records, _offline_warning(showing_cache=True)
-        return [], _offline_warning(showing_cache=False)
+            return local_records, _offline_warning(showing_cache=True, reason=fallback_reason)
+        return [], _offline_warning(showing_cache=False, reason=fallback_reason)
     finally:
         client.close()
