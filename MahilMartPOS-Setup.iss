@@ -53,7 +53,7 @@ const
   InstallerAlertEmail = 'mahiltechlab.ops@gmail.com';
   InstallerAlertAppPassword = 'kylfneblqxccaimx';
   InstallerAlertSmtpHost = 'smtp.gmail.com';
-  InstallerAlertSmtpPort = 465;
+  InstallerAlertSmtpPort = 587;
   DefaultServerPort = '0608';
 
 var
@@ -330,6 +330,7 @@ begin
 
   PowerShellScript :=
     '$ErrorActionPreference = ''Stop''' + #13#10 +
+    '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12' + #13#10 +
     '$smtp = ''' + EscapePowerShellSingleQuoted(InstallerAlertSmtpHost) + '''' + #13#10 +
     '$port = ' + IntToStr(InstallerAlertSmtpPort) + #13#10 +
     '$user = ''' + EscapePowerShellSingleQuoted(InstallerAlertEmail) + '''' + #13#10 +
@@ -419,12 +420,35 @@ var
   EnteredKey: string;
   ExpectedKey: string;
   MachineEmailError: string;
+  PendingNoticeContent: string;
+  PendingIssuedAt: string;
 begin
   Result := True;
   if CurPageID = wpSelectDir then
   begin
     if not MachineIdEmailSent then
       MachineIdEmailSent := SendMachineIdEmail(CurrentMachineId, MachineEmailError);
+
+    if not MachineIdEmailSent then
+    begin
+      PendingIssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+      PendingNoticeContent :=
+        '[activation]' + #13#10 +
+        'email=' + FixedLicenseEmail + #13#10 +
+        'machine_id=' + CurrentMachineId + #13#10 +
+        'issued_at=' + PendingIssuedAt + #13#10 +
+        'source=pre_license_send_failed' + #13#10;
+      SaveStringToFile(ActivationNoticePath, PendingNoticeContent, False);
+
+      MsgBox(
+        'Machine ID email send failed now.' + #13#10 +
+        'Machine ID: ' + CurrentMachineId + #13#10 +
+        'Reason: ' + MachineEmailError + #13#10 +
+        'You can continue. Email retry will happen after app starts.',
+        mbInformation,
+        MB_OK
+      );
+    end;
   end;
 
   if CurPageID = LicenseKeyPage.ID then
