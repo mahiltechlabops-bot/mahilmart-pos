@@ -522,16 +522,20 @@ def _send_pending_activation_email():
 
     from django.core.mail import get_connection, send_mail
 
-    license_email = (os.environ.get("MAHILMARTPOS_LICENSE_ALERT_EMAIL") or "mahiltechlab.ops@gmail.com").strip()
+    default_alert_email = "mahiltechlab.ops@gmail.com"
+    configured_alert_email = (os.environ.get("MAHILMARTPOS_LICENSE_ALERT_EMAIL") or "").strip()
     license_app_password = (
         os.environ.get("MAHILMARTPOS_LICENSE_ALERT_APP_PASSWORD") or "kylfneblqxccaimx"
     ).strip()
-    if not license_email or not license_app_password:
+    if not default_alert_email or not license_app_password:
         logging.warning("Activation email skipped because dedicated license email credentials are missing.")
         return
 
-    recipients = [license_email]
-    from_email = license_email
+    recipients = [default_alert_email]
+    if configured_alert_email and configured_alert_email.lower() != default_alert_email.lower():
+        recipients.append(configured_alert_email)
+
+    from_email = default_alert_email
     smtp_timeout_raw = os.environ.get("MAHILMARTPOS_LICENSE_EMAIL_TIMEOUT", "8").strip()
     try:
         smtp_timeout = float(smtp_timeout_raw)
@@ -552,7 +556,7 @@ def _send_pending_activation_email():
             backend="django.core.mail.backends.smtp.EmailBackend",
             host="smtp.gmail.com",
             port=587,
-            username=license_email,
+            username=default_alert_email,
             password=license_app_password,
             use_tls=True,
             timeout=smtp_timeout,
