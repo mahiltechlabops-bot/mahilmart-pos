@@ -1,3 +1,4 @@
+import configparser
 import json
 import os
 import re
@@ -16,6 +17,59 @@ DEFAULT_MONGO_COLLECTION = "license_keys"
 LOCAL_CACHE_DIR = Path.home() / "MahilMartPOS"
 LOCAL_CACHE_FILE = LOCAL_CACHE_DIR / "license_keys_cache.json"
 _PUBLIC_IP_CACHE = None
+
+
+def _shared_mongo_config_path():
+    custom_path = (os.environ.get("MAHILMARTPOS_SHARED_MONGO_CONFIG_PATH") or "").strip()
+    if custom_path:
+        return Path(custom_path)
+    return Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "MahilMartPOS" / "license_mongo_config.ini"
+
+
+def _read_shared_mongo_config():
+    config_path = _shared_mongo_config_path()
+    if not config_path.exists():
+        return {}
+
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        parser.read(config_path, encoding="utf-8")
+    except Exception:
+        return {}
+
+    if "mongo" not in parser:
+        return {}
+
+    section = parser["mongo"]
+    return {
+        "mongo_uri": (section.get("mongo_uri") or "").strip(),
+        "mongo_db": (section.get("mongo_db") or "").strip(),
+        "mongo_collection": (section.get("mongo_collection") or "").strip(),
+    }
+
+
+def _get_mongo_runtime_config():
+    shared_config = _read_shared_mongo_config()
+    mongo_uri = (
+        os.environ.get("MAHILMARTPOS_LICENSE_MONGO_URI")
+        or shared_config.get("mongo_uri")
+        or DEFAULT_MONGO_URI
+    ).strip()
+    mongo_db = (
+        os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB")
+        or shared_config.get("mongo_db")
+        or DEFAULT_MONGO_DB
+    ).strip()
+    mongo_collection = (
+        os.environ.get("MAHILMARTPOS_LICENSE_MONGO_COLLECTION")
+        or shared_config.get("mongo_collection")
+        or DEFAULT_MONGO_COLLECTION
+    ).strip()
+    return {
+        "mongo_uri": mongo_uri,
+        "mongo_db": mongo_db,
+        "mongo_collection": mongo_collection,
+    }
 
 
 def _build_checksum_value(seed, multiplier, offset):
@@ -96,7 +150,7 @@ def generate_machine_license_key(machine_id):
 
 
 def _open_mongo_client():
-    mongo_uri = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_URI") or DEFAULT_MONGO_URI).strip()
+    mongo_uri = _get_mongo_runtime_config()["mongo_uri"]
     if not mongo_uri:
         return None, "Mongo URI is not configured."
     try:
@@ -117,7 +171,7 @@ def _sanitize_mongo_error_message(error_text):
             "whether your network blocks Atlas TLS."
         )
     if "authentication failed" in lowered:
-        return "MongoDB authentication failed. Check username/password in MAHILMARTPOS_LICENSE_MONGO_URI."
+        return "MongoDB authentication failed. Check Mongo URI in License Manager settings."
     if "timed out" in lowered or "timeout" in lowered:
         return "MongoDB connection timed out. Check internet and Atlas cluster status."
     if "dns" in lowered:
@@ -307,10 +361,9 @@ def store_generated_license(
             return True, _offline_save_message(error_message)
         return False, _offline_save_failed_message(cache_message, error_message)
 
-    db_name = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB") or DEFAULT_MONGO_DB).strip()
-    collection_name = (
-        os.environ.get("MAHILMARTPOS_LICENSE_MONGO_COLLECTION") or DEFAULT_MONGO_COLLECTION
-    ).strip()
+    mongo_runtime = _get_mongo_runtime_config()
+    db_name = mongo_runtime["mongo_db"]
+    collection_name = mongo_runtime["mongo_collection"]
 
     try:
         collection = client[db_name][collection_name]
@@ -343,10 +396,9 @@ def fetch_recent_generated_licenses(limit=20):
             return local_records, _offline_warning(showing_cache=True, reason=error_message)
         return [], _offline_warning(showing_cache=False, reason=error_message)
 
-    db_name = (os.environ.get("MAHILMARTPOS_LICENSE_MONGO_DB") or DEFAULT_MONGO_DB).strip()
-    collection_name = (
-        os.environ.get("MAHILMARTPOS_LICENSE_MONGO_COLLECTION") or DEFAULT_MONGO_COLLECTION
-    ).strip()
+    mongo_runtime = _get_mongo_runtime_config()
+    db_name = mongo_runtime["mongo_db"]
+    collection_name = mongo_runtime["mongo_collection"]
 
     try:
         collection = client[db_name][collection_name]
