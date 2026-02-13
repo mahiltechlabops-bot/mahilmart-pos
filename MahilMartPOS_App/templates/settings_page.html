@@ -179,21 +179,6 @@
             <span class="settings-card-link">Customize <i class="fa fa-arrow-right"></i></span>
         </div>
 
-        {% if license_manager_machine_allowed %}
-            {% if request.user.is_superuser or perm.allow_license_manager %}
-            <div class="settings-card-box" onclick="location.href='{% url 'license_manager' %}'">
-                <div class="settings-icon">
-                    <i class="fa fa-key"></i>
-                </div>
-                <div class="settings-card-title">License Manager</div>
-                <div class="settings-card-text">
-                    Generate machine-based setup keys and save records to MongoDB.
-                </div>
-                <span class="settings-card-link">Generate <i class="fa fa-arrow-right"></i></span>
-            </div>
-            {% endif %}
-        {% endif %}
-
         {% if request.user.is_superuser %}
         <div class="settings-card-box" onclick="location.href='{% url 'permission_settings' %}'">
             <div class="settings-icon">

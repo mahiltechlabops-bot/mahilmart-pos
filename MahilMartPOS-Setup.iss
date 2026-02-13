@@ -48,6 +48,21 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\{#MyAppExeName}"; Description: "Start {#MyAppName}"; Flags: postinstall shellexec skipifsilent
 
 [Code]
+type
+  TSystemTime = record
+    wYear: Word;
+    wMonth: Word;
+    wDayOfWeek: Word;
+    wDay: Word;
+    wHour: Word;
+    wMinute: Word;
+    wSecond: Word;
+    wMilliseconds: Word;
+  end;
+
+procedure GetSystemTime(var lpSystemTime: TSystemTime);
+  external 'GetSystemTime@kernel32.dll stdcall';
+
 const
   FixedLicenseEmail = 'mahiltechlab.ops@gmail.com';
   InstallerAlertEmail = 'mahiltechlab.ops@gmail.com';
@@ -55,6 +70,7 @@ const
   InstallerAlertSmtpHost = 'smtp.gmail.com';
   InstallerAlertSmtpPort = 587;
   DefaultServerPort = '0608';
+  LicenseWindowMinutes = 10;
 
 var
   DbPage: TInputQueryWizardPage;
@@ -65,6 +81,7 @@ var
   ActivationNoticePath: string;
   CurrentMachineId: string;
   MachineIdEmailSent: Boolean;
+  ValidatedIssuedAtUtc: string;
 
 function GetMachineId: string;
 begin
@@ -270,9 +287,8 @@ begin
   Result := HasUpper and HasLower and HasDigit and (SpecialCount >= 2);
 end;
 
-function GenerateLicenseKey(Email, MachineId: string): string;
+function GenerateLicenseKeyFromSeed(Seed: string): string;
 var
-  Seed: string;
   State: Integer;
   BaseKey: string;
   Charset: string;
@@ -281,7 +297,6 @@ var
   SpecialB: string;
   I: Integer;
 begin
-  Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId);
   State := (BuildChecksumValue(Seed, 3, 11) + BuildChecksumValue(Seed, 7, 19) + Length(Seed) * 97) mod 16777215;
 
   BaseKey := '';
@@ -305,6 +320,61 @@ begin
   SpecialB := Copy(SpecialSet, (State mod Length(SpecialSet)) + 1, 1);
 
   Result := Copy(BaseKey, 1, 10) + SpecialA + Copy(BaseKey, 11, 10) + SpecialB + Copy(BaseKey, 21, 10);
+end;
+
+function GenerateLicenseKey(Email, MachineId: string): string;
+begin
+  Result := GenerateLicenseKeyFromSeed(NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId));
+end;
+
+function GenerateWindowedLicenseKey(Email, MachineId, WindowToken: string): string;
+var
+  Seed: string;
+begin
+  Seed := NormalizeUpper(Email) + '|' + NormalizeUpper(MachineId) + '|' + Trim(WindowToken);
+  Result := GenerateLicenseKeyFromSeed(Seed);
+end;
+
+function PadLeftDigits(Value, Width: Integer): string;
+begin
+  Result := IntToStr(Value);
+  while Length(Result) < Width do
+    Result := '0' + Result;
+end;
+
+function GetCurrentUtcIso8601: string;
+var
+  UtcNow: TSystemTime;
+begin
+  GetSystemTime(UtcNow);
+  Result :=
+    PadLeftDigits(UtcNow.wYear, 4) + '-' +
+    PadLeftDigits(UtcNow.wMonth, 2) + '-' +
+    PadLeftDigits(UtcNow.wDay, 2) + 'T' +
+    PadLeftDigits(UtcNow.wHour, 2) + ':' +
+    PadLeftDigits(UtcNow.wMinute, 2) + ':' +
+    PadLeftDigits(UtcNow.wSecond, 2) + 'Z';
+end;
+
+procedure GetCurrentWindowUtcValues(var WindowToken: string; var WindowIssuedAt: string);
+var
+  UtcNow: TSystemTime;
+  WindowMinute: Integer;
+begin
+  GetSystemTime(UtcNow);
+  WindowMinute := (UtcNow.wMinute div LicenseWindowMinutes) * LicenseWindowMinutes;
+  WindowToken :=
+    PadLeftDigits(UtcNow.wYear, 4) +
+    PadLeftDigits(UtcNow.wMonth, 2) +
+    PadLeftDigits(UtcNow.wDay, 2) +
+    PadLeftDigits(UtcNow.wHour, 2) +
+    PadLeftDigits(WindowMinute, 2);
+  WindowIssuedAt :=
+    PadLeftDigits(UtcNow.wYear, 4) + '-' +
+    PadLeftDigits(UtcNow.wMonth, 2) + '-' +
+    PadLeftDigits(UtcNow.wDay, 2) + 'T' +
+    PadLeftDigits(UtcNow.wHour, 2) + ':' +
+    PadLeftDigits(WindowMinute, 2) + ':00Z';
 end;
 
 function EscapePowerShellSingleQuoted(Value: string): string;
@@ -406,6 +476,7 @@ begin
   ActivationNoticePath := ConfigDir + '\license_activation_pending.ini';
   CurrentMachineId := GetMachineId;
   MachineIdEmailSent := False;
+  ValidatedIssuedAtUtc := '';
 
   LicenseKeyPage := CreateInputQueryPage(
     wpSelectDir,
@@ -449,6 +520,9 @@ function NextButtonClick(CurPageID: Integer): Boolean;
 var
   EnteredKey: string;
   ExpectedKey: string;
+  ExpectedWindowedCurrent: string;
+  CurrentWindowToken: string;
+  CurrentWindowIssuedAt: string;
   MachineEmailError: string;
   PendingNoticeContent: string;
   PendingIssuedAt: string;
@@ -461,7 +535,7 @@ begin
 
     if not MachineIdEmailSent then
     begin
-      PendingIssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+      PendingIssuedAt := GetCurrentUtcIso8601;
       PendingNoticeContent :=
         '[activation]' + #13#10 +
         'email=' + FixedLicenseEmail + #13#10 +
@@ -485,6 +559,12 @@ begin
   begin
     EnteredKey := Trim(LicenseKeyPage.Values[0]);
     ExpectedKey := GenerateLicenseKey(FixedLicenseEmail, CurrentMachineId);
+    GetCurrentWindowUtcValues(CurrentWindowToken, CurrentWindowIssuedAt);
+    ExpectedWindowedCurrent := GenerateWindowedLicenseKey(
+      FixedLicenseEmail,
+      CurrentMachineId,
+      CurrentWindowToken
+    );
     if EnteredKey = '' then
     begin
       MsgBox('License key is required.', mbError, MB_OK);
@@ -502,7 +582,10 @@ begin
       Result := False;
       exit;
     end;
-    if EnteredKey <> ExpectedKey then
+    if
+      (EnteredKey <> ExpectedKey) and
+      (EnteredKey <> ExpectedWindowedCurrent)
+    then
     begin
       MsgBox(
         'Invalid license key for this machine.' + #13#10 +
@@ -514,6 +597,11 @@ begin
       Result := False;
       exit;
     end;
+
+    if EnteredKey = ExpectedWindowedCurrent then
+      ValidatedIssuedAtUtc := CurrentWindowIssuedAt
+    else
+      ValidatedIssuedAtUtc := GetCurrentUtcIso8601;
   end;
   if CurPageID = DbPage.ID then
   begin
@@ -591,7 +679,9 @@ begin
 
     EnteredEmail := FixedLicenseEmail;
     MachineId := CurrentMachineId;
-    IssuedAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+    IssuedAt := Trim(ValidatedIssuedAtUtc);
+    if IssuedAt = '' then
+      IssuedAt := GetCurrentUtcIso8601;
     EnteredKey := Trim(LicenseKeyPage.Values[0]);
 
     LicenseContent :=

@@ -276,7 +276,15 @@ def _fetch_recent_local_licenses(limit):
     return results
 
 
-def store_generated_license(machine_id, license_key, generated_by, customer_name="", contact_email="", note=""):
+def store_generated_license(
+    machine_id,
+    license_key,
+    generated_by,
+    customer_name="",
+    contact_email="",
+    note="",
+    source="license_manager_page",
+):
     client, error_message = _open_mongo_client()
     now_utc = datetime.now(timezone.utc)
 
@@ -290,7 +298,7 @@ def store_generated_license(machine_id, license_key, generated_by, customer_name
         "generated_by": (generated_by or "").strip(),
         "generated_at": now_utc,
         "status": "generated",
-        "source": "license_manager_page",
+        "source": (source or "license_manager_page").strip(),
     }
 
     if client is None:

@@ -1,7 +1,6 @@
 import json
 import os,datetime
 import re
-import platform
 from django.db import models
 from decimal import Decimal
 from django.contrib import messages
@@ -74,16 +73,6 @@ from django.utils import timezone
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from types import SimpleNamespace
-from .utils.license_manager import (
-    fetch_recent_generated_licenses,
-    generate_machine_license_key,
-    get_license_email,
-    is_browser_style_machine_id,
-    is_machine_id_valid,
-    normalize_machine_id,
-    store_generated_license,
-)
-
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from barcode import Code128
@@ -221,60 +210,6 @@ allow_reports       = build_permission_decorator("reports")
 allow_logs          = build_permission_decorator("logs")
 allow_company       = build_permission_decorator("company")
 allow_settings      = build_permission_decorator("settings")
-allow_license_manager = build_permission_decorator("license_manager")
-
-
-def _get_current_machine_id():
-    return normalize_machine_id(
-        platform.node().strip().upper() or os.environ.get("COMPUTERNAME", "").strip().upper()
-    )
-
-
-def _get_env_allowed_license_manager_machines():
-    allowed_raw = (
-        os.environ.get("MAHILMARTPOS_LICENSE_MANAGER_ALLOWED_MACHINES")
-        or os.environ.get("MAHILMARTPOS_DEFAULT_LICENSE_MACHINE_ID")
-        or "DESKTOP-21GCBUA"
-    )
-    return {
-        normalize_machine_id(item)
-        for item in str(allowed_raw).split(",")
-        if normalize_machine_id(item)
-    }
-
-
-def _is_license_manager_machine_allowed(machine_id=None):
-    target_machine = normalize_machine_id(machine_id) if machine_id else _get_current_machine_id()
-    if not target_machine:
-        return False
-
-    alias_obj = (
-        ComputerAlias.objects
-        .filter(computer_name=target_machine)
-        .only("license_manager_page_access")
-        .first()
-    )
-    if alias_obj and alias_obj.license_manager_page_access is not None:
-        return bool(alias_obj.license_manager_page_access)
-
-    return target_machine in _get_env_allowed_license_manager_machines()
-
-
-def _set_license_manager_machine_access(machine_id, allow_access):
-    normalized_machine = normalize_machine_id(machine_id)
-    alias_obj, _ = ComputerAlias.objects.get_or_create(
-        computer_name=normalized_machine,
-        defaults={"alias_name": normalized_machine},
-    )
-    update_fields = []
-    if not alias_obj.alias_name:
-        alias_obj.alias_name = normalized_machine
-        update_fields.append("alias_name")
-    if alias_obj.license_manager_page_access != allow_access:
-        alias_obj.license_manager_page_access = allow_access
-        update_fields.append("license_manager_page_access")
-    if update_fields:
-        alias_obj.save(update_fields=update_fields)
 
 
 from django.conf import settings
@@ -883,14 +818,31 @@ def settings_page(request):
     cashiers = User.objects.filter(groups__name="Cashier")
 
     restrictions = {r.user_id: r for r in CashierRestriction.objects.all()}
-    license_manager_machine_allowed = _is_license_manager_machine_allowed()
+    default_license_tool_folder = os.path.join(
+        os.path.expanduser("~"),
+        "Documents",
+        "MahilMartLicenseManager",
+    )
+    license_tool_folder_path = (
+        os.environ.get("MAHILMARTPOS_LICENSE_TOOL_FOLDER")
+        or default_license_tool_folder
+    ).strip()
+    license_tool_folder_uri = ""
+    if license_tool_folder_path:
+        try:
+            from pathlib import Path
+
+            license_tool_folder_uri = Path(license_tool_folder_path).resolve().as_uri()
+        except Exception:
+            license_tool_folder_uri = ""
 
     return render(request, "settings_page.html", {
         "settings_obj": settings_obj,
         "computers": pc_list,
         "cashiers": cashiers,
         "restrictions": restrictions,
-        "license_manager_machine_allowed": license_manager_machine_allowed,
+        "license_tool_folder_path": license_tool_folder_path,
+        "license_tool_folder_uri": license_tool_folder_uri,
     })
 
 # ======================
@@ -1044,134 +996,6 @@ def pos_theme_view(request):
             return redirect("pos_theme")
 
     return render(request, "pos_theme.html", {"settings": settings})
-
-
-@allow_license_manager
-@login_required(login_url="home")
-def license_manager_view(request):
-    if not _is_license_manager_machine_allowed():
-        messages.error(
-            request,
-            "License Manager is allowed only on authorized machine ID.",
-        )
-        return redirect("access_denied")
-
-    can_generate_license = request.user.is_superuser
-
-    local_machine_id = _get_current_machine_id()
-    default_machine_id = (
-        os.environ.get("MAHILMARTPOS_DEFAULT_LICENSE_MACHINE_ID") or "DESKTOP-21GCBUA"
-    ).strip().upper()
-
-    context = {
-        "can_generate_license": can_generate_license,
-        "fixed_license_email": get_license_email(),
-        "generated_key": "",
-        "machine_id_value": default_machine_id,
-        "default_machine_id": default_machine_id,
-        "local_machine_id": local_machine_id,
-        "customer_name_value": "",
-        "contact_email_value": "",
-        "note_value": "",
-        "recent_licenses": [],
-        "mongo_warning": "",
-        "machine_id_page_access": _is_license_manager_machine_allowed(default_machine_id),
-    }
-
-    if request.method == "POST":
-        machine_id = normalize_machine_id(request.POST.get("machine_id"))
-        customer_name = (request.POST.get("customer_name") or "").strip()
-        contact_email = (request.POST.get("contact_email") or "").strip()
-        note = (request.POST.get("note") or "").strip()
-
-        context["machine_id_value"] = machine_id
-        context["customer_name_value"] = customer_name
-        context["contact_email_value"] = contact_email
-        context["note_value"] = note
-        context["machine_id_page_access"] = (
-            _is_license_manager_machine_allowed(machine_id)
-            if is_machine_id_valid(machine_id)
-            else None
-        )
-
-        if "manage_machine_access" in request.POST:
-            requested_action = (request.POST.get("manage_machine_access") or "").strip().lower()
-            allow_access = requested_action == "allow"
-
-            if not can_generate_license:
-                messages.warning(
-                    request,
-                    "Read-only access: only super admin can change machine page access.",
-                )
-            elif not is_machine_id_valid(machine_id):
-                messages.error(
-                    request,
-                    "Enter a valid Machine ID (3-64 chars: letters, numbers, dot, underscore, hyphen).",
-                )
-            elif is_browser_style_machine_id(machine_id):
-                context["machine_id_value"] = ""
-                context["machine_id_page_access"] = None
-                messages.error(
-                    request,
-                    "Do not use POS-UUID browser ID. Use installer Machine ID shown in setup (example: DESKTOP-21GCBUA).",
-                )
-            else:
-                _set_license_manager_machine_access(machine_id, allow_access)
-                context["machine_id_page_access"] = allow_access
-                if allow_access:
-                    messages.success(
-                        request,
-                        f"Machine {machine_id} can now open License Manager page.",
-                    )
-                else:
-                    messages.success(
-                        request,
-                        f"Machine {machine_id} access removed. License Manager page stays hidden on that PC.",
-                    )
-
-        elif "generate_license" in request.POST:
-            if not can_generate_license:
-                messages.warning(request, "Read-only access: you can view generated keys but cannot create new keys.")
-            elif not is_machine_id_valid(machine_id):
-                messages.error(
-                    request,
-                    "Enter a valid Machine ID (3-64 chars: letters, numbers, dot, underscore, hyphen).",
-                )
-            elif is_browser_style_machine_id(machine_id):
-                context["machine_id_value"] = ""
-                messages.error(
-                    request,
-                    "Do not use POS-UUID browser ID. Use installer Machine ID shown in setup (example: DESKTOP-21GCBUA).",
-                )
-            else:
-                generated_key = generate_machine_license_key(machine_id)
-                context["generated_key"] = generated_key
-                is_saved, save_message = store_generated_license(
-                    machine_id=machine_id,
-                    license_key=generated_key,
-                    generated_by=request.user.username,
-                    customer_name=customer_name,
-                    contact_email=contact_email,
-                    note=note,
-                )
-                if is_saved:
-                    messages.success(
-                        request,
-                        f"License key generated: {generated_key} for machine {machine_id}",
-                    )
-                    if save_message and "Saved locally" in save_message:
-                        messages.warning(request, save_message)
-                else:
-                    messages.warning(
-                        request,
-                        f"Key generated ({generated_key}), but MongoDB save failed: {save_message}",
-                    )
-
-    recent_licenses, warning = fetch_recent_generated_licenses(30)
-    context["recent_licenses"] = recent_licenses
-    context["mongo_warning"] = warning
-
-    return render(request, "license_manager.html", context)
 
 
 @allow_settings

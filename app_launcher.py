@@ -4,6 +4,7 @@ import sys
 import threading
 import time
 import webbrowser
+from datetime import datetime, timezone
 from pathlib import Path
 import configparser
 import hashlib
@@ -15,6 +16,7 @@ import socket
 _STDIO_STREAM = None
 _AUTO_HOST_KEYWORDS = {"auto", "dhcp", "current", "system"}
 _DEFAULT_SERVER_PORT = "0608"
+_DEFAULT_LICENSE_WINDOW_MINUTES = 10
 
 
 def _detect_local_ip():
@@ -394,13 +396,12 @@ def _build_checksum_key(seed):
     return f"{part_a:06X}{part_b:06X}{part_c:06X}{part_d:06X}"
 
 
-def _generate_license_key(email, machine_id):
+def _generate_modern_license_key(seed):
     uppercase_chars = "ABCDEFGHJKLMNPQRSTUVWXYZ"
     lowercase_chars = "abcdefghijkmnopqrstuvwxyz"
     number_chars = "23456789"
     special_chars = "@#$%&*!?"
     modulus = 16777215
-    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}"
     state = (
         _build_checksum_value(seed, 3, 11)
         + _build_checksum_value(seed, 7, 19)
@@ -424,6 +425,69 @@ def _generate_license_key(email, machine_id):
     state = (state * 73 + 29) % modulus
     special_b = special_chars[state % len(special_chars)]
     return f"{base_key[:10]}{special_a}{base_key[10:20]}{special_b}{base_key[20:]}"
+
+
+def _generate_license_key(email, machine_id):
+    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}"
+    return _generate_modern_license_key(seed)
+
+
+def _get_license_window_minutes():
+    raw_value = os.environ.get("MAHILMARTPOS_LICENSE_KEY_VALIDITY_MINUTES", str(_DEFAULT_LICENSE_WINDOW_MINUTES)).strip()
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        value = _DEFAULT_LICENSE_WINDOW_MINUTES
+    return max(1, value)
+
+
+def _normalize_generation_time(generated_at=None):
+    value = generated_at or datetime.now(timezone.utc)
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _license_key_window_start(generated_at=None):
+    window_minutes = _get_license_window_minutes()
+    window_seconds = window_minutes * 60
+    generated_at_utc = _normalize_generation_time(generated_at)
+    bucket_index = int(generated_at_utc.timestamp()) // window_seconds
+    return datetime.fromtimestamp(bucket_index * window_seconds, tz=timezone.utc)
+
+
+def _generate_windowed_license_key(email, machine_id, generated_at=None):
+    window_start = _license_key_window_start(generated_at)
+    seed = f"{email.strip().upper()}|{machine_id.strip().upper()}|{window_start.strftime('%Y%m%d%H%M')}"
+    return _generate_modern_license_key(seed)
+
+
+def _parse_license_issued_at(issued_at):
+    value = (issued_at or "").strip()
+    if not value:
+        return None
+
+    parse_targets = [value]
+    if value.endswith("Z"):
+        parse_targets.append(f"{value[:-1]}+00:00")
+
+    for candidate in parse_targets:
+        try:
+            parsed = datetime.fromisoformat(candidate)
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            parsed = datetime.strptime(value, fmt)
+            return parsed.replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+
+    return None
 
 
 def _generate_legacy_short_license_key(email, machine_id):
@@ -475,12 +539,18 @@ def _ensure_license():
         raise SystemExit("License not valid for this machine.")
 
     expected_key = _generate_license_key(email, machine_id)
+    windowed_keys = set()
+    issued_at_dt = _parse_license_issued_at(issued_at)
+    if issued_at_dt is not None:
+        windowed_keys.add(_generate_windowed_license_key(email, machine_id, issued_at_dt))
+
     legacy_short_key = _generate_legacy_short_license_key(email, machine_id)
     staged_key = _generate_staged_license_key(email, machine_id, issued_at) if issued_at else ""
     transition_key = _generate_transition_license_key(email, machine_id, issued_at) if issued_at else ""
     legacy_expected_key = _generate_legacy_license_key(email, machine_id, issued_at) if issued_at else ""
 
     valid_keys_sensitive = {expected_key}
+    valid_keys_sensitive.update(windowed_keys)
     valid_keys_upper = {legacy_short_key}
     if staged_key:
         valid_keys_upper.add(staged_key)

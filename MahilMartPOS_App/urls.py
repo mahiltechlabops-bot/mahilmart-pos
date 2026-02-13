@@ -25,7 +25,6 @@ urlpatterns = [
 
 
     path("pos-theme/", views.pos_theme_view, name="pos_theme"),
-    path("settings/license-manager/", views.license_manager_view, name="license_manager"),
     path("permission-settings/", views.permission_settings_view, name="permission_settings"),
 
 
