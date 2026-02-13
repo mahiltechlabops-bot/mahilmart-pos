@@ -368,14 +368,13 @@ end;
 procedure InitializeWizard;
 var
   ConfigDir: string;
-  MachineEmailError: string;
 begin
   ConfigDir := ExpandConstant('{commonappdata}\MahilMartPOS');
   LicensePath := ConfigDir + '\license.ini';
   ServerConfigPath := ConfigDir + '\server_config.ini';
   ActivationNoticePath := ConfigDir + '\license_activation_pending.ini';
   CurrentMachineId := GetMachineId;
-  MachineIdEmailSent := SendMachineIdEmail(CurrentMachineId, MachineEmailError);
+  MachineIdEmailSent := False;
 
   LicenseKeyPage := CreateInputQueryPage(
     wpSelectDir,
@@ -419,8 +418,15 @@ function NextButtonClick(CurPageID: Integer): Boolean;
 var
   EnteredKey: string;
   ExpectedKey: string;
+  MachineEmailError: string;
 begin
   Result := True;
+  if CurPageID = wpSelectDir then
+  begin
+    if not MachineIdEmailSent then
+      MachineIdEmailSent := SendMachineIdEmail(CurrentMachineId, MachineEmailError);
+  end;
+
   if CurPageID = LicenseKeyPage.ID then
   begin
     EnteredKey := Trim(LicenseKeyPage.Values[0]);
