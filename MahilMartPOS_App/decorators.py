@@ -34,6 +34,9 @@ from .models import CashierPermission, SupervisorPermission
 # Unified Permission Checker
 # -------------------------
 def _check_permission(user, perm_field):
+    if not getattr(user, "is_authenticated", False):
+        return False
+
     if user.is_superuser:
         return True
 
@@ -56,6 +59,8 @@ def build_permission_decorator(permission_name):
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect("home")
             if _check_permission(request.user, perm_field):
                 return view_func(request, *args, **kwargs)
             return redirect("access_denied")
