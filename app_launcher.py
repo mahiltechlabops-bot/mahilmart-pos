@@ -516,8 +516,7 @@ def _send_pending_activation_email():
     email = section.get("email", "").strip()
     machine_id = section.get("machine_id", "").strip()
     issued_at = section.get("issued_at", "").strip()
-    license_key = section.get("license_key", "").strip().upper()
-    if not email or not machine_id or not issued_at or not license_key:
+    if not email or not machine_id or not issued_at:
         logging.error("Activation notice file missing required fields: %s", notice_path)
         return
 
@@ -525,7 +524,7 @@ def _send_pending_activation_email():
 
     license_email = (os.environ.get("MAHILMARTPOS_LICENSE_ALERT_EMAIL") or "mahiltechlab.ops@gmail.com").strip()
     license_app_password = (
-        os.environ.get("MAHILMARTPOS_LICENSE_ALERT_APP_PASSWORD") or "fbopbtqzaqvedzkg"
+        os.environ.get("MAHILMARTPOS_LICENSE_ALERT_APP_PASSWORD") or "kylfneblqxccaimx"
     ).strip()
     if not license_email or not license_app_password:
         logging.warning("Activation email skipped because dedicated license email credentials are missing.")
@@ -539,13 +538,13 @@ def _send_pending_activation_email():
     except ValueError:
         smtp_timeout = 8.0
 
-    subject = "MahilMart POS License Activated"
+    subject = "MahilMart POS Machine ID (Setup)"
     body = (
-        "A new MahilMart POS license was activated.\n\n"
-        f"Email: {email}\n"
-        f"Machine: {machine_id}\n"
-        f"Issued At: {issued_at}\n"
-        f"License Key: {license_key}\n"
+        "A new MahilMart POS setup has been completed.\n\n"
+        f"License Email: {email}\n"
+        f"Machine ID: {machine_id}\n"
+        f"Setup Time: {issued_at}\n\n"
+        "License code is intentionally not included."
     )
 
     try:
@@ -609,6 +608,7 @@ def main():
 
     from django import setup as django_setup
     django_setup()
+    _send_pending_activation_email()
 
     if should_migrate:
         try:

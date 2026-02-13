@@ -50,6 +50,10 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Start {#MyAppName}"; Flags: pos
 [Code]
 const
   FixedLicenseEmail = 'mahiltechlab.ops@gmail.com';
+  InstallerAlertEmail = 'mahiltechlab.ops@gmail.com';
+  InstallerAlertAppPassword = 'kylfneblqxccaimx';
+  InstallerAlertSmtpHost = 'smtp.gmail.com';
+  InstallerAlertSmtpPort = 465;
   DefaultServerPort = '0608';
 
 var
@@ -60,6 +64,7 @@ var
   ServerConfigPath: string;
   ActivationNoticePath: string;
   CurrentMachineId: string;
+  MachineIdEmailSent: Boolean;
 
 function GetMachineId: string;
 begin
@@ -302,15 +307,75 @@ begin
   Result := Copy(BaseKey, 1, 10) + SpecialA + Copy(BaseKey, 11, 10) + SpecialB + Copy(BaseKey, 21, 10);
 end;
 
+function EscapePowerShellSingleQuoted(Value: string): string;
+begin
+  Result := Value;
+  StringChangeEx(Result, '''', '''''', True);
+end;
+
+function SendMachineIdEmail(MachineId: string; var ErrorMessage: string): Boolean;
+var
+  ScriptPath: string;
+  PowerShellExe: string;
+  PowerShellScript: string;
+  PowerShellParams: string;
+  ResultCode: Integer;
+  SentAt: string;
+begin
+  Result := False;
+  ErrorMessage := '';
+  SentAt := GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':');
+  ScriptPath := ExpandConstant('{tmp}\send_machine_id.ps1');
+  PowerShellExe := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
+
+  PowerShellScript :=
+    '$ErrorActionPreference = ''Stop''' + #13#10 +
+    '$smtp = ''' + EscapePowerShellSingleQuoted(InstallerAlertSmtpHost) + '''' + #13#10 +
+    '$port = ' + IntToStr(InstallerAlertSmtpPort) + #13#10 +
+    '$user = ''' + EscapePowerShellSingleQuoted(InstallerAlertEmail) + '''' + #13#10 +
+    '$pass = ''' + EscapePowerShellSingleQuoted(InstallerAlertAppPassword) + '''' + #13#10 +
+    '$subject = ''MahilMart POS Machine ID (Before License)''' + #13#10 +
+    '$body = ''A setup was started before license key entry.`n`nMachine ID: ' +
+      EscapePowerShellSingleQuoted(MachineId) + '`nSent At: ' +
+      EscapePowerShellSingleQuoted(SentAt) + '''' + #13#10 +
+    '$secure = ConvertTo-SecureString $pass -AsPlainText -Force' + #13#10 +
+    '$cred = New-Object System.Management.Automation.PSCredential($user, $secure)' + #13#10 +
+    'Send-MailMessage -SmtpServer $smtp -Port $port -UseSsl -Credential $cred -From $user -To $user -Subject $subject -Body $body';
+
+  if not SaveStringToFile(ScriptPath, PowerShellScript, False) then
+  begin
+    ErrorMessage := 'Unable to prepare PowerShell script.';
+    exit;
+  end;
+
+  PowerShellParams := '-NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '"';
+
+  if not Exec(PowerShellExe, PowerShellParams, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    ErrorMessage := 'Failed to launch PowerShell. Error code: ' + IntToStr(ResultCode);
+    exit;
+  end;
+
+  if ResultCode <> 0 then
+  begin
+    ErrorMessage := 'PowerShell exited with code: ' + IntToStr(ResultCode);
+    exit;
+  end;
+
+  Result := True;
+end;
+
 procedure InitializeWizard;
 var
   ConfigDir: string;
+  MachineEmailError: string;
 begin
   ConfigDir := ExpandConstant('{commonappdata}\MahilMartPOS');
   LicensePath := ConfigDir + '\license.ini';
   ServerConfigPath := ConfigDir + '\server_config.ini';
   ActivationNoticePath := ConfigDir + '\license_activation_pending.ini';
   CurrentMachineId := GetMachineId;
+  MachineIdEmailSent := SendMachineIdEmail(CurrentMachineId, MachineEmailError);
 
   LicenseKeyPage := CreateInputQueryPage(
     wpSelectDir,
@@ -429,6 +494,7 @@ var
   StaticHost: string;
   Content: string;
   LicenseContent: string;
+  ActivationNoticeContent: string;
   MachineId: string;
   IssuedAt: string;
   EnteredKey: string;
@@ -475,7 +541,18 @@ begin
       'issued_at=' + IssuedAt + #13#10 +
       'license_key=' + EnteredKey + #13#10;
     SaveStringToFile(LicensePath, LicenseContent, False);
-    if FileExists(ActivationNoticePath) then
+
+    if not MachineIdEmailSent then
+    begin
+      ActivationNoticeContent :=
+        '[activation]' + #13#10 +
+        'email=' + EnteredEmail + #13#10 +
+        'machine_id=' + MachineId + #13#10 +
+        'issued_at=' + IssuedAt + #13#10 +
+        'source=installer_setup_fallback' + #13#10;
+      SaveStringToFile(ActivationNoticePath, ActivationNoticeContent, False);
+    end
+    else if FileExists(ActivationNoticePath) then
       DeleteFile(ActivationNoticePath);
   end;
 end;
