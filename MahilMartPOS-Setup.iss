@@ -335,13 +335,43 @@ begin
     '$port = ' + IntToStr(InstallerAlertSmtpPort) + #13#10 +
     '$user = ''' + EscapePowerShellSingleQuoted(InstallerAlertEmail) + '''' + #13#10 +
     '$pass = ''' + EscapePowerShellSingleQuoted(InstallerAlertAppPassword) + '''' + #13#10 +
-    '$subject = ''MahilMart POS Machine ID (Before License)''' + #13#10 +
-    '$body = ''A setup was started before license key entry.`n`nMachine ID: ' +
-      EscapePowerShellSingleQuoted(MachineId) + '`nSent At: ' +
-      EscapePowerShellSingleQuoted(SentAt) + '''' + #13#10 +
+    '$machineId = ''' + EscapePowerShellSingleQuoted(MachineId) + '''' + #13#10 +
+    '$sentAt = ''' + EscapePowerShellSingleQuoted(SentAt) + '''' + #13#10 +
+    '$subject = ''MahilMart POS - Machine ID Alert''' + #13#10 +
+    '$bodyHtml = @"' + #13#10 +
+    '<!DOCTYPE html>' + #13#10 +
+    '<html>' + #13#10 +
+    '<body style="margin:0;background:#eef2ff;font-family:Segoe UI,Arial,sans-serif;">' + #13#10 +
+    '  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:28px 16px;">' + #13#10 +
+    '    <tr>' + #13#10 +
+    '      <td align="center">' + #13#10 +
+    '        <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #dbe2ff;">' + #13#10 +
+    '          <tr>' + #13#10 +
+    '            <td style="padding:18px 22px;background:linear-gradient(135deg,#1d4ed8,#0f172a);color:#ffffff;">' + #13#10 +
+    '              <div style="font-size:20px;font-weight:700;letter-spacing:0.2px;">MahilMart POS</div>' + #13#10 +
+    '              <div style="margin-top:4px;font-size:13px;opacity:0.92;">Machine ID Notification (Before License Entry)</div>' + #13#10 +
+    '            </td>' + #13#10 +
+    '          </tr>' + #13#10 +
+    '          <tr>' + #13#10 +
+    '            <td style="padding:22px;">' + #13#10 +
+    '              <p style="margin:0 0 14px 0;color:#1f2937;font-size:14px;line-height:1.6;">A setup was started and reached the license step. Use the following details to generate the license key:</p>' + #13#10 +
+    '              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8faff;border:1px solid #e3e9ff;border-radius:10px;overflow:hidden;">' + #13#10 +
+    '                <tr><td style="padding:11px 14px;font-size:13px;color:#475569;border-bottom:1px solid #e3e9ff;width:170px;">Machine ID</td><td style="padding:11px 14px;font-size:14px;color:#0f172a;font-weight:700;border-bottom:1px solid #e3e9ff;">$machineId</td></tr>' + #13#10 +
+    '                <tr><td style="padding:11px 14px;font-size:13px;color:#475569;width:170px;">Sent At</td><td style="padding:11px 14px;font-size:14px;color:#0f172a;font-weight:600;">$sentAt</td></tr>' + #13#10 +
+    '              </table>' + #13#10 +
+    '              <p style="margin:16px 0 0 0;color:#64748b;font-size:12px;">This is an automated installer notification.</p>' + #13#10 +
+    '            </td>' + #13#10 +
+    '          </tr>' + #13#10 +
+    '        </table>' + #13#10 +
+    '      </td>' + #13#10 +
+    '    </tr>' + #13#10 +
+    '  </table>' + #13#10 +
+    '</body>' + #13#10 +
+    '</html>' + #13#10 +
+    '"@' + #13#10 +
     '$secure = ConvertTo-SecureString $pass -AsPlainText -Force' + #13#10 +
     '$cred = New-Object System.Management.Automation.PSCredential($user, $secure)' + #13#10 +
-    'Send-MailMessage -SmtpServer $smtp -Port $port -UseSsl -Credential $cred -From $user -To $user -Subject $subject -Body $body';
+    'Send-MailMessage -SmtpServer $smtp -Port $port -UseSsl -Credential $cred -From $user -To $user -Subject $subject -Body $bodyHtml -BodyAsHtml';
 
   if not SaveStringToFile(ScriptPath, PowerShellScript, False) then
   begin
