@@ -6614,7 +6614,7 @@ from django.core.paginator import Paginator
 from datetime import timedelta
 from django.utils import timezone
 
-from .models import ActivityLog, CompanyDetails
+from .models import ActivityLog
 
 
 @login_required
@@ -6645,11 +6645,6 @@ def activity_log_view(request):
     # --------------------
     sessions = []
     open_sessions = {}
-    company = CompanyDetails.objects.first()
-    configured_timeout = getattr(company, "auto_logout_minutes", 0) or 0
-    session_close_minutes = configured_timeout if configured_timeout > 0 else 30
-    now_time = timezone.now()
-
     def resolve_role(log):
         if log.role:
             return log.role
@@ -6692,9 +6687,7 @@ def activity_log_view(request):
         if log.action == "LOGIN":
             if key in open_sessions:
                 stale_login = open_sessions.pop(key)
-                stale_cutoff = stale_login.created_at + timedelta(minutes=session_close_minutes)
-                inferred_logout_at = min(log.created_at, stale_cutoff)
-                append_session_entry(stale_login, inferred_logout_at)
+                append_session_entry(stale_login, log.created_at)
             open_sessions[key] = log
 
         elif log.action == "LOGOUT" and key in open_sessions:
@@ -6705,11 +6698,7 @@ def activity_log_view(request):
     # Still logged-in users
     # --------------------
     for login_log in open_sessions.values():
-        auto_close_at = login_log.created_at + timedelta(minutes=session_close_minutes)
-        if now_time >= auto_close_at:
-            append_session_entry(login_log, auto_close_at)
-        else:
-            append_session_entry(login_log, None)
+        append_session_entry(login_log, None)
 
     # Latest sessions first
     sessions.reverse()
