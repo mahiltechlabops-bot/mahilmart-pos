@@ -1120,8 +1120,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const navItems = document.querySelectorAll(".nav-item");
     const currentPath = window.location.pathname;
     const settingsNavItem = document.querySelector('.nav-item[data-nav="settings"]');
-    let isInternalNavigation = false;
-    const autoLogoutEndpoint = "{% url 'auto_logout_on_close' %}";
 
     /* -------------------------------------------
        BOOTSTRAP TOOLTIP INITIALIZATION
@@ -1234,64 +1232,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* -------------------------------------------
-       AUTO LOGOUT ON WINDOW/TAB CLOSE
-    -------------------------------------------- */
-    function markInternalNavigationFromLink(link, clickEvent) {
-        if (!link) return;
-        if (link.target === "_blank") return;
-        if (clickEvent && (clickEvent.ctrlKey || clickEvent.metaKey || clickEvent.shiftKey || clickEvent.altKey)) {
-            return;
-        }
-        try {
-            const linkUrl = new URL(link.href, window.location.origin);
-            if (linkUrl.origin === window.location.origin) {
-                isInternalNavigation = true;
-            }
-        } catch (err) {
-            // Ignore malformed URLs
-        }
-    }
-
-    document.addEventListener("click", (event) => {
-        const link = event.target.closest("a[href]");
-        markInternalNavigationFromLink(link, event);
-    }, true);
-
-    document.addEventListener("submit", () => {
-        isInternalNavigation = true;
-    }, true);
-
-    function sendAutoLogoutBeacon() {
-        const payload = "reason=window_close";
-        try {
-            if (navigator.sendBeacon) {
-                const blob = new Blob([payload], { type: "application/x-www-form-urlencoded" });
-                navigator.sendBeacon(autoLogoutEndpoint, blob);
-                return;
-            }
-        } catch (err) {
-            // Fallback below
-        }
-
-        try {
-            fetch(autoLogoutEndpoint, {
-                method: "POST",
-                credentials: "same-origin",
-                keepalive: true,
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: payload,
-            });
-        } catch (err) {
-            // Ignore network errors during unload
-        }
-    }
-
-    window.addEventListener("beforeunload", () => {
-        if (isInternalNavigation) return;
-        sendAutoLogoutBeacon();
-    });
-
-    /* -------------------------------------------
        PREMIUM CONFIRM MODAL
     -------------------------------------------- */
     window.showConfirm = function (title, message, onConfirm) {
@@ -1324,7 +1264,6 @@ document.addEventListener('DOMContentLoaded', function () {
     item.addEventListener("click", () => {
         const link = item.querySelector("a");
         if (link) {
-            isInternalNavigation = true;
             window.location.href = link.href;
         }
     });
