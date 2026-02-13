@@ -535,7 +535,7 @@ def login_view(request):
             "app_name": app_name,
             "app_short": app_short,
             "app_tagline": "Enterprise Retail System",
-            "app_version": "v2.0.0",
+            "app_version": "v1.0.0",
         }
 
     # ------------------------------------------
@@ -638,7 +638,7 @@ def initial_admin_setup(request):
             "app_name": app_name,
             "app_short": app_short,
             "app_tagline": "Enterprise Retail System",
-            "app_version": "v2.0.0",
+            "app_version": "v1.0.0",
         }
 
     context = _get_branding_context()
