@@ -1,0 +1,1139 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Email Configuration | System Settings{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        --card-hover-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+        --border-radius-lg: 16px;
+        --border-radius-md: 12px;
+        --border-radius-sm: 8px;
+        --text-primary: #2d3748;
+        --text-secondary: #718096;
+        --border-color: #e2e8f0;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --info-color: #3b82f6;
+    }
+
+    .premium-container {
+        max-width: none;
+        width: 100%;
+        margin: 0;
+        padding: 30px 30px;
+    }
+
+    .premium-header {
+        background: var(--primary-gradient);
+        border-radius: var(--border-radius-lg);
+        padding: 40px;
+        margin-bottom: 30px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .premium-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--secondary-gradient);
+    }
+
+    .premium-header h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .premium-header h1 i {
+        font-size: 2.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 50%;
+    }
+
+    .premium-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .premium-card {
+        background: white;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--card-shadow);
+        padding: 40px;
+        transition: all 0.3s ease;
+        border: 1px solid var(--border-color);
+    }
+
+    .premium-card:hover {
+        box-shadow: var(--card-hover-shadow);
+        transform: translateY(-2px);
+    }
+
+    .card-header {
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .card-header h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .card-header h2 i {
+        color: var(--info-color);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .form-label i {
+        color: var(--info-color);
+        font-size: 1.1rem;
+    }
+
+    .required-star {
+        color: #ef4444;
+        margin-left: 4px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 14px 16px;
+        border: 2px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: white;
+        color: var(--text-primary);
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--info-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-control::placeholder {
+        color: #a0aec0;
+    }
+
+    .form-help-text {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.4;
+    }
+
+    /* Custom Checkbox Styling */
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 18px 0;
+        padding: 18px 20px;
+        background: #f8fafc;
+        border-radius: var(--border-radius-md);
+        border: 1px solid var(--border-color);
+    }
+
+    .checkbox-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        width: 100%;
+        margin: 0;
+        position: relative;
+    }
+
+    .checkbox-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .toggle-input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .checkbox-custom {
+        position: relative;
+        width: 46px;
+        height: 26px;
+        background: #cbd5f5;
+        border: 2px solid #cbd5f5;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    .checkbox-custom::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 3px;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
+        background: #ffffff;
+        border-radius: 999px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+        transition: transform 0.2s ease;
+    }
+
+    .toggle-input:checked + .checkbox-custom {
+        background: var(--info-color);
+        border-color: var(--info-color);
+    }
+
+    .toggle-input:checked + .checkbox-custom::after {
+        transform: translate(20px, -50%);
+    }
+
+    .checkbox-label:focus-within .checkbox-custom {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Current Sending Status */
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin: 10px 0 25px;
+    }
+
+    .status-item {
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        padding: 14px;
+    }
+
+    .status-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+    }
+
+    .status-value {
+        font-weight: 600;
+        color: var(--text-primary);
+        word-break: break-word;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .status-pill.success {
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+    }
+
+    .status-pill.muted {
+        background: rgba(148, 163, 184, 0.2);
+        color: #475569;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 2px solid var(--border-color);
+    }
+
+    .btn {
+        padding: 14px 32px;
+        border-radius: var(--border-radius-sm);
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-width: 140px;
+    }
+
+    .btn-primary {
+        background: var(--primary-gradient);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary {
+        background: white;
+        color: var(--text-primary);
+        border: 2px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+        background: #f7fafc;
+        border-color: #cbd5e0;
+        transform: translateY(-2px);
+    }
+
+    /* Test Email Section */
+    .test-section {
+        margin-top: 40px;
+        padding: 30px;
+        background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+        border-radius: var(--border-radius-md);
+        border: 2px dashed #68d391;
+    }
+
+    .quick-actions {
+        margin-top: 30px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        background: #f8fafc;
+    }
+
+    .quick-actions h3 {
+        margin: 0 0 12px 0;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .test-section h3 {
+        color: #2f855a;
+        margin: 0 0 15px 0;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .test-input-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .test-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #c6f6d5;
+        border-radius: var(--border-radius-sm);
+        background: white;
+    }
+
+    .btn-test {
+        background: #38a169;
+        color: white;
+        padding: 12px 24px;
+        border-radius: var(--border-radius-sm);
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-test:hover {
+        background: #2f855a;
+        transform: translateY(-2px);
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-top: 10px;
+    }
+
+    .status-connected {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .status-disconnected {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    /* Messages/Notifications */
+    .message-container {
+        margin-bottom: 30px;
+    }
+
+    .alert {
+        padding: 20px;
+        border-radius: var(--border-radius-sm);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        border-left: 4px solid;
+    }
+
+    .alert-success {
+        background: rgba(16, 185, 129, 0.1);
+        border-left-color: #10b981;
+        color: #10b981;
+    }
+
+    .alert-error {
+        background: rgba(239, 68, 68, 0.1);
+        border-left-color: #ef4444;
+        color: #ef4444;
+    }
+
+    .alert-info {
+        background: rgba(59, 130, 246, 0.1);
+        border-left-color: var(--info-color);
+        color: var(--info-color);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .premium-container {
+            padding: 20px 15px;
+        }
+
+        .premium-header {
+            padding: 30px 20px;
+        }
+
+        .premium-header h1 {
+            font-size: 1.8rem;
+            flex-direction: column;
+            text-align: center;
+            gap: 10px;
+        }
+
+        .premium-card {
+            padding: 25px 20px;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .test-input-group {
+            flex-direction: column;
+        }
+    }
+
+    /* Password Toggle */
+    .password-toggle {
+        position: relative;
+    }
+
+    .toggle-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: color 0.3s ease;
+    }
+
+    .toggle-icon:hover {
+        color: var(--info-color);
+    }
+
+    /* Animated Focus */
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+
+    .form-control:focus {
+        animation: pulse 1.5s infinite;
+    }
+
+    /* Loading State */
+    .btn-loading {
+        position: relative;
+        color: transparent !important;
+    }
+
+    .btn-loading::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border: 2px solid white;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<div class="premium-container">
+    <!-- Header Section -->
+    <div class="premium-header">
+        <h1>
+            <i class="fas fa-envelope"></i>
+            Email Configuration
+        </h1>
+        <p>Configure your email server settings for system notifications and alerts</p>
+    </div>
+
+    <!-- Messages Display -->
+    {% if messages %}
+    <div class="message-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Configuration Card -->
+    <div class="premium-card">
+        <div class="card-header">
+            <h2>
+                <i class="fas fa-sliders-h"></i>
+                SMTP Server Settings
+            </h2>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-item">
+                <div class="status-label">Sending From</div>
+                <div class="status-value">{{ current_from_email }}</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Alert Recipients</div>
+                <div class="status-value">{{ current_recipients }}</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Access Denied Alerts</div>
+                <div class="status-value">
+                    {% if access_denied_enabled %}
+                        <span class="status-pill success" id="statusAccessDenied">Enabled</span>
+                    {% else %}
+                        <span class="status-pill muted" id="statusAccessDenied">Disabled</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Low Stock Alerts</div>
+                <div class="status-value">
+                    {% if low_stock_enabled %}
+                        <span class="status-pill success" id="statusLowStock">Enabled</span>
+                    {% else %}
+                        <span class="status-pill muted" id="statusLowStock">Disabled</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Out of Stock Alerts</div>
+                <div class="status-value">
+                    {% if no_stock_enabled %}
+                        <span class="status-pill success" id="statusNoStock">Enabled</span>
+                    {% else %}
+                        <span class="status-pill muted" id="statusNoStock">Disabled</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <form method="post" id="emailConfigForm">
+            {% csrf_token %}
+            
+        <div class="form-grid">
+                <!-- SMTP Host -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-server"></i>
+                        SMTP Host
+                        <span class="required-star">*</span>
+                    </label>
+                    <input type="text" 
+                           name="email_host" 
+                           class="form-control"
+                           value="{{ config.email_host|default:'smtp.gmail.com' }}" 
+                           required
+                           placeholder="e.g., smtp.gmail.com">
+                    <span class="form-help-text">
+                        Enter your email service provider's SMTP server address
+                    </span>
+                </div>
+
+                <!-- SMTP Port -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-plug"></i>
+                        SMTP Port
+                        <span class="required-star">*</span>
+                    </label>
+                    <input type="number" 
+                           name="email_port" 
+                           class="form-control"
+                           value="{{ config.email_port|default:587 }}" 
+                           required
+                           placeholder="e.g., 587">
+                    <span class="form-help-text">
+                        Common ports: 587 (TLS), 465 (SSL), 25 (Standard)
+                    </span>
+                </div>
+
+                <!-- Email Username -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-user"></i>
+                        Email Username
+                        <span class="required-star">*</span>
+                    </label>
+                    <input type="email" 
+                           name="email_host_user" 
+                           class="form-control"
+                           value="{{ config.email_host_user }}" 
+                           required
+                           placeholder="your-email@gmail.com">
+                    <span class="form-help-text">
+                        Full email address used for authentication
+                    </span>
+                </div>
+
+                <!-- Email Password -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-key"></i>
+                        Email App Password
+                        <span class="required-star">*</span>
+                    </label>
+                    <div class="password-toggle">
+                        <input type="password" 
+                               name="email_host_password" 
+                               id="passwordInput"
+                               class="form-control"
+                               placeholder="Enter app password"
+                               autocomplete="new-password">
+                        <i class="fas fa-eye toggle-icon" id="togglePassword"></i>
+                    </div>
+                    <span class="form-help-text">
+                        Leave blank to keep current password. Use app passwords for Gmail/Office 365.
+                    </span>
+                </div>
+
+                <!-- Default From Email -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-at"></i>
+                        Default From Email
+                        <span class="required-star">*</span>
+                    </label>
+                    <input type="email" 
+                           name="default_from_email" 
+                           class="form-control"
+                           value="{{ config.default_from_email }}" 
+                           required
+                           placeholder="noreply@yourcompany.com">
+                    <span class="form-help-text">
+                        Email address that will appear as sender
+                    </span>
+                </div>
+
+                <!-- Alert Recipients -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-users"></i>
+                        Alert Recipients
+                    </label>
+                    <input type="text" 
+                           name="alert_recipients" 
+                           class="form-control"
+                           value="{{ config.alert_recipients|default_if_none:'' }}" 
+                           placeholder="admin@example.com, support@example.com">
+                    <span class="form-help-text">
+                        Comma-separated list of email addresses for system alerts
+                    </span>
+                </div>
+            </div>
+
+            <!-- Alert Toggles -->
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <span class="checkbox-text">
+                        <strong>Access Denied Alert Emails</strong>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Send an email when someone tries to open a restricted page.
+                        </span>
+                    </span>
+                    <input type="checkbox" 
+                           name="access_denied_alert_enabled" 
+                           id="access_denied_alert_enabled"
+                           class="toggle-input"
+                           {% if not config or config.access_denied_alert_enabled %}checked{% endif %}>
+                    <span class="checkbox-custom" aria-hidden="true"></span>
+                </label>
+            </div>
+
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <span class="checkbox-text">
+                        <strong>Low Stock Alert Emails</strong>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Send an email when items go below the low stock threshold.
+                        </span>
+                    </span>
+                    <input type="checkbox" 
+                           name="low_stock_alert_enabled" 
+                           id="low_stock_alert_enabled"
+                           class="toggle-input"
+                           {% if not config or config.low_stock_alert_enabled %}checked{% endif %}>
+                    <span class="checkbox-custom" aria-hidden="true"></span>
+                </label>
+            </div>
+
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <span class="checkbox-text">
+                        <strong>Out of Stock Alert Emails</strong>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Send an email when items are completely out of stock.
+                        </span>
+                    </span>
+                    <input type="checkbox" 
+                           name="no_stock_alert_enabled" 
+                           id="no_stock_alert_enabled"
+                           class="toggle-input"
+                           {% if not config or config.no_stock_alert_enabled %}checked{% endif %}>
+                    <span class="checkbox-custom" aria-hidden="true"></span>
+                </label>
+            </div>
+            <div id="toggleResult"></div>
+
+            <!-- TLS Checkbox -->
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <span class="checkbox-text">
+                        <strong>Use TLS (Transport Layer Security)</strong>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Recommended for secure email transmission. Required for most modern email providers.
+                        </span>
+                    </span>
+                    <input type="checkbox" 
+                           name="use_tls" 
+                           id="use_tls"
+                           class="toggle-input"
+                           {% if config.use_tls %}checked{% endif %}>
+                    <span class="checkbox-custom" aria-hidden="true"></span>
+                </label>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary" id="saveBtn">
+                    <i class="fas fa-save"></i>
+                    Save Configuration
+                </button>
+                <button type="button" class="btn btn-secondary" onclick='window.location.href="{% url "dashboard" %}"'>
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <button type="reset" class="btn btn-secondary" id="resetBtn">
+                    <i class="fas fa-redo"></i>
+                    Reset Form
+                </button>
+            </div>
+        </form>
+
+        <div class="quick-actions">
+            <h3>
+                <i class="fas fa-bolt"></i>
+                Quick Actions
+            </h3>
+            <div class="action-buttons">
+                <a class="btn btn-secondary" href="{% url 'email_view' %}">
+                    <i class="fas fa-eye"></i>
+                    View Configuration
+                </a>
+                <a class="btn btn-secondary" href="{% url 'email_logs' %}">
+                    <i class="fas fa-list"></i>
+                    View Email Logs
+                </a>
+                <a class="btn btn-secondary" href="{% url 'email_preview' %}">
+                    <i class="fas fa-envelope-open-text"></i>
+                    Preview Access Alert
+                </a>
+            </div>
+        </div>
+
+        <!-- Test Email Section -->
+        <div class="test-section">
+            <h3>
+                <i class="fas fa-paper-plane"></i>
+                Test Email Configuration
+            </h3>
+            <p style="margin: 0 0 15px 0; color: #4a5568;">
+                Send a test email to verify your configuration is working correctly.
+            </p>
+            <div class="test-input-group">
+                <input type="email" 
+                       id="testEmail" 
+                       class="test-input" 
+                       placeholder="Enter email address for test">
+                <button type="button" class="btn-test" id="sendTestBtn">
+                    <i class="fas fa-paper-plane"></i>
+                    Send Test Email
+                </button>
+            </div>
+            <div id="testResult" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password toggle functionality
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('passwordInput');
+    
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+    }
+
+    // Form submission handling
+    const form = document.getElementById('emailConfigForm');
+    const saveBtn = document.getElementById('saveBtn');
+    
+    if (form && saveBtn) {
+        form.addEventListener('submit', function(e) {
+            // Validate form
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#ef4444';
+                    isValid = false;
+                } else {
+                    field.style.borderColor = '';
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Show loading state
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            saveBtn.classList.add('btn-loading');
+            
+            // Optional: Add confirmation for password change
+            const passwordField = document.querySelector('input[name="email_host_password"]');
+            if (passwordField && passwordField.value.trim()) {
+                if (!confirm('Are you sure you want to change the email password?')) {
+                    e.preventDefault();
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Configuration';
+                    saveBtn.classList.remove('btn-loading');
+                }
+            }
+        });
+    }
+
+    // Auto-save toggle switches (no page refresh)
+    if (form) {
+        const toggles = form.querySelectorAll('.toggle-input');
+        const toggleResult = document.getElementById('toggleResult');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+        const setToggleResult = (ok, message) => {
+            if (!toggleResult) return;
+            toggleResult.innerHTML = `
+                <div class="status-indicator ${ok ? 'status-connected' : 'status-disconnected'}">
+                    <i class="fas ${ok ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                    ${message}
+                </div>
+            `;
+            setTimeout(() => {
+                toggleResult.innerHTML = '';
+            }, 4000);
+        };
+
+        const setTogglesDisabled = (disabled) => {
+            toggles.forEach(t => t.disabled = disabled);
+        };
+
+        const updateStatusPill = (id, enabled) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = enabled ? 'Enabled' : 'Disabled';
+            el.classList.remove('success', 'muted');
+            el.classList.add(enabled ? 'success' : 'muted');
+        };
+
+        const syncStatusBadges = () => {
+            const accessDeniedToggle = document.getElementById('access_denied_alert_enabled');
+            const lowStockToggle = document.getElementById('low_stock_alert_enabled');
+            const noStockToggle = document.getElementById('no_stock_alert_enabled');
+
+            updateStatusPill('statusAccessDenied', accessDeniedToggle?.checked);
+            updateStatusPill('statusLowStock', lowStockToggle?.checked);
+            updateStatusPill('statusNoStock', noStockToggle?.checked);
+        };
+
+        const buildPayload = () => {
+            const payload = new URLSearchParams();
+            payload.set('toggle_only', '1');
+            toggles.forEach(t => {
+                payload.set(t.name, t.checked ? 'on' : '');
+            });
+            return payload;
+        };
+
+        toggles.forEach(toggle => {
+            toggle.addEventListener('change', async function() {
+                if (!form.checkValidity()) {
+                    alert('Please fill required SMTP fields first, then save once.');
+                    toggle.checked = !toggle.checked;
+                    return;
+                }
+
+                setTogglesDisabled(true);
+
+                try {
+                    const res = await fetch(window.location.href, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "X-CSRFToken": csrfToken,
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        body: buildPayload().toString()
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.success) {
+                        syncStatusBadges();
+                        setToggleResult(true, data.message || "Saved.");
+                    } else {
+                        setToggleResult(false, data.message || "Failed to save.");
+                    }
+                } catch (err) {
+                    setToggleResult(false, "Failed to save.");
+                } finally {
+                    setTogglesDisabled(false);
+                }
+            });
+        });
+    }
+
+    // Test email functionality
+    const sendTestBtn = document.getElementById('sendTestBtn');
+    const testEmailInput = document.getElementById('testEmail');
+    const testResult = document.getElementById('testResult');
+    
+    if (sendTestBtn && testEmailInput && testResult) {
+        sendTestBtn.addEventListener('click', function() {
+            const email = testEmailInput.value.trim();
+            
+            if (!email) {
+                alert('Please enter an email address for testing');
+                testEmailInput.focus();
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                alert('Please enter a valid email address');
+                testEmailInput.focus();
+                return;
+            }
+            
+            // Show loading
+            const originalText = sendTestBtn.innerHTML;
+            sendTestBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            sendTestBtn.disabled = true;
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            const payload = new URLSearchParams({ email });
+
+            fetch("{% url 'email_test' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": csrfToken,
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: payload.toString()
+            })
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                return { ok: res.ok, data };
+            })
+            .then(({ ok, data }) => {
+                if (ok && data.success) {
+                    testResult.innerHTML = `
+                        <div class="status-indicator status-connected">
+                            <i class="fas fa-check-circle"></i>
+                            ${data.message || `Test email sent successfully to ${email}`}
+                        </div>
+                    `;
+                } else {
+                    testResult.innerHTML = `
+                        <div class="status-indicator status-disconnected">
+                            <i class="fas fa-exclamation-circle"></i>
+                            ${data.message || "Failed to send test email. Check your configuration."}
+                        </div>
+                    `;
+                }
+            })
+            .catch(() => {
+                testResult.innerHTML = `
+                    <div class="status-indicator status-disconnected">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Failed to send test email. Please try again.
+                    </div>
+                `;
+            })
+            .finally(() => {
+                sendTestBtn.innerHTML = originalText;
+                sendTestBtn.disabled = false;
+                setTimeout(() => {
+                    testResult.innerHTML = '';
+                }, 10000);
+            });
+        });
+    }
+
+    // Reset button functionality
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to reset all changes?')) {
+                form.reset();
+                
+                // Reset password field specifically
+                if (passwordInput) {
+                    passwordInput.value = '';
+                    passwordInput.type = 'password';
+                    if (togglePassword) {
+                        togglePassword.classList.remove('fa-eye-slash');
+                        togglePassword.classList.add('fa-eye');
+                    }
+                }
+                
+                // Reset checkbox visual state
+                const tlsCheckbox = document.getElementById('use_tls');
+                if (tlsCheckbox && !tlsCheckbox.checked) {
+                    const tlsDefault = "{{ config.use_tls|yesno:'true,false' }}" === "true";
+                    tlsCheckbox.checked = tlsDefault;
+                }
+            }
+        });
+    }
+
+    // Email validation helper
+    function validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    // Add input validation styling
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.style.borderColor = '#ef4444';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

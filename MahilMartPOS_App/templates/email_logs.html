@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Email Logs{% endblock %}
+
+{% block content %}
+<style>
+    .logs-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+
+    .logs-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .logs-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .logs-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+        padding: 20px;
+    }
+
+    .logs-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .logs-table th {
+        text-align: left;
+        padding: 10px 8px;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        color: #374151;
+        font-weight: 600;
+    }
+
+    .logs-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        vertical-align: top;
+        word-break: break-word;
+    }
+
+    .status-pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 12px;
+        display: inline-block;
+    }
+
+    .status-sent {
+        background: rgba(16, 185, 129, 0.15);
+        color: #047857;
+    }
+
+    .status-failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: #b91c1c;
+    }
+
+    .logs-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        color: #111827;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+    .log-error {
+        color: #ef4444;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+</style>
+
+<div class="logs-wrapper">
+    <div class="logs-header">
+        <div class="logs-title">Email Logs</div>
+        <div class="logs-actions">
+            <a class="btn btn-primary" href="{% url 'email_settings' %}">Email Settings</a>
+            <a class="btn" href="{% url 'email_view' %}">View Config</a>
+            <a class="btn" href="{% url 'email_preview' %}">Preview Email</a>
+        </div>
+    </div>
+
+    <div class="logs-card">
+        {% if log_error %}
+            <div class="log-error">{{ log_error }}</div>
+        {% endif %}
+
+        {% if logs %}
+        <table class="logs-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Event</th>
+                    <th>Subject</th>
+                    <th>Recipients</th>
+                    <th>Status</th>
+                    <th>User</th>
+                    <th>Path</th>
+                    <th>IP</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.created_at }}</td>
+                    <td>{{ log.get_event_type_display }}</td>
+                    <td>{{ log.subject }}</td>
+                    <td>{{ log.recipients }}</td>
+                    <td>
+                        <span class="status-pill {% if log.status == 'sent' %}status-sent{% else %}status-failed{% endif %}">
+                            {{ log.status|title }}
+                        </span>
+                    </td>
+                    <td>{{ log.triggered_by.username|default:"System" }}</td>
+                    <td>{{ log.request_path|default:"-" }}</td>
+                    <td>{{ log.ip_address|default:"-" }}</td>
+                    <td>{{ log.error_message|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <div style="color:#64748b;">No email logs available.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,863 @@
+{% extends "base.html" %}
+
+{% block style %}
+<style>
+:root {
+    --preview-primary: {{ settings.primary_color|default:"#2e3b4e" }};
+    --preview-sidebar: {{ settings.sidebar_color|default:"#1f2a38" }};
+    --preview-accent: {{ settings.accent_color|default:"#4a6fa5" }};
+}
+
+.theme-shell {
+    padding: 14px;
+}
+
+.theme-hero {
+    position: relative;
+    padding: 26px 28px;
+    border-radius: 20px;
+    color: #fff;
+    overflow: hidden;
+    background: linear-gradient(120deg, #0f172a 0%, #1f2937 45%, #334155 100%);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.26);
+}
+
+.theme-hero::before {
+    content: "";
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    right: -90px;
+    top: -130px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 74%);
+}
+
+.theme-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.theme-heading {
+    margin-top: 14px;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1.16;
+}
+
+.theme-subtext {
+    margin: 10px 0 0;
+    color: rgba(255, 255, 255, 0.86);
+    max-width: 740px;
+}
+
+.theme-layout {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: 18px;
+}
+
+.theme-panel,
+.theme-preview-panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 248, 252, 0.96) 100%);
+    border: 1px solid rgba(15, 23, 42, 0.09);
+    border-radius: 20px;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.theme-panel {
+    padding: 22px;
+}
+
+.theme-preview-panel {
+    padding: 20px;
+}
+
+.section-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+}
+
+.mode-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.mode-btn {
+    border: 1px solid #dbe2ea;
+    background: #f7fafc;
+    color: #334155;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.mode-btn:hover {
+    transform: translateY(-1px);
+    border-color: #c5d0dd;
+}
+
+.mode-btn.active {
+    background: var(--preview-accent);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 10px 20px rgba(79, 114, 164, 0.26);
+}
+
+.palette-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.swatch-card {
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid #dce5ef;
+    background: #fff;
+}
+
+.swatch-title {
+    margin: 0;
+    font-size: 13px;
+    color: #334155;
+    font-weight: 700;
+}
+
+.swatch-meta {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.swatch-value {
+    font-family: "Consolas", "Menlo", monospace;
+    font-size: 12px;
+    color: #0f172a;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+
+.swatch-preview {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 1px #d6dce6;
+}
+
+.swatch-input {
+    width: 100%;
+    height: 42px;
+    border: none;
+    margin-top: 10px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.preset-grid {
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    gap: 10px;
+}
+
+.preset-btn {
+    border: 1px solid #d5dfeb;
+    border-radius: 12px;
+    background: #ffffff;
+    text-align: left;
+    padding: 10px 11px;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.preset-btn:hover {
+    transform: translateY(-2px);
+    border-color: #becedf;
+    box-shadow: 0 8px 15px rgba(15, 23, 42, 0.08);
+}
+
+.preset-btn.active {
+    border-color: var(--preview-accent);
+    box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.22);
+}
+
+.preset-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.preset-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.preset-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    background: #e2e8f0;
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+
+.preset-dots {
+    display: flex;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.preset-dots span {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+.preset-controls {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-show-more {
+    border: 1px solid #cdd9e8;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f6f9fe 100%);
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px 14px;
+    transition: all 0.22s ease;
+}
+
+.btn-show-more:hover {
+    border-color: #aebed3;
+    box-shadow: 0 8px 14px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.btn-show-more:disabled {
+    opacity: 0.72;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.btn-save-theme {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    color: #fff;
+    font-weight: 700;
+    background: var(--preview-primary);
+    box-shadow: 0 11px 22px rgba(39, 62, 92, 0.25);
+}
+
+.btn-reset-theme {
+    border-radius: 10px;
+    padding: 10px 16px;
+    border: 1px solid #cfd9e5;
+    background: #fff;
+    font-weight: 700;
+    color: #334155;
+}
+
+.preview-caption {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.pos-preview {
+    margin-top: 14px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #d8e2ef;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 16px 24px rgba(15, 23, 42, 0.12);
+    background: #f8fafc;
+}
+
+.preview-topbar {
+    height: 58px;
+    background: var(--preview-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-weight: 700;
+}
+
+.preview-status {
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    padding: 5px 10px;
+}
+
+.preview-body {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    min-height: 280px;
+}
+
+.preview-sidebar {
+    background: var(--preview-sidebar);
+    color: #fff;
+    padding: 14px 10px;
+}
+
+.preview-side-item {
+    margin-bottom: 8px;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.preview-side-item.active {
+    background: var(--preview-accent);
+}
+
+.preview-workspace {
+    padding: 14px;
+}
+
+.preview-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.preview-kpi {
+    border-radius: 12px;
+    border: 1px solid #dbe5f0;
+    background: #fff;
+    padding: 10px;
+}
+
+.preview-kpi-label {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.preview-kpi-value {
+    margin-top: 5px;
+    font-size: 16px;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.preview-table {
+    margin-top: 10px;
+    border-radius: 12px;
+    border: 1px solid #dbe5f0;
+    background: #fff;
+    overflow: hidden;
+}
+
+.preview-row {
+    display: grid;
+    grid-template-columns: 1.2fr 0.7fr 0.7fr;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 12px;
+}
+
+.preview-row:last-child {
+    border-bottom: none;
+}
+
+.preview-row.header {
+    font-weight: 700;
+    color: #475569;
+    background: #f8fafc;
+}
+
+.preview-chip {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 12px;
+    background: var(--preview-accent);
+}
+
+.preview-dark {
+    background: #0f172a;
+    border-color: #1f2a3c;
+}
+
+.preview-dark .preview-workspace,
+.preview-dark .preview-kpi,
+.preview-dark .preview-table,
+.preview-dark .preview-row.header {
+    background: #172235;
+    border-color: #22324a;
+}
+
+.preview-dark .preview-kpi-label,
+.preview-dark .preview-row {
+    color: #c9d4e2;
+}
+
+.preview-dark .preview-kpi-value {
+    color: #ffffff;
+}
+
+.preview-dark .preview-row {
+    border-color: #22324a;
+}
+
+@media (max-width: 1199px) {
+    .theme-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+    .theme-shell {
+        padding: 4px;
+    }
+
+    .theme-hero {
+        padding: 20px;
+    }
+
+    .theme-heading {
+        font-size: 27px;
+    }
+
+    .palette-grid,
+    .preset-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
+    <div class="theme-shell">
+      <div class="theme-hero">
+        <span class="theme-badge">POS Theme Studio</span>
+        <h1 class="theme-heading mb-0">Build a richer, premium look for your billing flow</h1>
+        <p class="theme-subtext">Adjust colors, switch mode, try presets, and preview the live result before saving.</p>
+      </div>
+
+      <div class="theme-layout">
+        <div class="theme-panel">
+          <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="save_theme">
+            <input type="hidden" name="theme_mode" id="theme_mode" value="{{ settings.mode|default:'light' }}">
+
+            <div class="section-title">Display Mode</div>
+            <div class="mode-row">
+              <button type="button"
+                      class="mode-btn {% if settings.mode != 'dark' %}active{% endif %}"
+                      data-mode="light">
+                Light Mode
+              </button>
+              <button type="button"
+                      class="mode-btn {% if settings.mode == 'dark' %}active{% endif %}"
+                      data-mode="dark">
+                Dark Mode
+              </button>
+            </div>
+
+            <div class="section-title">Brand Colors</div>
+            <div class="palette-grid">
+              <div class="swatch-card">
+                <p class="swatch-title">Primary Header</p>
+                <div class="swatch-meta">
+                  <span class="swatch-value" id="primary_text">#2E3B4E</span>
+                  <span class="swatch-preview" id="preview_primary"></span>
+                </div>
+                <input type="color" class="swatch-input"
+                       name="primary_color"
+                       value="{{ settings.primary_color|default:'#2e3b4e' }}">
+              </div>
+
+              <div class="swatch-card">
+                <p class="swatch-title">Sidebar</p>
+                <div class="swatch-meta">
+                  <span class="swatch-value" id="sidebar_text">#1F2A38</span>
+                  <span class="swatch-preview" id="preview_sidebar"></span>
+                </div>
+                <input type="color" class="swatch-input"
+                       name="sidebar_color"
+                       value="{{ settings.sidebar_color|default:'#1f2a38' }}">
+              </div>
+
+              <div class="swatch-card">
+                <p class="swatch-title">Accent</p>
+                <div class="swatch-meta">
+                  <span class="swatch-value" id="accent_text">#4A6FA5</span>
+                  <span class="swatch-preview" id="preview_accent"></span>
+                </div>
+                <input type="color" class="swatch-input"
+                       name="accent_color"
+                       value="{{ settings.accent_color|default:'#4a6fa5' }}">
+              </div>
+            </div>
+
+            <div class="preset-head">
+              <div class="section-title mb-0">Quick Presets</div>
+              <span id="preset_count" class="preset-count">0 combos</span>
+            </div>
+            <div class="preset-grid" id="preset_grid"></div>
+            <div class="preset-controls">
+              <span class="preview-caption">Premium palette combos for fast one-click theme switching.</span>
+              <button type="button" id="show_more_presets" class="btn-show-more">Show More (+10)</button>
+            </div>
+
+            <div class="actions-row">
+              <button class="btn-save-theme" type="submit">Save Theme</button>
+              <button id="reset_theme_btn" class="btn-reset-theme" type="button">Reset to Default</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="theme-preview-panel">
+          <div class="section-title mb-1">Live POS Preview</div>
+          <p class="preview-caption">This reflects your current selections before save.</p>
+
+          <div id="pos_preview" class="pos-preview">
+            <div class="preview-topbar" id="preview_topbar">
+              <span>MahilMart POS</span>
+              <span class="preview-status">Ready</span>
+            </div>
+            <div class="preview-body">
+              <div class="preview-sidebar" id="preview_sidebar_panel">
+                <div class="preview-side-item active">Billing</div>
+                <div class="preview-side-item">Inventory</div>
+                <div class="preview-side-item">Reports</div>
+                <div class="preview-side-item">Settings</div>
+              </div>
+              <div class="preview-workspace">
+                <div class="preview-kpi-grid">
+                  <div class="preview-kpi">
+                    <div class="preview-kpi-label">Today Sales</div>
+                    <div class="preview-kpi-value">Rs 38,420</div>
+                  </div>
+                  <div class="preview-kpi">
+                    <div class="preview-kpi-label">Bills</div>
+                    <div class="preview-kpi-value">124</div>
+                  </div>
+                </div>
+                <div class="preview-table">
+                  <div class="preview-row header"><span>Item</span><span>Qty</span><span>Total</span></div>
+                  <div class="preview-row"><span>Soap</span><span>2</span><span>Rs 80</span></div>
+                  <div class="preview-row"><span>Tea</span><span>1</span><span>Rs 210</span></div>
+                  <div class="preview-row"><span>Rice</span><span>5</span><span>Rs 640</span></div>
+                </div>
+                <span id="preview_chip" class="preview-chip">Accent Action</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const defaultColors = {
+        primary: "#2e3b4e",
+        sidebar: "#1f2a38",
+        accent: "#4a6fa5",
+    };
+
+    const primaryInput = document.querySelector("input[name='primary_color']");
+    const sidebarInput = document.querySelector("input[name='sidebar_color']");
+    const accentInput = document.querySelector("input[name='accent_color']");
+    const modeHidden = document.getElementById("theme_mode");
+    const previewTopbar = document.getElementById("preview_topbar");
+    const previewSidebarPanel = document.getElementById("preview_sidebar_panel");
+    const previewChip = document.getElementById("preview_chip");
+    const primaryText = document.getElementById("primary_text");
+    const sidebarText = document.getElementById("sidebar_text");
+    const accentText = document.getElementById("accent_text");
+    const presetGrid = document.getElementById("preset_grid");
+    const presetCount = document.getElementById("preset_count");
+    const showMorePresetsBtn = document.getElementById("show_more_presets");
+    const PRESETS_PER_CLICK = 10;
+
+    function darkenHex(hex, amount) {
+        const value = (hex || "").replace("#", "");
+        if (value.length !== 6) return "#1f2a38";
+        const factor = Math.max(0, Math.min(1, 1 - amount));
+        const r = parseInt(value.slice(0, 2), 16);
+        const g = parseInt(value.slice(2, 4), 16);
+        const b = parseInt(value.slice(4, 6), 16);
+        const toHex = (channel) =>
+            Math.max(0, Math.min(255, Math.round(channel * factor)))
+                .toString(16)
+                .padStart(2, "0");
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    const featuredPresets = [
+        { name: "Classic Steel", primary: "#2e3b4e", sidebar: "#1f2a38", accent: "#4a6fa5" },
+        { name: "Grand Amber", primary: "#1e293b", sidebar: "#111827", accent: "#f97316" },
+        { name: "Emerald Pro", primary: "#134e4a", sidebar: "#052e2b", accent: "#0ea5a4" },
+    ];
+
+    const primaryPalette = [
+        "#1f2937", "#0f172a", "#334155", "#3f3f46", "#134e4a", "#0c4a6e",
+        "#1e3a8a", "#4c1d95", "#7c2d12", "#7f1d1d", "#2e1065", "#14532d",
+        "#312e81", "#3f6212", "#78350f", "#4338ca",
+    ];
+    const accentPalette = [
+        "#22c55e", "#06b6d4", "#3b82f6", "#6366f1", "#f59e0b", "#f97316",
+        "#ef4444", "#ec4899", "#14b8a6", "#84cc16", "#f43f5e", "#a855f7",
+    ];
+
+    const generatedPresets = [];
+    const TARGET_PRESET_TOTAL = 100;
+    const generatedTarget = Math.max(0, TARGET_PRESET_TOTAL - featuredPresets.length);
+    let comboIndex = 1;
+    for (const primary of primaryPalette) {
+        for (const accent of accentPalette) {
+            generatedPresets.push({
+                name: `Studio ${String(comboIndex).padStart(3, "0")}`,
+                primary,
+                sidebar: darkenHex(primary, 0.28),
+                accent,
+            });
+            comboIndex += 1;
+            if (generatedPresets.length >= generatedTarget) {
+                break;
+            }
+        }
+        if (generatedPresets.length >= generatedTarget) {
+            break;
+        }
+    }
+
+    const quickPresets = [...featuredPresets, ...generatedPresets];
+    let visiblePresetCount = PRESETS_PER_CLICK;
+
+    function renderPresets() {
+        if (!presetGrid) return;
+        const visiblePresets = quickPresets.slice(0, visiblePresetCount);
+        presetGrid.innerHTML = visiblePresets
+            .map(
+                (preset) => `
+                <button type="button" class="preset-btn" data-primary="${preset.primary}" data-sidebar="${preset.sidebar}" data-accent="${preset.accent}">
+                  <div class="preset-name">${preset.name}</div>
+                  <div class="preset-dots">
+                    <span style="background:${preset.primary}"></span>
+                    <span style="background:${preset.sidebar}"></span>
+                    <span style="background:${preset.accent}"></span>
+                  </div>
+                </button>
+                `
+            )
+            .join("");
+        if (presetCount) {
+            const shown = Math.min(visiblePresetCount, quickPresets.length);
+            presetCount.textContent = `${shown}/${quickPresets.length} combos`;
+        }
+        if (showMorePresetsBtn) {
+            const remaining = Math.max(0, quickPresets.length - visiblePresets.length);
+            showMorePresetsBtn.disabled = remaining === 0;
+            showMorePresetsBtn.textContent =
+                remaining > 0 ? `Show More (+${Math.min(PRESETS_PER_CLICK, remaining)})` : "All Presets Loaded";
+        }
+        syncPresetSelection();
+    }
+
+    function syncPresetSelection() {
+        const currentPrimary = (primaryInput.value || "").toLowerCase();
+        const currentSidebar = (sidebarInput.value || "").toLowerCase();
+        const currentAccent = (accentInput.value || "").toLowerCase();
+        document.querySelectorAll("#preset_grid .preset-btn").forEach((btn) => {
+            const isMatch =
+                (btn.dataset.primary || "").toLowerCase() === currentPrimary &&
+                (btn.dataset.sidebar || "").toLowerCase() === currentSidebar &&
+                (btn.dataset.accent || "").toLowerCase() === currentAccent;
+            btn.classList.toggle("active", isMatch);
+        });
+    }
+
+    function normalizeHex(value, fallback) {
+        if (!value) return fallback;
+        return value.toUpperCase();
+    }
+
+    function updatePreview() {
+        document.getElementById("preview_primary").style.background = primaryInput.value;
+        document.getElementById("preview_sidebar").style.background = sidebarInput.value;
+        document.getElementById("preview_accent").style.background = accentInput.value;
+
+        primaryText.textContent = normalizeHex(primaryInput.value, defaultColors.primary.toUpperCase());
+        sidebarText.textContent = normalizeHex(sidebarInput.value, defaultColors.sidebar.toUpperCase());
+        accentText.textContent = normalizeHex(accentInput.value, defaultColors.accent.toUpperCase());
+
+        document.documentElement.style.setProperty("--preview-primary", primaryInput.value);
+        document.documentElement.style.setProperty("--preview-sidebar", sidebarInput.value);
+        document.documentElement.style.setProperty("--preview-accent", accentInput.value);
+
+        previewTopbar.style.background = primaryInput.value;
+        previewSidebarPanel.style.background = sidebarInput.value;
+        previewChip.style.background = accentInput.value;
+
+        document.documentElement.style.setProperty("--primary", primaryInput.value);
+        document.documentElement.style.setProperty("--primary-dark", sidebarInput.value);
+        document.documentElement.style.setProperty("--accent", accentInput.value);
+        syncPresetSelection();
+    }
+
+    function setMode(mode) {
+        modeHidden.value = mode;
+        document.querySelectorAll(".mode-btn").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.mode === mode);
+        });
+        applyLayoutMode(mode);
+    }
+
+    primaryInput.addEventListener("input", updatePreview);
+    sidebarInput.addEventListener("input", updatePreview);
+    accentInput.addEventListener("input", updatePreview);
+
+    document.querySelectorAll(".mode-btn").forEach((btn) => {
+        btn.addEventListener("click", () => setMode(btn.dataset.mode));
+    });
+
+    if (presetGrid) {
+        presetGrid.addEventListener("click", (event) => {
+            const btn = event.target.closest(".preset-btn");
+            if (!btn) return;
+            primaryInput.value = btn.dataset.primary;
+            sidebarInput.value = btn.dataset.sidebar;
+            accentInput.value = btn.dataset.accent;
+            updatePreview();
+            applyLayoutMode(modeHidden.value || "light");
+        });
+    }
+
+    if (showMorePresetsBtn) {
+        showMorePresetsBtn.addEventListener("click", () => {
+            visiblePresetCount = Math.min(quickPresets.length, visiblePresetCount + PRESETS_PER_CLICK);
+            renderPresets();
+        });
+    }
+
+    document.getElementById("reset_theme_btn").addEventListener("click", () => {
+        primaryInput.value = defaultColors.primary;
+        sidebarInput.value = defaultColors.sidebar;
+        accentInput.value = defaultColors.accent;
+        updatePreview();
+        setMode("light");
+    });
+
+    renderPresets();
+    updatePreview();
+    setMode(modeHidden.value || "light");
+});
+
+
+function applyLayoutMode(mode) {
+    const header = document.querySelector(".app-header");
+    const sidebar = document.querySelector(".app-sidebar");
+    const content = document.querySelector(".app-content");
+    const cards = document.querySelectorAll(".card, .theme-panel, .theme-preview-panel");
+    const preview = document.getElementById("pos_preview");
+    const primaryInput = document.querySelector("input[name='primary_color']");
+    const sidebarInput = document.querySelector("input[name='sidebar_color']");
+    const accentInput = document.querySelector("input[name='accent_color']");
+
+    if (!header || !sidebar || !content) return;
+
+    if (mode === "dark" && preview) {
+        preview.classList.add("preview-dark");
+    } else if (preview) {
+        preview.classList.remove("preview-dark");
+    }
+
+    if (mode === "dark") {
+        document.body.classList.add("dark-mode");
+
+        document.body.style.background = "#0d1117";
+        header.style.background = "#1a2634";
+        sidebar.style.background = "#0d1117";
+        content.style.background = "#111821";
+
+        cards.forEach((card) => {
+            card.style.background = "#1f2a33";
+            card.style.color = "white";
+        });
+
+    } else {
+        document.body.classList.remove("dark-mode");
+        const primaryColor = primaryInput.value;
+        const sidebarColor = sidebarInput.value;
+        const accentColor = accentInput.value;
+
+        document.documentElement.style.setProperty("--primary-dark", sidebarColor);
+        document.documentElement.style.setProperty("--primary", primaryColor);
+        document.documentElement.style.setProperty("--accent", accentColor);
+        document.documentElement.style.setProperty("--primary-light", "#32465a");
+        document.documentElement.style.setProperty("--text-light", "#f8f9fa");
+        document.documentElement.style.setProperty("--text-muted", "#adb5bd");
+
+        document.body.style.background = "#f5f7fa";
+        header.style.background = primaryColor;
+        sidebar.style.background = sidebarColor;
+        content.style.background = "#f5f7fa";
+
+        cards.forEach((card) => {
+            card.style.background = "white";
+            card.style.color = "#0f172a";
+        });
+    }
+}
+</script>
+
+
+  </div>
+</div>
+{% endblock %}

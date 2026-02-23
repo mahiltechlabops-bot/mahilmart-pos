@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+from .db_config import get_database_settings
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,8 +29,8 @@ SECRET_KEY = 'django-insecure-m$j%wqpm)dqy8!erkd_^9hh#4-f29io_)_@zf&+68d1b81fc*)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.0.105','127.0.0.1']
-# ALLOWED_HOSTS = ['*']
+# Allow all hosts so the packaged app works on any LAN/WAN IP without manual edits.
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -38,7 +41,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'MahilMartPOS_App',
+    # 'MahilMartPOS_App',
+    'django_extensions',
+    'MahilMartPOS_App.apps.MahilmartposAppConfig',
+
 ]
 
 MIDDLEWARE = [
@@ -63,6 +69,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'MahilMartPOS_App.context_processors.base_context',
+                'MahilMartPOS_App.context_processors.user_permissions',
+                # 'MahilMartPOS_App.context_processors.permission_context',
+                'MahilMartPOS_App.context_processors.company_context',
             ],
         },
     },
@@ -71,18 +81,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'MahilMartPOS.wsgi.application'
 
 
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mmpos',
-        'USER': 'postgres',
-        'PASSWORD': 'admin123',
-        'HOST': '192.168.0.105',
-        'PORT': '5432',    
-    }
+    "default": get_database_settings()
 }
 
 # psql -h localhost -p 5432 -U mahilmart_user -d mahilmart_db
@@ -119,6 +128,13 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'DEBUG',
     },
+    'loggers': {
+        'pymongo': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
 }
 
 
@@ -143,3 +159,44 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOW_STOCK_THRESHOLD = 10
+
+
+ADMINS = [
+    ("POS Admin", "mahiltechlab.ops@gmail.com"),
+]
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+# 🔐 Dummy defaults (will be overridden from DB)
+EMAIL_HOST = ""
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = ""
+EMAIL_HOST_PASSWORD = ""
+
+DEFAULT_FROM_EMAIL = ""
+
+
+from django.contrib.messages import constants as messages
+
+MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
+
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
+    messages.WARNING: 'warning',
+    messages.SUCCESS: 'success',
+    messages.INFO: 'info',
+}
+
+
+MSSQL_CONN_STR = (
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=192.168.0.110,1433;"
+    "DATABASE=MahilMart-Analytics;"
+    "UID=mahilmartuser;"
+    "PWD=Admin@123;"
+    "TrustServerCertificate=yes;"
+)
+

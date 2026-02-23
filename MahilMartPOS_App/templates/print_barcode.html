@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
 <div class="container mt-4" style="max-width: 2500px;">
     <h2>Print Barcode - Multiple Items</h2>
     <form method="POST" action="{% url 'print_barcode' %}">
@@ -11,9 +13,15 @@
             <label for="label_size"><strong>Select Barcode Label Size</strong></label>
             <select name="label_size" id="label_size" class="form-control w-25" required>
                 <option value="">-- Choose Size --</option>
-                <option value="35x22">Small (35 × 22 mm)</option>
-                <option value="50x40">Medium (50 × 40 mm)</option>
-                <option value="70x35">Large (70 × 35 mm)</option>
+                {% if label_sizes and label_sizes|length > 0 %}
+                    {% for size in label_sizes %}
+                        <option value="{{ size.name }}">{{ size.name }} ({{ size.width_mm }} × {{ size.height_mm }} mm)</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="35x22">Small (35 × 22 mm)</option>
+                    <option value="50x40">Medium (50 × 40 mm)</option>
+                    <option value="70x35">Large (70 × 35 mm)</option>
+                {% endif %}
             </select>
         </div>
 
@@ -196,4 +204,8 @@ document.addEventListener("input", function(e) {
         });
 });
 </script>
+
+  </div>
+</div>
 {% endblock %}
+

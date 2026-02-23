@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+
+<style>
+/* ------------------- COLOR SYSTEM ------------------- */
+:root {
+    --primary-dark: #1f2a38;
+    --primary: #2e3b4e;
+    --primary-light: #32465a;
+    --accent: #4a6fa5;
+    --text-light: #f8f9fa;
+    --text-muted: #adb5bd;
+    --border: #d4d4d4;
+    --white: #ffffff;
+    --table-hover: #f2f9ff;
+}
+
+/* ------------------- TOP CONTROL BAR ------------------- */
+.controls-bar {
+  width: 92%;
+  margin: 20px auto;
+  padding: 15px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
+
+/* Input fields */
+.controls-bar input[type="text"],
+.controls-bar select {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #f8f8f8;
+  font-size: 1rem;
+  min-width: 180px;
+}
+
+/* Buttons */
+.controls-bar input[type="submit"],
+.controls-bar a.btn,
+.controls-bar button.reset-btn {
+  padding: 10px 14px;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: 0.2s;
+}
+
+.controls-bar input[type="submit"]:hover,
+.controls-bar a.btn:hover,
+.controls-bar button.reset-btn:hover {
+  background: var(--primary-dark);
+}
+
+/* STACK form on mobile */
+@media(max-width: 768px) {
+  .controls-bar {
+    flex-direction: column;
+    text-align: center;
+  }
+  .controls-bar form {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .controls-bar .buttons {
+    width: 100%;
+    justify-content: center;
+  }
+  .controls-bar input[type="text"],
+  .controls-bar select {
+    width: 100%;
+  }
+}
+
+/* ------------------- USER TABLE ------------------- */
+.user-table-container {
+  width: 92%;
+  margin: 20px auto;
+  overflow-x: auto;
+}
+
+.user-table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+  background: var(--white);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 14px rgba(0, 0, 0, 0.08);
+}
+
+th, td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #ececec;
+}
+
+th {
+  background: var(--primary);
+  color: white;
+}
+
+tr:hover {
+  background-color: var(--table-hover);
+}
+
+/* ------------------- ACTION BUTTONS ------------------- */
+.action-btn {
+  padding: 6px 12px;
+  font-size: .9rem;
+  border-radius: 6px;
+  color: white;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+.edit-btn { background: #2ebacc; }
+.edit-btn:hover { background: #2396a3; }
+
+.delete-btn { background: #6c757d; }
+.delete-btn:hover { background: #565e64; }
+
+/* Make action buttons vertical on small screens */
+@media(max-width: 600px) {
+  .action-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+}
+
+/* ------------------- PAGINATION ------------------- */
+.pagination {
+  width: 92%;
+  margin: 20px auto;
+  text-align: center;
+}
+
+.pagination a, .pagination span {
+  display: inline-block;
+  padding: 8px 14px;
+  margin: 0 3px;
+  background: #e7f8fa;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.pagination .current {
+  background: var(--primary);
+  color: white;
+}
+</style>
+
+
+
+<!-- ---------------- CONTROLS BAR ---------------- -->
+<div class="controls-bar">
+
+  <form method="get" action="{% url 'user' %}">
+    
+    <input id="liveSearchInput" type="text" name="q" placeholder="Search username or email..." value="{{ query|default:'' }}">
+
+    <select name="role" id="roleFilter">
+        <option value="">All Roles</option>
+        {% for g in groups %}
+          <option value="{{ g.name }}" {% if role == g.name %}selected{% endif %}>
+              {{ g.name }}
+          </option>
+        {% endfor %}
+
+    </select>
+
+    <input type="submit" value="🔍 Search">
+
+    <!-- <button type="button" class="reset-btn" onclick="resetFilters()">🔄 Reset</button> -->
+
+  </form>
+
+  <div class="buttons">
+    <a href="{% url 'create_user' %}" class="btn">➕ Create New User</a>
+  </div>
+
+</div>
+
+
+
+<!-- ---------------- USER TABLE ---------------- -->
+<div class="user-table-container">
+<table class="user-table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Username</th>
+      <th>Email</th>
+      <th>Admin</th>
+      <th>Supv.</th>
+      <th>Cashier</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+
+  <tbody id="userTableBody">
+    {% include 'partials/user_table_rows.html' with users=page_obj %}
+  </tbody>
+
+</table>
+</div>
+
+
+
+<!-- ---------------- PAGINATION ---------------- -->
+<div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">« Prev</a>
+  {% endif %}
+
+  <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Next »</a>
+  {% endif %}
+</div>
+
+
+
+<!-- ---------------- LIVE SEARCH SCRIPT ---------------- -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    const searchBox = document.getElementById("liveSearchInput");
+    const tableBody = document.getElementById("userTableBody");
+    const roleFilter = document.getElementById("roleFilter");
+
+    let timer = null;
+
+    function triggerSearch() {
+        const query = searchBox.value.trim();
+        const role = roleFilter.value;
+
+        if (query.length < 3 && query.length !== 0) return;
+
+        fetch(`/ajax/search-users/?q=${query}&role=${role}`)
+            .then(res => res.json())
+            .then(data => {
+                tableBody.innerHTML = data.html;
+            });
+    }
+
+    searchBox.addEventListener("keyup", () => {
+        clearTimeout(timer);
+        timer = setTimeout(triggerSearch, 300);
+    });
+
+    roleFilter.addEventListener("change", triggerSearch);
+});
+
+
+
+/* ---------------- RESET FILTERS ---------------- */
+function resetFilters() {
+    const searchBox = document.getElementById("liveSearchInput");
+    const roleFilter = document.getElementById("roleFilter");
+    const tableBody = document.getElementById("userTableBody");
+
+    searchBox.value = "";
+    roleFilter.value = "";
+
+    fetch(`/ajax/search-users/?q=&role=`)
+        .then(res => res.json())
+        .then(data => {
+            tableBody.innerHTML = data.html;
+        });
+
+    window.history.pushState({}, "", "{% url 'user' %}");
+}
+</script>
+
+
+
+{% endblock %}

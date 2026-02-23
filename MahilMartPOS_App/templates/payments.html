@@ -109,13 +109,19 @@
     }
     
     .modal-dialog {
-    max-width: 95%; /* width of modal */
-    margin: 1.75rem auto; /* keep centered */
-}
+        max-width: 95vw;
+        width: 95vw;
+        margin: 1.75rem auto; /* keep centered */
+    }
 
-.modal-body table {
-    width: 200%; /* make table span full modal */
-}
+    .modal-body {
+        overflow-x: auto;
+    }
+
+    .modal-body table {
+        width: 100%;
+        min-width: 900px;
+    }
 .modal-backdrop {
     z-index: 1040 !important;
 }
@@ -283,7 +289,7 @@ td {
     </table>
 </div>
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="paymentModalLabel">Billing Payments</h5>

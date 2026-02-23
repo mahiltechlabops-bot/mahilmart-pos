@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
+
+<div class="container py-5">
+
+    <h2 class="text-center mb-4">MSSQL → PostgreSQL Migration Tool</h2>
+
+    {% if messages %}
+        {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+                {{ msg }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- =================== Single Table Migration =================== -->
+    <div class="card shadow p-4 mb-4">
+        <h5>Single Table Migration</h5>
+
+        <form method="POST" action="{% url 'migrate_single_table' %}">
+            {% csrf_token %}
+
+            <!-- MSSQL Dropdown -->
+            <div class="mb-3">
+                <label class="form-label">Select MSSQL Table</label>
+                <div class="d-flex">
+                    <select id="singleTableSelect" name="mssql_table" class="form-select" required>
+                        <option disabled selected>Loading tables...</option>
+                    </select>
+
+                    <button type="button"
+                            class="btn btn-secondary ms-2"
+                            onclick="openMappingModal()">
+                        Map Columns
+                    </button>
+                </div>
+            </div>
+
+            <!-- PG Table Dropdown + Text -->
+            <div class="mb-3">
+                <label class="form-label">PostgreSQL Table Name</label>
+                <div class="d-flex">
+
+                    <select id="pgTableSelect" class="form-select" style="max-width:300px;">
+                        <option value="">Loading...</option>
+                    </select>
+
+                    <input type="text"
+                           id="pgTableName"
+                           name="postgres_table"
+                           class="form-control ms-2"
+                           placeholder="Or type custom table name">
+                </div>
+            </div>
+
+            <button class="btn btn-primary w-100">Migrate Table</button>
+        </form>
+    </div>
+
+</div>
+
+
+<!-- ======================================================
+     COLUMN MAPPING MODAL
+====================================================== -->
+<div class="modal fade" id="columnMapModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Column Mapping</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div id="mapLoader" class="text-center py-4" style="display:none;">
+            <div class="spinner-border"></div>
+            <p>Loading Columns...</p>
+        </div>
+
+        <table class="table table-bordered" id="mapTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>MSSQL Column</th>
+                    <th>PostgreSQL Column</th>
+                </tr>
+            </thead>
+            <tbody id="mapBody"></tbody>
+        </table>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-success" onclick="saveMapping()">Save Mapping</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// =================== CSRF ===================
+function getCookie(name) {
+    let v = null;
+    if (document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + "=")) {
+                v = decodeURIComponent(cookie.substring(name.length + 1));
+            }
+        }
+    }
+    return v;
+}
+const csrftoken = getCookie("csrftoken");
+
+
+// =================== Load MSSQL Tables ===================
+function loadTables() {
+    const select = document.getElementById("singleTableSelect");
+    select.innerHTML = `<option>Loading...</option>`;
+
+    fetch("/db-migrate/ajax/load-mssql-tables/")
+        .then(r => r.json())
+        .then(data => {
+            if (data.status !== "ok") {
+                select.innerHTML = `<option>Error loading MSSQL tables</option>`;
+                return;
+            }
+
+            select.innerHTML = `<option disabled selected>Select MSSQL table</option>`;
+            data.tables.forEach(t => {
+                select.innerHTML += `<option value="${t}">${t}</option>`;
+            });
+        });
+}
+
+
+// =================== Load PostgreSQL Tables ===================
+function loadPGTables() {
+    const pgSel = document.getElementById("pgTableSelect");
+    pgSel.innerHTML = `<option>Loading...</option>`;
+
+    fetch("/db-migrate/ajax/get-postgres-tables/")
+        .then(r => r.json())
+        .then(data => {
+            if (data.status !== "ok") {
+                pgSel.innerHTML = `<option>Error loading PG tables</option>`;
+                return;
+            }
+
+            pgSel.innerHTML = `<option value="">Select PG table</option>`;
+            data.tables.forEach(t => {
+                pgSel.innerHTML += `<option value="${t}">${t}</option>`;
+            });
+        });
+
+    pgSel.addEventListener("change", () => {
+        document.getElementById("pgTableName").value = pgSel.value;
+    });
+}
+
+
+// =================== Mapping Modal ===================
+function openMappingModal() {
+    let mssqlTable = document.getElementById("singleTableSelect").value;
+    if (!mssqlTable) {
+        alert("Please select a MSSQL table first");
+        return;
+    }
+
+    document.getElementById("mapLoader").style.display = "block";
+    document.getElementById("mapTable").style.display = "none";
+
+    new bootstrap.Modal(document.getElementById("columnMapModal")).show();
+    loadColumnsForMapping(mssqlTable);
+}
+
+
+// =================== Load MSSQL + PG Columns ===================
+function loadColumnsForMapping(tableName) {
+    let pgTable = document.getElementById("pgTableName").value ||
+                  document.getElementById("pgTableSelect").value;
+
+    fetch(`/db-migrate/ajax/get-columns/${tableName}/?pg=${pgTable}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.status !== "ok") {
+                alert("Column loading failed");
+                return;
+            }
+
+            let mssqlCols = data.mssql_columns;
+            let pgCols = data.pg_columns;
+
+            const body = document.getElementById("mapBody");
+            body.innerHTML = "";
+
+            mssqlCols.forEach(col => {
+                body.innerHTML += `
+                    <tr>
+                        <td>${col}</td>
+                        <td>
+                            <select class="form-select map-select" data-mssql="${col}">
+                                <option value="">-- Select PG Column --</option>
+                                ${pgCols.map(p => `<option value="${p}">${p}</option>`).join("")}
+                            </select>
+                        </td>
+                    </tr>`;
+            });
+
+            document.getElementById("mapLoader").style.display = "none";
+            document.getElementById("mapTable").style.display = "table";
+        });
+}
+
+
+// =================== Save Mapping ===================
+function saveMapping() {
+    let mapping = {};
+    document.querySelectorAll(".map-select").forEach(sel => {
+        if (sel.value) mapping[sel.dataset.mssql] = sel.value;
+    });
+
+    fetch("/db-migrate/ajax/save-mapping/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
+        },
+        body: JSON.stringify({
+            mssql_table: document.getElementById("singleTableSelect").value,
+            pg_table: document.getElementById("pgTableName").value,
+            mapping: mapping
+        })
+    })
+    .then(r => r.json())
+    .then(d => alert(d.status === "ok" ? "Mapping saved!" : d.error));
+}
+
+
+// =================== INIT ===================
+document.addEventListener("DOMContentLoaded", () => {
+    loadTables();
+    loadPGTables();
+});
+</script>
+
+
+  </div>
+</div>
+{% endblock %}
+
+
+
+

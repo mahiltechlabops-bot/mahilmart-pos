@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block style %}
+<style>
+/* ------ ROOT COLOR MAPPING ------ */
+:root {
+    --primary-dark: #1f2a38;
+    --primary: #2e3b4e;
+    --primary-light: #32465a;
+    --accent: #4a6fa5;
+    --text-light: #f8f9fa;
+    --text-muted: #adb5bd;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+    --transition: all 0.2s ease;
+}
+
+/* Page wrapper */
+.settings-wrapper {
+    padding: 25px 35px;
+    font-family: "Segoe UI";
+}
+
+.settings-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 6px;
+}
+
+.settings-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+}
+
+/* Grid layout */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 28px;
+}
+
+/* Premium Card */
+.settings-card-box {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    position: relative;
+    transition: var(--transition);
+    border-left: 5px solid var(--accent);
+}
+
+.settings-card-box:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Icon background */
+.settings-icon {
+    width: 55px;
+    height: 55px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--text-light);
+    margin-bottom: 14px;
+}
+
+/* Titles */
+.settings-card-title {
+    font-weight: 600;
+    font-size: 19px;
+    color: var(--primary-dark);
+    margin-bottom: 4px;
+}
+
+/* Text */
+.settings-card-text {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+/* Link */
+.settings-card-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.settings-card-link i {
+    font-size: 11px;
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="settings-wrapper">
+
+    <div class="settings-title">Settings</div>
+    <div class="settings-sub">
+        Manage all system, company, and security settings from one place.
+    </div>
+
+    <div class="settings-grid">
+
+        {% if request.user.is_superuser or perm.allow_config_view %}
+        <div class="settings-card-box" onclick="location.href='{% url 'add' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-file-invoice-dollar"></i>
+            </div>
+            <div class="settings-card-title">Config View</div>
+            <div class="settings-card-text">
+                Bill types, payment modes, points & billing configuration.
+            </div>
+            <span class="settings-card-link">Open <i class="fa fa-arrow-right"></i></span>
+        </div>
+        {% endif %}
+
+        {% if request.user.is_superuser or perm.allow_logs %}
+        <div class="settings-card-box" onclick="location.href='{% url 'activity_log' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-history"></i>
+            </div>
+            <div class="settings-card-title">Activity Logs</div>
+            <div class="settings-card-text">
+                Track user logins, sessions, and system activity.
+            </div>
+            <span class="settings-card-link">View <i class="fa fa-arrow-right"></i></span>
+        </div>
+        {% endif %}
+
+        {% if request.user.is_superuser or perm.allow_company %}
+        <div class="settings-card-box" onclick="location.href='{% url 'company_details' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-info-circle"></i>
+            </div>
+            <div class="settings-card-title">Company Info</div>
+            <div class="settings-card-text">
+                Business details, tax settings, bank and license info.
+            </div>
+            <span class="settings-card-link">Open <i class="fa fa-arrow-right"></i></span>
+        </div>
+        {% endif %}
+
+        <div class="settings-card-box" onclick="location.href='{% url 'computer_alias' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-desktop"></i>
+            </div>
+            <div class="settings-card-title">Computer Alias</div>
+            <div class="settings-card-text">
+                Assign system names (System-1, System-2) for billing machines.
+            </div>
+            <span class="settings-card-link">Configure <i class="fa fa-arrow-right"></i></span>
+        </div>
+
+        <div class="settings-card-box" onclick="location.href='{% url 'pos_theme' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-palette"></i>
+            </div>
+            <div class="settings-card-title">POS Theme Colors</div>
+            <div class="settings-card-text">
+                Customize POS colors for a better visual experience.
+            </div>
+            <span class="settings-card-link">Customize <i class="fa fa-arrow-right"></i></span>
+        </div>
+
+        {% if request.user.is_superuser %}
+        <div class="settings-card-box" onclick="location.href='{% url 'permission_settings' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-user-shield"></i>
+            </div>
+            <div class="settings-card-title">User Restrictions</div>
+            <div class="settings-card-text">
+                Manage user access
+            </div>
+            <span class="settings-card-link">Manage <i class="fa fa-arrow-right"></i></span>
+        </div>
+        {% endif %}
+
+        <div class="settings-card-box" onclick="location.href='{% url 'user' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-user-cog"></i>
+            </div>
+            <div class="settings-card-title">Admin Settings</div>
+            <div class="settings-card-text">
+                Store name, phone, address & invoice footer settings.
+            </div>
+            <span class="settings-card-link">Open <i class="fa fa-arrow-right"></i></span>
+        </div>
+
+        <div class="settings-card-box" onclick="location.href='{% url 'points_config' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-coins"></i>
+            </div>
+            <div class="settings-card-title">Point Config Page</div>
+            <div class="settings-card-text">
+                Loyalty points configuration.
+            </div>
+            <span class="settings-card-link">Open <i class="fa fa-arrow-right"></i></span>
+        </div>
+
+        <div class="settings-card-box" onclick="location.href='{% url 'company_name_settings' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-building"></i>
+            </div>
+            <div class="settings-card-title">Company Name Settings</div>
+            <div class="settings-card-text">
+                Organization identity and branding.
+            </div>
+            <span class="settings-card-link">Open <i class="fa fa-arrow-right"></i></span>
+        </div>
+
+        <div class="settings-card-box" onclick="location.href='{% url 'email_settings' %}'">
+            <div class="settings-icon">
+                <i class="fa fa-envelope"></i>
+            </div>
+            <div class="settings-card-title">Email Settings</div>
+            <div class="settings-card-text">
+                Outgoing email configuration.
+            </div>
+            <span class="settings-card-link">Open <i class="fa fa-arrow-right"></i></span>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

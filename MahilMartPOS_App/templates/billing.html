@@ -1,377 +1,1124 @@
 {% extends 'base.html' %}
-{% block title %}Sales Creation{% endblock %} 
+{% block title %}Supermarket Billing Counter{% endblock %}
 
 {% block style %}
 <style>
-    body {
-        background-color: #f0f4f8;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+/* ===============================
+   SUPERMARKET BILLING COUNTER DESIGN
+================================ */
+:root {
+    --primary-blue: #1a365d;
+    --primary-dark: #0f172a;
+    --primary-light: #2d3748;
+    --accent-gold: #d4af37;
+    --accent-gold-light: #f5e2a3;
+    --success-green: #10b981;
+    --danger-red: #ef4444;
+    --warning-orange: #f59e0b;
+    
+    --bg-light: #f8fafc;
+    --bg-lighter: #f1f5f9;
+    --bg-white: #ffffff;
+    
+    --text-dark: #1e293b;
+    --text-medium: #475569;
+    --text-light: #94a3b8;
+    
+    --border-light: #e2e8f0;
+    --border-medium: #cbd5e1;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+}
 
-    .sales-page {
-        padding: 15px;
-    }
+/* ===============================
+   BASE STYLES
+================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-    .sales-page .main-container {
-        max-width: 1600px;
-        margin: 0 auto;
-        background: #fff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    color: var(--text-dark);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 100vh;
+    overflow: hidden;
+}
 
-    .sales-page .title {
-        text-align: center;
-        font-size: 26px;
-        color: #333;
-        margin-bottom: 15px;
-        font-weight: 600;
-    }
+/* ===============================
+   MAIN CONTAINER - BILLING COUNTER
+================================ */
+.billing-counter {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    grid-template-rows: 80px 1fr;
+    grid-template-areas: 
+        "header totals"
+        "main totals";
+    gap: 1px;
+    background: var(--border-medium);
+}
 
-    /* Compact form header */
-    .sales-page .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-        background: #f9f9f9;
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-    }
+/* ===============================
+   HEADER - SUPERMARKET BRANDING
+================================ */
+.counter-header {
+    grid-area: header;
+    background: var(--bg-white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 3px solid var(--accent-gold);
+    box-shadow: var(--shadow-md);
+}
 
-    .sales-page .form-group {
-        display: flex;
+.store-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.store-logo-text {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+    box-shadow: var(--shadow-md);
+}
+
+.store-info h1 {
+    font-size: 22px;
+    color: var(--primary-blue);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.store-info p {
+    font-size: 12px;
+    color: var(--text-medium);
+    font-weight: 500;
+}
+
+.bill-info {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+}
+
+.bill-meta {
+    text-align: right;
+}
+
+.bill-meta .label {
+    font-size: 11px;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.bill-meta .value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary-blue);
+    background: var(--bg-lighter);
+    padding: 6px 16px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--border-light);
+    margin-top: 4px;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* ===============================
+   MAIN WORK AREA - ITEMS SCANNING
+================================ */
+.main-work-area {
+    grid-area: main;
+    background: var(--bg-white);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Customer Section */
+.customer-section {
+    background: linear-gradient(to right, #f8fafc, #f1f5f9);
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.customer-form {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+    height: 40px;
+    padding: 0 12px;
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dark);
+    background: var(--bg-white);
+    transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
+}
+
+/* Items Table Section */
+.items-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.items-table td:nth-child(1) .table-input {
+    text-align: center;
+    font-weight: 700;
+    padding: 0;
+    min-width: 36px;
+}
+
+.items-section-header {
+    background: linear-gradient(to right, var(--primary-blue), var(--primary-dark));
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.items-section-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.scan-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.scan-pulse {
+    width: 10px;
+    height: 10px;
+    background: var(--accent-gold);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Items Table - FIXED: Bigger QTY column */
+.items-table-container {
+    flex: 1;
+    overflow: auto;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-white);
+}
+
+.items-table thead {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(to right, #f8fafc, #f1f5f9);
+    z-index: 10;
+}
+
+.items-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border-light);
+    white-space: nowrap;
+}
+
+.items-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+}
+
+.items-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Table Inputs - FIXED: Bigger QTY input */
+.table-input {
+    width: 100%;
+    height: 40px; /* Increased from 36px */
+    padding: 0 12px;
+    box-sizing: border-box;
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px; /* Increased from 13px */
+    font-weight: 500;
+    color: var(--text-dark);
+    background: var(--bg-white);
+    transition: all 0.2s;
+}
+
+/* Make QTY input even bigger */
+.items-table td:nth-child(5) .table-input { /* QTY column */
+    height: 42px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.table-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
+}
+
+.table-input[readonly] {
+    background: #f1f5f9;
+    color: var(--text-medium);
+    cursor: default;
+}
+
+.amount-cell {
+    font-weight: 600;
+    color: var(--primary-blue);
+    font-size: 13px;
+}
+
+/* Table Actions */
+.table-actions {
+    padding: 16px 24px;
+    background: var(--bg-lighter);
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn {
+    height: 40px;
+    padding: 0 20px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-green), #059669);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--danger-red), #dc2626);
+    color: white;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid var(--border-medium);
+    color: var(--text-medium);
+}
+
+.delete-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: var(--danger-red);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-btn:hover {
+    background: var(--danger-red);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* ===============================
+   TOTALS PANEL - RIGHT SIDE
+================================ */
+.totals-panel {
+    grid-area: totals;
+    background: var(--bg-white);
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border-light);
+}
+
+.totals-header {
+    background: linear-gradient(to right, var(--primary-blue), var(--primary-dark));
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.totals-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* Amount Display */
+.amount-display {
+    padding: 24px;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    text-align: center;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.total-label {
+    font-size: 12px;
+    color: var(--text-medium);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.grand-total {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--primary-blue);
+    line-height: 1;
+    margin-bottom: 16px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sub-totals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.sub-total-item {
+    background: white;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.sub-label {
+    font-size: 10px;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.sub-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary-blue);
+    display: block;
+}
+
+/* Payment Section */
+.payment-section {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.payment-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-blue);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.payment-methods {
+    display: grid;
+    gap: 12px;
+}
+
+.payment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.payment-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.payment-input {
+    width: 120px;
+    height: 36px;
+    padding: 0 12px;
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    text-align: right;
+    background: var(--bg-white);
+}
+
+.payment-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+
+.payment-summary {
+    background: #f0f9ff;
+    padding: 16px;
+    border-radius: var(--radius-md);
+    margin-top: 16px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.summary-row:last-child {
+    margin-bottom: 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-light);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--primary-blue);
+}
+
+/* Points Section - FIXED: Better points display */
+.points-section {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.points-display {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.points-card {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 1px solid #fbbf24;
+    border-radius: var(--radius-md);
+    padding: 16px;
+    text-align: center;
+}
+
+.points-card.gold {
+    background: linear-gradient(135deg, #fef3c7, #fbbf24);
+    border-color: var(--accent-gold);
+}
+
+.points-label {
+    font-size: 11px;
+    color: #92400e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.points-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #92400e;
+}
+
+/* Actions Section */
+.actions-section {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.action-button {
+    width: 100%;
+    height: 48px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.action-button.save {
+    background: linear-gradient(135deg, var(--success-green), #059669);
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.action-button.quotation {
+    background: linear-gradient(135deg, var(--accent-gold), #b45309);
+    color: white;
+}
+
+.action-button.reset {
+    background: var(--bg-lighter);
+    color: var(--text-medium);
+    border: 2px solid var(--border-medium);
+}
+
+/* ===============================
+   MODAL & POPUP
+================================ */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 400px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    background: linear-gradient(to right, var(--primary-blue), var(--primary-dark));
+    color: white;
+    padding: 20px;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+
+.modal-footer {
+    padding: 20px;
+    background: #f8fafc;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+/* ===============================
+   CUSTOMER PREVIEW
+================================ */
+.customer-preview {
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+    border: 1px solid #7dd3fc;
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+
+.customer-preview::before {
+    content: "👤";
+    font-size: 16px;
+}
+
+/* ===============================
+   RESPONSIVE DESIGN
+================================ */
+@media (max-width: 1200px) {
+    .billing-counter {
+        grid-template-columns: 1fr;
+        grid-template-areas: 
+            "header"
+            "main"
+            "totals";
+        grid-template-rows: 80px 1fr auto;
+    }
+    
+    .totals-panel {
+        border-left: none;
+        border-top: 1px solid var(--border-light);
+    }
+}
+
+@media (max-width: 768px) {
+    .customer-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .bill-info {
         flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
     }
-
-    .sales-page .form-group label {
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 3px;
-        color: #555;
+    
+    .bill-meta {
+        text-align: left;
     }
+}
 
-    .sales-page .form-group input,
-    .sales-page .form-group textarea,
-    .sales-page .form-group select {
-        padding: 6px 8px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 14px;
-    }
+/* ===============================
+   UTILITIES
+================================ */
+.input-error {
+    border-color: var(--danger-red) !important;
+    background: #fef2f2 !important;
+}
 
-    /* Table Styling */
-    .sales-page .item-table {
-        width: 100%;
-        border-collapse: collapse;
-        background-color: #fff;
-        margin-bottom: 10px;
-    }
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #166534;
+}
 
-    .sales-page .item-table th,
-    .sales-page .item-table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: center;
-        font-size: 13px;
-    }
+.status-indicator::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
 
-    .sales-page .item-table th {
-        background-color: #e1f7f7;
-        font-weight: 600;
-    }
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
 
-    .sales-page .table-input {
-        width: 100%;
-        border: none;
-        padding: 5px;
-        background-color: transparent;
-        font-size: 13px;
-    }
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
 
-    /* Footer Controls */
-    .footer-controls {
-        background-color: #f5f9fa;
-        padding: 12px;
-        border-radius: 8px;
-        margin-top: 10px;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        gap: 10px;
-        align-items: center;
-    }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
 
-    .total-red {
-        color: #d9534f;
-        font-size: 20px;
-        font-weight: bold;
-    }
-
-    .total-blue {
-        color: #0275d8;
-        font-size: 16px;
-    }
-
-    button,
-    input[type="submit"],
-    input[type="button"] {
-        padding: 6px 14px;
-        border: none;
-        border-radius: 5px;
-        font-weight: bold;
-        cursor: pointer;
-        background-color: #0275d8;
-        color: white;
-        transition: background 0.2s ease-in-out;
-        font-size: 14px;
-    }
-
-    button:hover {
-        background-color: #025aa5;
-    }
-
-    .delete-row-btn {
-        background-color: #d9534f;
-    }
-
-    .delete-row-btn:hover {
-        background-color: #c9302c;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr); /* 5 equal columns */
-        gap: 10px;
-        align-items: start;
-        grid-auto-rows: min-content; /* rows adjust height to content */
-    }
-
-    /* Place first 5 form groups in first row */
-    .form-grid .form-group:nth-child(-n+5) {
-        grid-row: 1;
-    }
-
-    /* Place the remaining form groups in second row */
-    .form-grid .form-group:nth-child(n+6) {
-        grid-row: 2;
-    }
-
-    /* Make inputs, selects, textareas fill their cells */
-    .form-grid .form-group input,
-    .form-grid .form-group select,
-    .form-grid .form-group textarea {
-        width: 85%;
-        padding: 6px;
-        font-size: 14px;
-        box-sizing: border-box;
-    }
-
-    .suggestion-list {
-        position: absolute;
-        background: rgb(219, 212, 212);
-        border: 1px solid #571414;
-        z-index: 1000;
-        max-height: 150px;
-        overflow-y: auto;
-        width: 10%;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        }
-
-        .suggestion-list li {
-        padding: 6px 10px;
-        cursor: pointer;
-        }
-
-        .suggestion-list li:hover {
-        background: #f0f0f0;
-        }
-
-        #qty-box-container input#qty-total {
-        width: 40px;                
-        text-align: center;          
-        font-weight: bold;
-        font-size: 14px;
-        color: #111;                 
-        background-color: #f0f0f0; 
-        border: 1px solid #6cb60b;       
-        border-radius: 2px;           
-        padding: 2px 4px;            
-        box-shadow: 1px 1px 3px rgba(0,0,0,0.2); 
-    }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="sales-page">
-<div class="main-container">
-    <div class="title" style="margin-top: -25px;">Sales Creation</div>
-    <form id="billingForm" method="POST" action="{% url 'billing' %}">
+<div class="billing-counter">
+    <!-- Header -->
+    <div class="counter-header">
+        <div class="store-brand">
+            <div class="store-logo-text">
+                {{ company.short_name }}
+            </div>
 
-        {% csrf_token %}       
+            <div class="store-info">
+                <h1>{{ company.print_name|default:company.company_name }}</h1>
+                <p>Point of Sale System • Counter = {{ current_counter_name }}</p>
+            </div>
 
-        <div class="form-grid">
-            <div class="form-group"><label>To :</label><input type="text" name="to" value="Cash Sales"></div>
-            <div class="form-group"><label>Bill No :</label><input type="text" name="bill_no" value="{{ bill_no }}" readonly></div>
-            <div class="form-group"><label>Date :</label><input type="text" name="date" value="{{ today_date }}" readonly></div>
-            <div class="form-group">
-                <label>Type :</label>
-                <select name="sale_type" style="padding:6px;">
-                    {% for type in bill_types %}
-                    <option value="{{ type.billtype }}">{{ type.billtype }}</option>
-                    {% endfor %}
-                </select>
+        </div>
+        <div class="bill-info">
+            <div class="bill-meta">
+                <div class="label">Bill Number</div>
+                <div class="value">{{ bill_no }}</div>
+            </div>
+            <div class="bill-meta">
+                <div class="label">Date & Time</div>
+                <div class="value">{{ today_date }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Work Area -->
+    <div class="main-work-area">
+        <!-- Customer Details -->
+        <div class="customer-section">
+            <form id="billingForm" method="post" class="customer-form">
+                {% csrf_token %}
+
+                <!-- ===============================
+                    REQUIRED HIDDEN FIELDS
+                    =============================== -->
+                <input type="hidden" id="itemDataField" name="item_data">
+
+                <!-- Business type: retail / medical / book -->
+                <input type="hidden" id="business_type" name="business_type"
+                    value="{{ business_type|default:'retail' }}">
+
+                <!-- Selected batch for medical items -->
+                <input type="hidden" id="selected_batch_no" name="selected_batch_no">
+
+                <!-- Prescription requirement flag -->
+                <input type="hidden" id="requires_prescription" value="false">
+
+                <!-- ===============================
+                    CUSTOMER INPUTS
+                    =============================== -->
+                <div class="form-group">
+                    <label for="cell">PHONE *</label>
+                    <input
+                        type="tel"
+                        id="cell"
+                        name="cell"
+                        pattern="[6-9][0-9]{9}"
+                        maxlength="10"
+                        required
+                        placeholder="Enter mobile number">
+                </div>
+
+                <div class="form-group">
+                    <label for="name">CUSTOMER NAME</label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="Customer name"
+                        readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="address">ADDRESS</label>
+                    <input
+                        type="text"
+                        id="address"
+                        name="address"
+                        placeholder="Customer address"
+                        readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="bill_type">BILL TYPE</label>
+                    <select id="bill_type" name="bill_type" class="form-control">
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="Both Cash & Card">Both Cash & Card</option>
+                        <option value="Credit">Credit</option>
+                    </select>
+                </div>
+
+                <!-- ===============================
+                    CUSTOMER PREVIEW (OPTIONAL)
+                    =============================== -->
+                <!--
+                <div id="customerPreview"
+                    class="customer-preview"
+                    style="display: none;">
+                    Customer details will appear here
+                </div>
+                -->
+
+            
+    </div>
+
+
+        <!-- Items Table -->
+        <div class="items-section">
+            <div class="items-section-header">
+                <h3>SCANNED ITEMS</h3>
+                <div class="scan-indicator">
+                    <div class="scan-pulse"></div>
+                    <span>SCANNING ACTIVE</span>
+                </div>
             </div>
             
-            <div class="form-group">
-                <label>Payment mode :</label>
-                <select name="bill_type" style="padding:6px;">
-                    {% for mode in payment_modes %}
-                    <option value="{{ mode.mode_name }}">{{ mode.mode_name }}</option>
-                    {% endfor %}
-                </select>
+            <div class="items-table-container scrollbar-thin">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th style="width: 100px;">CODE</th>
+                            <th>ITEM DESCRIPTION</th>
+                            <th style="width: 80px;">UNIT</th>
+                            <th style="width: 100px;">QTY</th> <!-- Increased width -->
+                            <th style="width: 100px;">MRP</th>
+                            <th style="width: 100px;">SELL PRICE</th>
+                            <th style="width: 120px;">AMOUNT</th>
+                            <th style="width: 60px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemTableBody">
+                        <tr>
+                            <td><input type="number" name="sno" class="table-input" value="1" readonly></td>
+                            <td><input type="text" name="code" class="table-input" placeholder="Scan code"></td>
+                            <td><input type="text" name="item_name" class="table-input" placeholder="Item name"></td>
+                            <td><input type="text" name="unit" class="table-input"></td>
+                            <td><input type="number" name="qty" class="table-input" value="1" step="0.01"></td>
+                            <td><input type="number" name="mrsp" class="table-input" readonly></td>
+                            <td><input type="number" name="sellingprice" class="table-input" readonly></td>
+                            <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
+                            <td><button type="button" class="delete-btn">×</button></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             
-            <div class="form-group">
-                <label>Counter :</label>
-                <select name="counter" style="padding:6px;">
-                    {% for count in counter %}
-                    <option value="{{ count.counter_name }}">{{ count.counter_name }}</option>
-                    {% endfor %}
-                </select>
+            <div class="table-actions">
+                <button type="button" id="addRowBtn" class="btn btn-primary">
+                    + ADD ITEM
+                </button>
+                <div class="status-indicator">
+                    READY FOR SCANNING
+                </div>
             </div>
-                                   
-            <div class="form-group"><label>Phone : (default - 9876543210)</label><input type="text" id="cell" name="cell" placeholder="Enter phone number" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digitNumber starting with 6, 7, 8, or 9" required autocomplete="off"></div>
-            <div class="form-group full-width"><label>Name :</label><input type="text" id="name" name="name" placeholder="" required></div> 
-            <div class="form-group"><label>Address :</label><textarea name="address" id="address" style="height: 40px;"></textarea></div>
+        </div>
+    </div>
+
+    <!-- Totals Panel -->
+    <div class="totals-panel">
+        <div class="totals-header">
+            <h2>PAYMENT SUMMARY</h2>
+        </div>
+        
+        <div class="amount-display">
+            <div class="total-label">GRAND TOTAL</div>
+            <div class="grand-total" id="grandTotalDisplay">0.00</div>
             
-            <div class="form-group"><label>Join Date :</label><input type="text" name="date_joined" id="date_joined" value="{{ today_date }}" readonly></div>            
-            <div id="nameModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-            background-color: rgba(0,0,0,0.4); justify-content:center; align-items:center; z-index:1000;">
-            
-            <div style="background-color:#fff; padding:20px; border-radius:8px; width:300px; text-align:center;">
-                <h3 style="margin-bottom:10px;">Enter the Name</h3>
-                <input type="text" id="modalNameInput"  name="name" placeholder="Type name here" style="width:90%; padding:8px;">
-                <br><br>
-                <button onclick="submitName()" style="padding:8px 20px;">OK</button>
+            <div class="sub-totals">
+                <div class="sub-total-item">
+                    <span class="sub-label">Total Qty</span>
+                    <span class="sub-value" id="qty-total">0</span>
+                </div>
+                <div class="sub-total-item">
+                    <span class="sub-label">Discount %</span>
+                    <input type="number" id="discount" name="discount" class="sub-value" 
+                           style="border: none; background: transparent; text-align: center; width: 100%;" 
+                           min="0" max="100" step="0.01" value="0">
+                </div>
             </div>
-            </div>                               
         </div>
-
-        <!-- Item Table -->
-        <table class="item-table">
-            <thead>
-                <tr style="height: 25px;">
-                    <th style="padding: 2px;">Sno</th>
-                    <th style="padding: 2px;">Code</th>
-                    <th style="padding: 2px;">Item Name</th>
-                    <th style="padding: 2px;">Unit</th>
-                    <th style="padding: 2px;">Qty</th>
-                    <th style="padding: 2px;">MRP</th>
-                    <th style="padding: 2px;">Sellprice</th>
-                    <th style="padding: 2px;">Amount</th>
-                    <th style="padding: 2px;">Action</th>
-                </tr>
-            </thead>
-            <tbody id="itemTableBody">
-                <tr style="height: 25px;">
-                    <td style="padding: 2px;"><input type="number" name="sno" class="table-input" readonly></td>
-                    <td style="padding: 2px;"><input type="text" name="code" class="table-input"></td>
-                    <td style="padding: 2px;"><input type="text" name="item_name" class="table-input"></td>
-                    <td style="padding: 2px;"><input type="text" name="unit" class="table-input"></td>
-                    <td style="padding: 2px;"><input type="number" name="qty" class="table-input" step="any"></td>
-                    <td style="padding: 2px;"><input type="number" name="mrsp" class="table-input" readonly></td>
-                    <td style="padding: 2px;"><input type="number" name="sellingprice" class="table-input" readonly></td>
-                    <td style="display:none;"><input type="hidden" name="tax" class="table-input" value="0"></td>
-                    <td style="padding: 2px;"><input type="text" class="table-input amount-output" value="0.00" readonly></td>
-                    <td style="padding: 2px;"><button type="button" class="delete-row-btn">Delete</button></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div style="text-align: left; margin: 10px;">
-            <button type="button" id="addRowBtn">+ Add Item</button>
+        
+        <div class="payment-section">
+            <h3>PAYMENT METHODS</h3>
+            <div class="payment-methods">
+                <div class="payment-row">
+                    <span class="payment-label">CASH:</span>
+                    <input type="number" name="cash_amount" class="payment-input" min="0" step="0.01" value="0">
+                </div>
+                <div class="payment-row">
+                    <span class="payment-label">CARD:</span>
+                    <input type="number" name="card_amount" class="payment-input" min="0" step="0.01" value="0">
+                </div>
+            </div>
+            
+            <div class="payment-summary">
+                <div class="summary-row">
+                    <span>Received:</span>
+                    <span><input type="text" name="received" class="payment-input" style="border: none; background: transparent; width: 100px;" readonly value="0.00"></span>
+                </div>
+                <div class="summary-row">
+                    <span>Balance:</span>
+                    <span><input type="text" name="balance" class="payment-input" style="border: none; background: transparent; width: 100px; font-weight: 700;" readonly value="0.00"></span>
+                </div>
+            </div>
         </div>
+        
+<div class="points-display">
 
-        <input type="hidden" name="item_data" id="itemDataField">
+    <!-- OLD POINTS -->
+    <div class="points-card">
+        <div class="points-label">OLD POINTS</div>
 
-        <div class="footer-controls" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 15px; border-top: 2px solid #ccc;">
+        <!-- Visible old points -->
+        <div class="points-value" id="oldPointsDisplay">0.00</div>
 
-    <div class="buttons" style="display: flex; gap: 10px;">
-        <button type="button" onclick="submitAsQuotation()" tabindex="-1">Quotation</button>
-        <button type="button" onclick="location.href='{% url 'order_list' %}'" tabindex="-1">
-        Order
-        </button>
-
+        <!-- Hidden old points -->
+        <input type="hidden" id="old_points" value="0">
     </div>
 
-    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 18px; font-weight: bold;">
+    <!-- TODAY'S POINTS -->
+    <div class="points-card gold">
+        <div class="points-label">TODAY'S POINTS</div>
 
-        <div id="qty-box-container">
-            Qty: <input type="text" id="qty-total" value="0" readonly>
-        </div>
+        <!-- Visible today points -->
+        <div class="points-value" id="totalEarnedDisplay">0.00</div>
 
-       <div id="discount-box-container">
-        Discount: <input type="number" id="discount" name="discount" style="width: 40px;" min="0" max="100"> %
-    </div>
-        <span class="total-red" style="font-size: 26px; color: red;">0.00</span> 
-
-        <label>Received:</label>
-        <input type="number" step="0.01" name="received" tabindex="-1" readonly 
-            style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#d4f8d4; border:2px solid #3cb043; color:#1a4314;">
-
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-        <div>
-            <label>Cash:</label>
-            <input type="number" step="0.01" name="cash_amount" min="0"
-                oninput="if(this.value < 0) this.value = 0;"
-                style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#e6f7ff; border:2px solid #3399ff; color:#003366;">
-        </div>
-        <div>
-            <label>Card:</label>
-            <input type="number" step="0.01" name="card_amount" min="0"
-                oninput="if(this.value < 0) this.value = 0;"
-                style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#fff0f5; border:2px solid #cc3366; color:#660033;">
-        </div>
+        <!-- Hidden today points -->
+        <input type="hidden" id="total_earned" name="total_earned" value="0">
     </div>
 
-        <label>Balance:</label>
-        <input type="number" step="0.01" name="balance" tabindex="-1" readonly
-            style="width:120px; height:40px; font-size:18px; font-weight:bold; background:#ffe4b3; border:2px solid #e69500; color:#663d00;">
-    </div>
+    <!-- TOTAL POINTS -->
+    <!-- <div class="points-card">
+        <div class="points-label">TOTAL POINTS</div> -->
 
-    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; font-size:16px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="points">Total Points:</label>
-            <input type="text" id="points" name="points" tabindex="-1" readonly style="width:100px; text-align:center;">
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="total_earned">Today Points:</label>
-            <input type="text" id="total_earned" name="total_earned" tabindex="-1" readonly style="width:100px; text-align:center;">
-        </div>
-    </div>
+        <!-- Visible total points -->
+        <!-- <div class="points-value" id="pointsDisplay">0.00</div> -->
 
-   <div class="buttons" 
-     style="display: flex; justify-content: flex-end; gap: 10px; width: 100%; margin-top: 10px;">
-    <button type="button" id="saveBtn" onclick="submitBilling()">Save</button>
-    <button type="button" onclick="location.reload()">Reset</button>   
-</div>
+        <!-- Hidden total points -->
+        <!-- <input type="hidden" id="points" name="points" value="0"> -->
+    <!-- </div> -->
 
 </div>
 
-    <input type="hidden" id="company_name" value="{{ company.company_name }}">
-    <input type="hidden" id="company_address" value="{{ company.address }}">
-    <input type="hidden" id="company_gstin" value="{{ company.gstin }}">
-    <input type="hidden" id="company_phone" value="{{ company.phone }}">
-    <input type="hidden" id="company_website" value="{{ company.website }}">
 
-    </form>
+
+        
+        <div class="actions-section">
+            <button id="saveBtn" type="submit" class="action-button save">
+                💾 SAVE BILL
+            </button>
+
+            <button type="button" onclick="submitAsQuotation()" class="action-button quotation">
+                📄 CREATE QUOTATION
+            </button>
+            <button type="button" onclick="location.reload()" class="action-button reset">
+                🔄 RESET
+            </button>
+            <button type="button" onclick='location.href="{% url "order_list" %}"' class="action-button">
+                📋 VIEW ORDERS
+            </button>
+        </div>
+    </div>
 </div>
+</form>
+
+<!-- Customer Details Modal -->
+<div id="customerPopup" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">New Customer Details</div>
+        </div>
+        <div class="modal-body">
+            <input type="text" id="popup_name" class="modal-input" placeholder="Customer Name *" required>
+            <textarea id="popup_address" class="modal-input" placeholder="Address" style="height: 80px; resize: vertical;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button onclick="saveCustomerPopup()" class="btn btn-primary">SAVE CUSTOMER</button>
+            <button onclick="closeCustomerPopup()" class="btn btn-outline">CANCEL</button>
+        </div>
+    </div>
 </div>
-{% endblock %}
+
+<!-- Name Modal (Fallback) -->
+<div id="nameModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">New Customer Registration</div>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-medium); margin-bottom: 16px;">Enter customer name for the phone number</p>
+            <input type="text" id="modalNameInput" class="modal-input" placeholder="Enter customer name">
+        </div>
+        <div class="modal-footer">
+            <button onclick="submitName()" class="btn btn-primary">SAVE</button>
+            <button onclick="document.getElementById('nameModal').style.display='none'" class="btn btn-outline">CANCEL</button>
+        </div>
+    </div>
+</div>
 
 {% if messages %}
     {% for message in messages %}
@@ -380,96 +1127,853 @@
         </script>
     {% endfor %}
 {% endif %}
+{% endblock %}
 
 {% block extra_js %}
 <script>
+let isNewCustomerLocked = false;
 
+     const COMPANY = {
+            name: "{{ company.print_name|default:company.company_name|default:'MY STORE'|escapejs }}",
+            address: "{{ company.address|default:''|escapejs }}",
+            gstin: "{{ company.gstin|default:''|escapejs }}",
+            phone: "{{ company.mobile|default:company.phone|default:''|escapejs }}",
+            website: "{{ company.website|default:''|escapejs }}"
+        };
+
+        const BILL_NO = "{{ bill_no|escapejs }}";
+        const BILL_DATE = "{{ today_date|escapejs }}";
+
+// Consolidated JavaScript for Supermarket Billing Counter
+
+// Global variables
+const itemTableBody = document.getElementById('itemTableBody');
+let prevRow = null; // Track previous row for delete operation
+const enableGST = '{{ enable_gst|yesno:"true,false" }}'.toLowerCase() === 'true';
+
+// Main initialization
 document.addEventListener('DOMContentLoaded', function() {
-    const firstRow = document.querySelector('#itemTableBody tr');
-
-    if (firstRow) {
-        // Bind autofill logic same as for dynamically added rows
-        attachAutoFill(firstRow);
-
-        // If code is already filled (like Sugar), trigger fetch
-        const codeInput = firstRow.querySelector('input[name="code"]');
-        if (codeInput && codeInput.value.trim() !== "") {
-            fetchItemDetails(codeInput.value, firstRow);
-        }
-    }
+    console.log("Initializing supermarket billing system");
+    
+    // Setup customer phone lookup with auto-trigger
+    setupCustomerLookup();
+    
+    // Initialize table and calculations
+    initializeTable();
+    
+    // Setup form submission
+    const form = document.getElementById('billingForm');
+    const saveBtn = document.getElementById('saveBtn');
+    
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        submitBilling();
+    });
+    
+    // Initial calculation
+    setTimeout(updateCalculations, 100);
 });
 
+// ===============================
+// CUSTOMER FUNCTIONS - ENHANCED WITH AUTO-LOOKUP
+// ===============================
+function setupCustomerLookup() {
+    const cellInput = document.getElementById("cell");
+    const nameInput = document.getElementById("name");
+    const addressInput = document.getElementById("address");
+    const customerPreview = document.getElementById("customerPreview");
 
-    // Global variables
-    const itemTableBody = document.getElementById('itemTableBody');
-    let prevRow = null; // Track previous row for delete operation
+    // Ensure OLD POINTS hidden input exists
+    let oldPointsInput = document.getElementById("old_points");
+    if (!oldPointsInput) {
+        oldPointsInput = document.createElement("input");
+        oldPointsInput.type = "hidden";
+        oldPointsInput.id = "old_points";
+        oldPointsInput.name = "old_points";
+        oldPointsInput.value = "0";
+        document.getElementById("billingForm").appendChild(oldPointsInput);
+    }
 
-    // Main initialization when DOM is loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-        const cellInput = document.getElementById('cell');
-        const nameInput = document.getElementById('name');
-        const modal = document.getElementById('nameModal');
-        const modalNameInput = document.getElementById('modalNameInput');
-        const addressInput = document.getElementById('address');
-        const pointsInput = document.getElementById('points');
-        const totalEarnedInput = document.getElementById('total_earned');
+    // Debounce function to prevent too many API calls
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 
-        // Handle customer autofill based on cell number
-        cellInput.addEventListener('blur', function () {
+    // Handle customer check automatically as user types
+    cellInput.addEventListener("input", debounce(function() {
         const phone = cellInput.value.trim();
+        if (phone.length >= 10) {
+            handleCustomerCheck();
+        }
+    }, 500));
 
-        // Only allow exactly 10 digits
-        if (!/^\d{10}$/.test(phone)) {            
-            cellInput.focus();
+    cellInput.addEventListener("blur", handleCustomerCheck);
+    cellInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleCustomerCheck();
+        }
+    });
+
+    // Main customer check function
+    function handleCustomerCheck() {
+
+        // 🚫 If new customer already saved, do nothing
+        if (isNewCustomerLocked) {
             return;
         }
 
-        // Now safe to send request to backend
+        const phone = cellInput.value.trim();
+
+        // ===============================
+        // PHONE VALIDATION
+        // ===============================
+        if (!/^\d{10}$/.test(phone)) {
+            if (phone.length > 0 && phone.length < 10) {
+                return; // Still typing
+            }
+            if (phone.length >= 10) {
+                clearCustomerInfo();
+            }
+            return;
+        }
+
         fetch(`?phone=${encodeURIComponent(phone)}`, {
-            method: "GET",
             headers: { "X-Requested-With": "XMLHttpRequest" }
         })
-        .then(response => response.json())
-        .then(data => {            
-            if (data.name) {
-                nameInput.value = data.name;
-                addressInput.value = data.customer_address || ''; 
-                pointsInput.value = data.points || 0;                        
-                const joinDateInput = document.getElementById('date_joined');
-                joinDateInput.value = data.date_joined || new Date().toISOString().split('T')[0];
-                joinDateInput.readOnly = !!data.date_joined;
-            } else {
-                modal.style.display = 'flex';
-                modalNameInput.value = '';
-                modalNameInput.focus();
+        .then(res => res.json())
+        .then(data => {
+
+            // ===============================
+            // NEW CUSTOMER
+            // ===============================
+            if (!data.name) {
+                clearCustomerInfo();
+
+                // 🔥 OPEN POPUP ONLY ONCE
+                openCustomerPopup();
+                return;
             }
+
+            // ===============================
+            // EXISTING CUSTOMER
+            // ===============================
+            nameInput.removeAttribute("readonly");
+            addressInput.removeAttribute("readonly");
+
+            nameInput.value = data.name;
+            addressInput.value = data.customer_address || "";
+
+            // ===============================
+            // OLD POINTS
+            // ===============================
+            const oldPoints = parseFloat(data.points) || 0;
+
+            if (oldPointsInput) {
+                oldPointsInput.value = oldPoints.toFixed(2);
+            }
+
+            const oldPointsDisplay = document.getElementById("oldPointsDisplay");
+            if (oldPointsDisplay) {
+                oldPointsDisplay.textContent = oldPoints.toFixed(2);
+            }
+
+            // ===============================
+            // UPDATE UI
+            // ===============================
+            updatePointsDisplay();
+            showCustomerPreview(data.name);
+
+            // Focus item code
+            setTimeout(() => {
+                const firstCodeInput = document.querySelector('input[name="code"]');
+                firstCodeInput?.focus();
+            }, 100);
+        })
+        .catch(err => {
+            console.error("Customer fetch error:", err);
+            clearCustomerInfo();
         });
-    });
-
-        // Initialize table and calculations
-        initializeTable();
-    });
-
-    // Validate form fields
-    function validateForm() {
-        const requiredFields = [
-            {id: 'name', name: 'Customer Name'},
-            {id: 'cell', name: 'Phone Number'}          
-        ];
-
-        for (const field of requiredFields) {
-            const element = document.getElementById(field.id);
-            if (!element || !element.value.trim()) {
-                alert(`${field.name} is required`);
-                element?.focus();
-                return false;
-            }
-        }
-        return true;
     }
 
-  function validateAllRows() {
+
+    function clearCustomerInfo() {
+
+    // 🚫 Do not clear if new customer already saved
+        if (isNewCustomerLocked) {
+            return;
+        }
+
+        nameInput.value = "";
+        addressInput.value = "";
+
+        if (oldPointsInput) {
+            oldPointsInput.value = "0";
+        }
+
+        const oldPointsDisplay = document.getElementById("oldPointsDisplay");
+        if (oldPointsDisplay) {
+            oldPointsDisplay.textContent = "0.00";
+        }
+
+        updatePointsDisplay();
+
+        if (customerPreview) {
+            customerPreview.style.display = "none";
+        }
+    }
+
+
+    function showCustomerPreview(name) {
+        if (customerPreview) {
+            customerPreview.innerHTML = `👤 ${name}`;
+            customerPreview.style.display = "flex";
+        }
+    }
+
+}
+
+// Customer popup functions
+function openCustomerPopup() {
+    const customerPopup = document.getElementById("customerPopup");
+    const popup_name = document.getElementById("popup_name");
+    const popup_address = document.getElementById("popup_address");
+    const cellInput = document.getElementById("cell");
+    
+    if (customerPopup && popup_name && popup_address) {
+        customerPopup.style.display = "flex";
+        
+        // Pre-fill with current values if available
+        if (cellInput) popup_name.value = document.getElementById("name")?.value || "";
+        popup_address.value = document.getElementById("address")?.value || "";
+        
+        popup_name.focus();
+    }
+}
+
+function closeCustomerPopup() {
+    const customerPopup = document.getElementById("customerPopup");
+    if (customerPopup) customerPopup.style.display = "none";
+}
+
+function saveCustomerPopup() {
+    const popup_name = document.getElementById("popup_name");
+    const popup_address = document.getElementById("popup_address");
+
+    const nameInput = document.getElementById("name");
+    const addressInput = document.getElementById("address");
+    const customerPreview = document.getElementById("customerPreview");
+
+    if (!popup_name || !popup_name.value.trim()) {
+        alert("Customer name is required");
+        popup_name.focus();
+        return;
+    }
+
+    // 🔒 LOCK auto customer lookup
+    isNewCustomerLocked = true;
+
+    // ✅ REMOVE readonly (important)
+    if (nameInput) nameInput.removeAttribute("readonly");
+    if (addressInput) addressInput.removeAttribute("readonly");
+
+    // ✅ SET VALUES
+    if (nameInput) {
+        nameInput.value = popup_name.value.trim();
+    }
+
+    if (addressInput) {
+        addressInput.value = popup_address.value.trim();
+    }
+
+    // ✅ SHOW PREVIEW
+    if (customerPreview) {
+        customerPreview.innerHTML = `👤 ${popup_name.value.trim()}`;
+        customerPreview.style.display = "flex";
+    }
+
+    // ✅ UPDATE POINTS
+    updatePointsDisplay();
+
+    // ✅ CLOSE POPUP
+    closeCustomerPopup();
+}
+
+
+// Modal submit action
+function submitName() {
+    const modalNameInput = document.getElementById('modalNameInput');
+    const nameInput = document.getElementById('name');
+    const modal = document.getElementById('nameModal');
+    const customerPreview = document.getElementById('customerPreview');
+    
+    if (modalNameInput && modalNameInput.value.trim() !== '') {
+        if (nameInput) nameInput.value = modalNameInput.value.trim();
+        if (customerPreview) {
+            customerPreview.innerHTML = `👤 ${modalNameInput.value.trim()}`;
+            customerPreview.style.display = "flex";
+        }
+        if (modal) modal.style.display = 'none';
+        
+        // Update points if needed
+        updatePointsDisplay();
+    }
+}
+
+// ===============================
+// ✅ GLOBAL POINTS DISPLAY (ONLY ONE)
+// ===============================
+function updatePointsDisplay() {
+    const pointsInput = document.getElementById('points');
+    const pointsDisplay = document.getElementById('pointsDisplay');
+
+    const todayPointsInput = document.getElementById('total_earned');
+    const todayPointsDisplay = document.getElementById('totalEarnedDisplay');
+
+    const oldPointsInput = document.getElementById('old_points');
+    const oldPointsDisplay = document.getElementById('oldPointsDisplay');
+
+    const oldPoints = parseFloat(oldPointsInput?.value) || 0;
+    const todayPoints = parseFloat(todayPointsInput?.value) || 0;
+    const totalPoints = oldPoints + todayPoints;
+
+    console.log("POINTS UPDATE:", { oldPoints, todayPoints, totalPoints });
+
+    if (oldPointsDisplay) oldPointsDisplay.textContent = oldPoints.toFixed(2);
+    if (todayPointsDisplay) todayPointsDisplay.textContent = todayPoints.toFixed(2);
+    if (pointsDisplay) pointsDisplay.textContent = totalPoints.toFixed(2);
+    if (pointsInput) pointsInput.value = totalPoints.toFixed(2);
+}
+
+// ===============================
+// TABLE AND CALCULATION FUNCTIONS - FIXED
+// ===============================
+function initializeTable() {
+    console.log("Initializing table");
+    
+    const addRowBtn = document.getElementById('addRowBtn');
+    const receivedInput = document.querySelector('input[name="received"]');
+    const balanceInput = document.querySelector('input[name="balance"]');
+    const qtyTotal = document.getElementById('qty-total');
+    const grandTotalDisplay = document.getElementById('grandTotalDisplay');
+
+    // Initialize calculation function
+    function updateCalculations() {
+        console.log("Updating calculations");
+
+        const rows = itemTableBody.querySelectorAll('tr');
+        let totalQty = 0;
+        let totalAmount = 0;
+
+        rows.forEach(row => {
+            const qtyInput = row.querySelector('input[name="qty"]');
+            const priceInput = row.querySelector('input[name="sellingprice"]');
+            const amountOutput = row.querySelector('.amount-output');
+
+            if (qtyInput && priceInput && amountOutput) {
+                const qty = parseFloat(qtyInput.value) || 0;
+                const price = parseFloat(priceInput.value) || 0;
+                const amount = qty * price;
+
+                amountOutput.value = amount.toFixed(2);
+                totalQty += qty;
+                totalAmount += amount;
+            }
+        });
+
+        // Discount
+        const discountPercent = parseFloat(document.getElementById('discount')?.value || 0);
+        const totalAfterDiscount = totalAmount - (totalAmount * discountPercent / 100);
+
+        if (qtyTotal) qtyTotal.textContent = totalQty.toFixed(2);
+        if (grandTotalDisplay) grandTotalDisplay.textContent = totalAfterDiscount.toFixed(2);
+
+        // Payments
+        const cash = parseFloat(document.querySelector('input[name="cash_amount"]')?.value || 0);
+        const card = parseFloat(document.querySelector('input[name="card_amount"]')?.value || 0);
+        const received = cash + card;
+        const balance = totalAfterDiscount - received;
+
+        if (receivedInput) receivedInput.value = received.toFixed(2);
+        if (balanceInput) balanceInput.value = balance.toFixed(2);
+
+        // ===============================
+        // ✅ TODAY POINTS CALCULATION (FIX)
+        // ===============================
+        const amountForOnePoint = parseFloat('{{ amount_for_one_point|floatformat:2|default:"0" }}') || 0;
+        const todayPoints = Math.round((totalAfterDiscount / amountForOnePoint) * 100) / 100;
+
+        // Update today's points
+        const totalEarnedInput = document.getElementById('total_earned');
+        if (totalEarnedInput) {
+            totalEarnedInput.value = todayPoints.toFixed(2);
+        }
+
+        // Optional UI display
+        const totalEarnedDisplay = document.getElementById('totalEarnedDisplay');
+        if (totalEarnedDisplay) {
+            totalEarnedDisplay.textContent = todayPoints.toFixed(2);
+        }
+
+        // Final points update
+        updatePointsDisplay();
+
+        console.log("Calculations updated:", {
+            totalQty,
+            totalAmount,
+            totalAfterDiscount,
+            todayPoints,
+            received,
+            balance
+        });
+    }
+
+    // Setup event listeners for calculations
+    const discountInput = document.getElementById('discount');
+    const cashInput = document.querySelector('input[name="cash_amount"]');
+    const cardInput = document.querySelector('input[name="card_amount"]');
+
+    if (discountInput) {
+        discountInput.addEventListener('input', updateCalculations);
+        discountInput.addEventListener('change', updateCalculations);
+    }
+
+    if (cashInput) {
+        cashInput.addEventListener('input', updateCalculations);
+        cashInput.addEventListener('change', updateCalculations);
+    }
+
+    if (cardInput) {
+        cardInput.addEventListener('input', updateCalculations);
+        cardInput.addEventListener('change', updateCalculations);
+    }
+
+    if (receivedInput) {
+        receivedInput.addEventListener('input', updateCalculations);
+    }
+
+    // Add input listeners to a row
+    function attachInputListeners(row) {
+        const qtyInput = row.querySelector('input[name="qty"]');
+        const sellingInput = row.querySelector('input[name="sellingprice"]');
+
+        if (qtyInput) {
+            qtyInput.addEventListener('input', updateCalculations);
+            qtyInput.addEventListener('change', updateCalculations);
+        }
+        if (sellingInput) {
+            sellingInput.addEventListener('input', updateCalculations);
+            sellingInput.addEventListener('change', updateCalculations);
+        }
+    }
+
+    // Add delete listener to a row
+    function attachDeleteListener(row) {
+        const deleteBtn = row.querySelector('.delete-btn') || row.querySelector('.delete-row-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                const totalRows = itemTableBody.querySelectorAll('tr').length;
+                if (totalRows <= 1) {
+                    alert("At least one row must be present.");
+                    return;
+                }
+
+                prevRow = row.previousElementSibling || row.nextElementSibling;
+                row.remove();
+                updateSerialNumbers();
+                updateCalculations();
+
+                if (prevRow) {
+                    const codeInput = prevRow.querySelector('input[name="code"]');
+                    if (codeInput) codeInput.focus();
+                }
+            });
+        }
+    }
+
+    function attachKeyboardFlow(row) {
+        const codeInput = row.querySelector('input[name="code"]');
+        const nameInput = row.querySelector('input[name="item_name"]');
+        const qtyInput = row.querySelector('input[name="qty"]');
+        const addRowBtn = document.getElementById("addRowBtn");
+
+        // Code → Qty or Item Name
+        if (codeInput) {
+            codeInput.addEventListener("keydown", function (e) {
+                if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                    e.preventDefault();
+                    if (codeInput.value.trim() !== "") {
+                        if (qtyInput) qtyInput.focus();
+                    } else {
+                        if (nameInput) nameInput.focus();
+                    }
+                }
+            });
+        }
+
+        // Item Name → Qty
+        if (nameInput && qtyInput) {
+            nameInput.addEventListener("keydown", function (e) {
+                if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                    e.preventDefault();
+                    qtyInput.focus();
+                }
+            });
+        }
+
+        // Qty → Add Item button
+        if (qtyInput && addRowBtn) {
+            qtyInput.addEventListener("keydown", function (e) {
+                if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                    e.preventDefault();
+                    addRowBtn.focus();
+                }
+            });
+        }
+    }
+
+    // Attach listener to Add Item button only once
+    if (addRowBtn) {
+        addRowBtn.addEventListener("keydown", function (e) {
+            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+                e.preventDefault();
+                addNewRow();
+
+                // Focus new row's code input
+                const rows = document.querySelectorAll("#itemTableBody tr");
+                const lastRow = rows[rows.length - 1];
+                const newCodeInput = lastRow?.querySelector('input[name="code"]');
+                if (newCodeInput) newCodeInput.focus();
+            }
+        });
+        
+        addRowBtn.addEventListener('click', addNewRow);
+    }
+
+    // Add new row to the table
+    async function addNewRow() {
+        const lastRow = itemTableBody.querySelector('tr:last-child');
+        if (!lastRow) return;
+        
+        const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
+        let isValid = true;
+
+        // Validate required fields in last row
+        requiredFields.forEach(field => {
+            const input = lastRow.querySelector(`input[name="${field}"]`);
+            if (!input || !input.value.trim()) {
+                input?.classList.add('input-error');
+                isValid = false;
+            } else {
+                input?.classList.remove('input-error');
+            }
+        });
+
+        if (!isValid) {
+            alert("Please fill all required fields (Code, Item Name, Qty, Selling Price) before adding a new item.");
+            lastRow.querySelector('.input-error')?.focus();
+            return;
+        }
+
+        const code = lastRow.querySelector('input[name="code"]').value.trim();
+        const itemName = lastRow.querySelector('input[name="item_name"]').value.trim();
+        const unit = lastRow.querySelector('input[name="unit"]').value.trim();
+        const qty = parseFloat(lastRow.querySelector('input[name="qty"]').value || 0);
+        const sellPrice = parseFloat(lastRow.querySelector('input[name="sellingprice"]').value || 0);
+
+        // Check for duplicates
+        const rows = itemTableBody.querySelectorAll('tr');
+        for (let row of rows) {
+            if (row === lastRow) continue;
+
+            const rowCode = row.querySelector('input[name="code"]')?.value.trim();
+            const rowItemName = row.querySelector('input[name="item_name"]')?.value.trim();
+            const rowUnit = row.querySelector('input[name="unit"]')?.value.trim();
+
+            if (rowCode === code && rowItemName === itemName && rowUnit === unit) {
+                const existingQtyInput = row.querySelector('input[name="qty"]');
+                const existingQty = parseFloat(existingQtyInput.value || 0);
+                const newQty = existingQty + qty;
+
+                try {
+                    const response = await fetch(`/ajax/get-item-info/?code=${encodeURIComponent(code)}`);
+                    if (!response.ok) throw new Error("Failed to fetch available quantity");
+
+                    const data = await response.json();
+                    const availableQty = parseFloat(data.total_available) || 0;
+
+                    if (newQty > availableQty) {
+                        alert(`⚠️ Only ${availableQty} units available. You tried to add ${newQty}.`);
+                        lastRow.querySelector('input[name="qty"]').focus();
+                        return;
+                    }
+
+                    // If valid, update merged quantity
+                    existingQtyInput.value = newQty;
+                    row.querySelector('.amount-output').value = (newQty * sellPrice).toFixed(2);
+
+                    // Clear last row
+                    lastRow.querySelectorAll('input').forEach(input => {
+                        if (input.type === 'number' || input.type === 'text') {
+                            input.value = '';
+                        }
+                    });
+                    lastRow.querySelector('.amount-output').value = '0.00';
+                    lastRow.querySelector('input[name="code"]').focus();
+                    updateSerialNumbers();
+                    updateCalculations();
+                    return;
+
+                } catch (error) {
+                    console.error("Error fetching available quantity:", error);
+                    alert("Error checking available quantity. Please try again.");
+                    return;
+                }
+            }
+        }
+
+        // If no duplicate found, create a new row
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td><input type="number" name="sno" class="table-input" readonly></td>
+            <td><input type="text" name="code" class="table-input" placeholder="Scan or enter code"></td>
+            <td><input type="text" name="item_name" class="table-input" placeholder="Item name"></td>
+            <td><input type="text" name="unit" class="table-input"></td>
+            <td><input type="number" name="qty" class="table-input" value="1" step="0.01"></td>
+            <td><input type="number" name="mrsp" class="table-input" readonly></td>
+            <td><input type="number" name="sellingprice" class="table-input" readonly></td>
+            <td style="display:none;"><input type="number" name="tax" class="table-input" value="0" step="0.01"></td>
+            <td><input type="text" class="table-input amount-output" value="0.00" readonly></td>
+            <td><button type="button" class="delete-btn">×</button></td>
+        `;
+
+        itemTableBody.appendChild(newRow);
+        attachInputListeners(newRow);
+        attachDeleteListener(newRow);
+        attachKeyboardFlow(newRow);   
+        attachAutoFill(newRow);
+        updateSerialNumbers();
+        updateCalculations();
+
+        newRow.querySelector('input[name="code"]').focus();
+    }
+
+    // Update serial numbers in the table
+    function updateSerialNumbers() {
+        const rows = itemTableBody.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            const snoInput = row.querySelector('input[name="sno"]');
+            if (snoInput) {
+                snoInput.value = index + 1;
+            }
+        });
+    }
+
+    // Auto reindex serial numbers on any row add/remove
+    if (itemTableBody) {
+        const tableObserver = new MutationObserver(() => {
+            updateSerialNumbers();
+        });
+        tableObserver.observe(itemTableBody, { childList: true });
+    }
+
+    function attachAutoFill(row) {
+        const codeInput = row.querySelector('input[name="code"]');
+        const nameInput = row.querySelector('input[name="item_name"]');
+        const unitInput = row.querySelector('input[name="unit"]');
+        const mrspInput = row.querySelector('input[name="mrsp"]');
+        const priceInput = row.querySelector('input[name="sellingprice"]');
+        const quantityInput = row.querySelector('input[name="qty"]');
+
+        function fetchItemInfo(field, value) {
+            if (!value.trim()) return;
+            const url = `/ajax/get-item-info/?${field}=${encodeURIComponent(value.trim())}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("Item not found!");
+                        if (codeInput) codeInput.value = '';
+                        if (nameInput) nameInput.value = '';
+                        if (codeInput) codeInput.focus();
+                        return;
+                    }
+
+                    if (codeInput && data.item_code) codeInput.value = data.item_code;
+                    if (nameInput && data.item_name) nameInput.value = data.item_name;
+                    if (unitInput && data.unit) unitInput.value = data.unit;
+
+                    const batchList = data.batch_details || [];
+                    const firstBatch = batchList[0] || {};
+
+                    const batchQty = parseFloat(firstBatch.available_qty || 0);
+                    const batchNo = firstBatch.batch_no || '';
+
+                    if (mrspInput) mrspInput.value = firstBatch.mrp ?? '';
+                    if (priceInput) priceInput.value = firstBatch.split_sale_price ?? '';
+
+                    const taxInput = row.querySelector('input[name="tax"]');
+                    if (taxInput && data.tax !== undefined) {
+                        taxInput.value = data.tax;
+                    }
+
+                    if (batchQty <= 0) {
+                        alert(`⚠️ Batch ${batchNo} has no stock available.`);
+                        row.querySelectorAll('input').forEach(input => input.value = '');
+                        if (codeInput) codeInput.focus();
+                        updateSerialNumbers();
+                        return;
+                    }
+
+                    // Low stock should not block billing; only warn if you want.
+                    // Keeping it non-blocking to allow billing until stock is 0.
+                    if (data.low_stock_warning) {
+                        console.warn(data.warning_message);
+                    }
+
+                    // Enforce strict batch-wise limit
+                    const validateQty = () => {
+                        if (!quantityInput) return true;
+                        const enteredQty = parseFloat(quantityInput.value || 0);
+                        if (enteredQty > batchQty) {
+                            alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}. Please enter a lower quantity.`);
+                            quantityInput.value = '';
+                            quantityInput.focus();
+                            return false;
+                        }
+                        return true;
+                    };
+
+                    if (quantityInput) {
+                        quantityInput.removeEventListener('change', quantityInput._strictQtyCheckListener);
+                        quantityInput.removeEventListener('blur', quantityInput._strictQtyCheckListener);
+                        
+                        const onQtyChange = () => {
+                            validateQty();
+                            updateCalculations();
+                        };
+                        
+                        quantityInput._strictQtyCheckListener = onQtyChange;
+                        quantityInput.addEventListener('change', onQtyChange);
+                        quantityInput.addEventListener('blur', onQtyChange);
+
+                        quantityInput.addEventListener('keydown', function (e) {
+                            const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                            if ((e.key >= '0' && e.key <= '9') || allowedKeys.includes(e.key)) {
+                                return;
+                            }
+
+                            const preview = quantityInput.value + e.key;
+                            const enteredQty = parseFloat(preview);
+                            if (!isNaN(enteredQty) && enteredQty > batchQty) {
+                                e.preventDefault();
+                                setTimeout(() => {
+                                    alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}.`);
+                                    quantityInput.value = '';
+                                    quantityInput.focus();
+                                }, 10);
+                            }
+                        });
+                    }
+
+                    updateCalculations();
+                })
+                .catch(err => {
+                    console.error('Item fetch error:', err);
+                });
+        }
+
+        if (codeInput) {
+            codeInput.addEventListener('blur', () => {
+                fetchItemInfo('code', codeInput.value);
+            });
+        }
+
+        if (nameInput) {
+            nameInput.addEventListener('input', () => {
+                const value = nameInput.value.trim();
+                if (value.length < 2) return;
+
+                fetch(`/ajax/get-itemname-info/?q=${encodeURIComponent(value)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.suggestions) {
+                            let list = document.createElement('ul');
+                            list.className = "suggestion-list";
+
+                            data.suggestions.forEach(s => {
+                                let li = document.createElement('li');
+                                li.textContent = `${s.item_name} (${s.item_code})`;
+                                li.addEventListener('click', () => {
+                                    if (codeInput) codeInput.value = s.item_code;
+                                    if (nameInput) nameInput.value = s.item_name;
+                                    if (unitInput) unitInput.value = s.unit;
+                                    fetchItemInfo('code', s.item_code);
+                                    list.remove();
+                                });
+                                list.appendChild(li);
+                            });
+
+                            const oldList = nameInput.parentNode.querySelector('.suggestion-list');
+                            if (oldList) oldList.remove();
+                            nameInput.parentNode.appendChild(list);
+                        }
+                    });
+            });
+        }
+    }
+
+    // Initialize first row
+    const initialRow = itemTableBody.querySelector('tr');
+    if (initialRow) {
+        attachInputListeners(initialRow);
+        attachDeleteListener(initialRow);
+        attachKeyboardFlow(initialRow);   
+        attachAutoFill(initialRow);
+        updateSerialNumbers();
+        updateCalculations();          
+    }
+}
+
+// ===============================
+// FORM VALIDATION FUNCTIONS
+// ===============================
+function validateForm() {
+    const requiredFields = [
+        {id: 'name', name: 'Customer Name'},
+        {id: 'cell', name: 'Phone Number'}          
+    ];
+
+    for (const field of requiredFields) {
+        const element = document.getElementById(field.id);
+        if (!element || !element.value.trim()) {
+            alert(`${field.name} is required`);
+            element?.focus();
+            return false;
+        }
+    }
+    
+    // Validate phone number format
+    const phone = document.getElementById('cell').value.trim();
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+        alert("Please enter a valid 10-digit phone number starting with 6-9");
+        document.getElementById('cell').focus();
+        return false;
+    }
+    
+    return true;
+}
+
+function validateAllRows() {
     const rows = document.querySelectorAll('#itemTableBody tr');
 
     if (rows.length === 0) {
@@ -514,539 +2018,35 @@ document.addEventListener('DOMContentLoaded', function() {
     return true;
 }
 
-    // Collect item data from table
-    function collectItemData() {
-        const rows = document.querySelectorAll('#itemTableBody tr');
-        const items = [];
-
-        rows.forEach(row => {
-            const taxInput = row.querySelector('input[name="tax"]');         
-            const taxValue = parseFloat(taxInput?.value);
-            const item = {
-                sno: row.querySelector('input[name="sno"]')?.value || "",
-                code: row.querySelector('input[name="code"]')?.value || "",
-                item_name: row.querySelector('input[name="item_name"]')?.value || "",
-                unit: row.querySelector('input[name="unit"]')?.value || "",
-                qty: parseFloat(row.querySelector('input[name="qty"]')?.value) || 0,
-                mrsp: parseFloat(row.querySelector('input[name="mrsp"]')?.value) || 0,
-                sellingprice: parseFloat(row.querySelector('input[name="sellingprice"]')?.value) || 0,
-                amount: parseFloat(row.querySelector('.amount-output')?.value) || 0,                     
-                tax: isNaN(taxValue) ? 0 : taxValue
-
-            };
-            items.push(item);
-        });
-
-        document.getElementById('itemDataField').value = JSON.stringify(items);
-        return items;
-    }
-
-    // Modal submit action
-    function submitName() {
-        const enteredName = document.getElementById('modalNameInput').value.trim();
-        if (enteredName !== '') {
-            document.getElementById('name').value = enteredName;
-            document.getElementById('nameModal').style.display = 'none';
-        }
-    }
-
-    // Initialize table functionality
-    function initializeTable() {
-        const addRowBtn = document.getElementById('addRowBtn');
-        const receivedInput = document.querySelector('input[name="received"]');
-        const balanceInput = document.querySelector('input[name="balance"]');
-        const totalText = document.querySelector('.total-red');
-        const itemCountDisplay = document.getElementById('item-count');
-        const qtyTotal = document.getElementById('qty-total');
-        const totalEarnedInput = document.getElementById('total_earned');
-
-         function updateCalculations() {
-    const rows = itemTableBody.querySelectorAll('tr');
-    let totalQty = 0;
-    let totalAmount = 0;
+// Collect item data from table
+function collectItemData() {
+    const rows = document.querySelectorAll('#itemTableBody tr');
+    const items = [];
 
     rows.forEach(row => {
-        const qty = parseFloat(row.querySelector('input[name="qty"]')?.value || 0);
-        const price = parseFloat(row.querySelector('input[name="sellingprice"]')?.value || 0);
-        const amount = qty * price;
-
-        const amountOutput = row.querySelector('.amount-output');
-        if (amountOutput) amountOutput.value = amount.toFixed(2);
-
-        const tax = parseFloat(row.querySelector('input[name="tax"]')?.value || 0);        
-        const taxable = amount / (1 + tax / 100);
-        const gst = amount - taxable;
-
-        totalQty += qty;
-        totalAmount += amount;
-    });
-    
-    const discountInput = document.getElementById('discount');
-    const discountPercent = parseFloat(discountInput?.value || 0);
-    const totalAfterDiscount = totalAmount - (totalAmount * discountPercent / 100);
-
-    // Update total displays
-    const qtyInput = document.getElementById('qty-total');
-    if (qtyInput) qtyInput.value = totalQty;
-
-    const totalRed = document.querySelector('.total-red');
-    if (totalRed) totalRed.textContent = totalAfterDiscount.toFixed(2); 
-
-    // Update received/balance if you have cash/card inputs
-    const cash = parseFloat(document.querySelector('input[name="cash_amount"]').value || 0);
-    const card = parseFloat(document.querySelector('input[name="card_amount"]').value || 0);
-    const received = cash + card;
-    let balance = totalAfterDiscount - received; // <-- subtract received from discounted total
-    // if (balance < 0) balance = 0;
-
-    const receivedInput = document.querySelector('input[name="received"]');
-    const balanceInput = document.querySelector('input[name="balance"]');
-    if (receivedInput) receivedInput.value = received.toFixed(2);
-    if (balanceInput) balanceInput.value = balance.toFixed(2);
-
-    // Points calculation      
-    const amountForOnePoint = {{ amount_for_one_point|floatformat:2 }};
-    const totalEarnedInput = document.querySelector('input[name="total_earned"]');
-    if (totalEarnedInput) {
-        totalEarnedInput.value = (totalAfterDiscount / amountForOnePoint).toFixed(2);
-    }
-}
-
-document.getElementById('discount').addEventListener('input', updateCalculations);
-
-
-
-// trigger calculation when user types in cash or card
-document.querySelector('input[name="cash_amount"]').addEventListener('input', updateCalculations);
-document.querySelector('input[name="card_amount"]').addEventListener('input', updateCalculations);
-
-// also trigger when items change
-receivedInput.addEventListener('input', updateCalculations);
-
-        // Add input listeners to a row
-        function attachInputListeners(row) {
-            const qtyInput = row.querySelector('input[name="qty"]');
-            const sellingInput = row.querySelector('input[name="sellingprice"]');
-
-            if (qtyInput) qtyInput.addEventListener('input', updateCalculations);
-            if (sellingInput) sellingInput.addEventListener('input', updateCalculations);
-        }
-
-        // Add delete listener to a row
-        function attachDeleteListener(row) {
-            const deleteBtn = row.querySelector('.delete-row-btn');
-            if (deleteBtn) {
-                deleteBtn.addEventListener('click', () => {
-                    const totalRows = itemTableBody.querySelectorAll('tr').length;
-                    if (totalRows <= 1) {
-                        alert("At least one row must be present.");
-                        return;
-                    }
-
-                    prevRow = row.previousElementSibling || row.nextElementSibling;
-                    row.remove();
-                    updateSerialNumbers();
-                    updateCalculations();
-
-                    if (prevRow) {
-                        const codeInput = prevRow.querySelector('input[name="code"]');
-                        if (codeInput) codeInput.focus();
-                    }
-                });
-            }
-        }
-
-        function attachKeyboardFlow(row) {
-    const codeInput = row.querySelector('input[name="code"]');
-    const nameInput = row.querySelector('input[name="item_name"]');
-    const qtyInput = row.querySelector('input[name="qty"]');
-    const addRowBtn = document.getElementById("addRowBtn");
-
-    // Code → Qty or Item Name
-    if (codeInput) {
-        codeInput.addEventListener("keydown", function (e) {
-            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
-                e.preventDefault();
-                if (codeInput.value.trim() !== "") {
-                    qtyInput.focus();
-                } else {
-                    nameInput.focus();
-                }
-            }
-        });
-    }
-
-    // Item Name → Qty
-    if (nameInput && qtyInput) {
-        nameInput.addEventListener("keydown", function (e) {
-            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
-                e.preventDefault();
-                qtyInput.focus();
-            }
-        });
-    }
-
-    // Qty → Add Item button
-    if (qtyInput && addRowBtn) {
-        qtyInput.addEventListener("keydown", function (e) {
-            if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
-                e.preventDefault();
-                addRowBtn.focus();
-            }
-        });
-    }
-}
-
-// Attach listener to Add Item button only once
-document.getElementById("addRowBtn").addEventListener("keydown", function (e) {
-    if ((e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
-        e.preventDefault();
-        addNewRow(true); // silent row add
-
-        // Focus new row's code input
-        const rows = document.querySelectorAll("#itemTableBody tr");
-        const lastRow = rows[rows.length - 1];
-        const newCodeInput = lastRow?.querySelector('input[name="code"]');
-        if (newCodeInput) newCodeInput.focus();
-    }
-});
-
-
-
-     // Add new row to the table
-    async function addNewRow() {
-    const lastRow = itemTableBody.querySelector('tr:last-child');
-    const requiredFields = ['code', 'item_name', 'unit', 'qty', 'sellingprice'];
-    let isValid = true;
-
-    // Validate required fields
-    requiredFields.forEach(field => {
-        const input = lastRow.querySelector(`input[name="${field}"]`);
-        if (!input || !input.value.trim()) {
-            input?.classList.add('input-error');
-            isValid = false;
-        } else {
-            input.classList.remove('input-error');
-        }
+        const taxInput = row.querySelector('input[name="tax"]');         
+        const taxValue = parseFloat(taxInput?.value);
+        const item = {
+            sno: row.querySelector('input[name="sno"]')?.value || "",
+            code: row.querySelector('input[name="code"]')?.value || "",
+            item_name: row.querySelector('input[name="item_name"]')?.value || "",
+            unit: row.querySelector('input[name="unit"]')?.value || "",
+            qty: parseFloat(row.querySelector('input[name="qty"]')?.value) || 0,
+            mrsp: parseFloat(row.querySelector('input[name="mrsp"]')?.value) || 0,
+            sellingprice: parseFloat(row.querySelector('input[name="sellingprice"]')?.value) || 0,
+            amount: parseFloat(row.querySelector('.amount-output')?.value) || 0,                     
+            tax: isNaN(taxValue) ? 0 : taxValue
+        };
+        items.push(item);
     });
 
-    if (!isValid) {
-        alert("Please fill all required fields (Code, Item Name, Qty, Selling Price) before adding a new item.");
-        lastRow.querySelector('.input-error')?.focus();
-        return;
-    }
-
-    const code = lastRow.querySelector('input[name="code"]').value.trim();
-    const itemName = lastRow.querySelector('input[name="item_name"]').value.trim();
-    const unit = lastRow.querySelector('input[name="unit"]').value.trim();
-    const qty = parseFloat(lastRow.querySelector('input[name="qty"]').value || 0);
-    const sellPrice = parseFloat(lastRow.querySelector('input[name="sellingprice"]').value || 0);
-
-    // Check for duplicates
-    const rows = itemTableBody.querySelectorAll('tr');
-    for (let row of rows) {
-        if (row === lastRow) continue;
-
-        const rowCode = row.querySelector('input[name="code"]')?.value.trim();
-        const rowItemName = row.querySelector('input[name="item_name"]')?.value.trim();
-        const rowUnit = row.querySelector('input[name="unit"]')?.value.trim();
-
-        if (rowCode === code && rowItemName === itemName && rowUnit === unit) {
-            const existingQtyInput = row.querySelector('input[name="qty"]');
-            const existingQty = parseFloat(existingQtyInput.value || 0);
-            const newQty = existingQty + qty; // Append first
-
-            try {
-                const response = await fetch(`/ajax/get-item-info/?code=${encodeURIComponent(code)}`);
-                if (!response.ok) throw new Error("Failed to fetch available quantity");
-
-                const data = await response.json();
-                const availableQty = parseFloat(data.total_available) || 0;
-
-                if (newQty > availableQty) {
-                    alert(`⚠️ Only ${availableQty} units available. You tried to add ${newQty}.`);
-                    lastRow.querySelector('input[name="qty"]').focus();
-                    return;
-                }
-
-                // If valid, update merged quantity
-                existingQtyInput.value = newQty;
-                row.querySelector('.amount-output').value = (newQty * sellPrice).toFixed(2);
-
-                // Clear last row
-                lastRow.remove();
-                lastRow.querySelectorAll('input').forEach(input => {
-                    if (input.type === 'number' || input.type === 'text') {
-                        input.value = '';
-                    }
-                });
-                lastRow.querySelector('.amount-output').value = '0.00';
-                lastRow.querySelector('input[name="code"]').focus();
-                updateSerialNumbers();
-                updateCalculations();
-                return;
-
-            } catch (error) {
-                console.error("Error fetching available quantity:", error);
-                alert("Error checking available quantity. Please try again.");
-                return;
-            }
-        }
-    }
-
-    // If no duplicate found, create a new row
-    const newRow = document.createElement('tr');
-    newRow.style.height = "25px";
-    newRow.innerHTML = `
-        <td style="padding:2px;"><input type="number" name="sno" class="table-input" readonly></td>
-        <td style="padding:2px;"><input type="text" name="code" class="table-input"></td>
-        <td style="padding:2px;"><input type="text" name="item_name" class="table-input"></td>
-        <td style="padding:2px;"><input type="text" name="unit" class="table-input"></td>
-        <td style="padding:2px;"><input type="number" name="qty" class="table-input" value="1"></td>
-        <td style="padding:2px;"><input type="number" name="mrsp" class="table-input" readonly></td>
-        <td style="padding:2px;"><input type="number" name="sellingprice" class="table-input" readonly></td>
-        <td style="padding:2px; display:none;"><input type="number" name="tax" class="table-input" value="0" step="0.01"></td>
-        <td style="padding:2px;"><input type="text" class="table-input amount-output" value="0.00" readonly></td>
-        <td style="padding:2px;"><button type="button" class="delete-row-btn">Delete</button></td>
-    `;
-
-    itemTableBody.appendChild(newRow);
-    attachInputListeners(newRow);
-    attachDeleteListener(newRow);
-    attachKeyboardFlow(newRow);   
-    attachAutoFill(newRow);
-    updateSerialNumbers();
-    updateCalculations();
-
-    newRow.querySelector('input[name="code"]').focus();
+    document.getElementById('itemDataField').value = JSON.stringify(items);
+    return items;
 }
 
-function resetRowInputs(row) {
-    row.querySelectorAll('input').forEach(input => {
-        if (input.name === 'sno' || input.classList.contains('amount-output')) {
-            input.value = input.classList.contains('amount-output') ? '0.00' : '';
-        } else {
-            input.value = '';
-        }
-    });
-}
-
-        // Update serial numbers in the table
-        function updateSerialNumbers() {
-            const rows = itemTableBody.querySelectorAll('tr');
-            rows.forEach((row, index) => {
-                const snoInput = row.querySelector('input[name="sno"]');
-                if (snoInput) {
-                    snoInput.value = index + 1;
-                }
-            });
-        }
-
-  function attachAutoFill(row) {
-    const codeInput = row.querySelector('input[name="code"]');
-    const nameInput = row.querySelector('input[name="item_name"]');
-    const unitInput = row.querySelector('input[name="unit"]');
-    const mrspInput = row.querySelector('input[name="mrsp"]');
-    const priceInput = row.querySelector('input[name="sellingprice"]');
-    const quantityInput = row.querySelector('input[name="qty"]');
-    const availableInput = row.querySelector('input[name="available"]');
-    const batchNoInput = row.querySelector('input[name="batch_no"]');
-
-    function fetchItemInfo(field, value) {
-        if (!value.trim()) return;
-        const url = `/ajax/get-item-info/?${field}=${encodeURIComponent(value.trim())}`;
-
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert("Item not found!");
-                    codeInput.value = '';
-                    nameInput.value = '';
-                    codeInput.focus();
-                    return;
-                }
-
-                if (data.item_code) codeInput.value = data.item_code;
-                if (data.item_name) nameInput.value = data.item_name;
-                if (data.unit) unitInput.value = data.unit;
-
-                const batchList = data.batch_details || [];
-                const firstBatch = batchList[0] || {};
-
-                const batchQty = parseFloat(firstBatch.available_qty || 0);
-                const batchNo = firstBatch.batch_no || '';
-
-                if (mrspInput) mrspInput.value = firstBatch.mrp ?? '';
-                if (priceInput) priceInput.value = firstBatch.split_sale_price ?? '';
-                if (availableInput) availableInput.value = parseFloat(data.total_available || 0).toFixed(2);
-                if (batchNoInput) batchNoInput.value = batchNo;
-
-                const taxInput = row.querySelector('input[name="tax"]');
-                if (taxInput && data.tax !== undefined) {
-                    taxInput.value = data.tax;
-                }
-
-                if (batchQty <= 0) {
-                    alert(`⚠️ Batch ${batchNo} has no stock available.`);
-
-                    // Assuming quantityInput is the quantity input element in the current row
-                    const row = quantityInput.closest('tr');  // get the row containing the input
-
-                    // Clear all inputs in this row (optional: or clear just the ones you want)
-                    row.querySelectorAll('input').forEach(input => input.value = '');
-
-                    // Focus the "code" input in this row
-                    const codeInput = row.querySelector('input[name="code"]');
-                    if (codeInput) {
-                        codeInput.focus();
-                    }
-                    updateSerialNumbers();
-                    return;
-                }
-
-                if (data.low_stock_warning) {
-                    alert(data.warning_message);
-                }
-
-                // Enforce strict batch-wise limit
-                const validateQty = () => {
-                    const enteredQty = parseFloat(quantityInput.value || 0);
-                    if (enteredQty > batchQty) {
-                        alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}. Please enter a lower quantity.`);
-                        quantityInput.value = '';
-                        quantityInput.focus();
-                        return false;
-                    }
-                    return true;
-                };
-
-                quantityInput.removeEventListener('_strictQtyCheck', quantityInput._strictQtyCheckListener);
-
-                const onQtyChange = () => {
-                    validateQty();
-                    updateCalculations();
-                };
-
-                quantityInput._strictQtyCheckListener = onQtyChange;
-                quantityInput.addEventListener('change', onQtyChange);
-                quantityInput.addEventListener('blur', onQtyChange);
-
-                quantityInput.addEventListener('keydown', function (e) {
-                    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
-                     if (
-                            (e.key >= '0' && e.key <= '9') || 
-                            allowedKeys.includes(e.key)
-                        ) {
-                            return;
-                        }
-
-                    const preview = quantityInput.value + e.key;
-                    const enteredQty = parseFloat(preview);
-                    if (!isNaN(enteredQty) && enteredQty > batchQty) {
-                        e.preventDefault();
-                        setTimeout(() => {
-                            alert(`⚠️ Only ${batchQty} units available in batch ${batchNo}.`);
-                            quantityInput.value = '';
-                            quantityInput.focus();
-                        }, 10);
-                    }
-                });
-
-                updateCalculations();
-            })
-            .catch(err => {
-                console.error('Item fetch error:', err);
-            });
-    }
-
-    if (codeInput) {
-        codeInput.addEventListener('blur', () => {
-            fetchItemInfo('code', codeInput.value);
-        });
-    }
-
-    if (nameInput) {
-        nameInput.addEventListener('input', () => {
-            const value = nameInput.value.trim();
-            if (value.length < 2) return; // wait until 2+ chars
-
-            fetch(`/ajax/get-itemname-info/?q=${encodeURIComponent(value)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.suggestions) {
-                        let list = document.createElement('ul');
-                        list.className = "suggestion-list";
-
-                        data.suggestions.forEach(s => {
-                            let li = document.createElement('li');
-                            li.textContent = `${s.item_name} (${s.item_code})`;
-                            li.addEventListener('click', () => {
-                                // Fill inputs
-                                codeInput.value = s.item_code;
-                                nameInput.value = s.item_name;
-                                unitInput.value = s.unit;
-
-                                // Fetch full inventory details
-                                fetchItemInfo('code', s.item_code);
-
-                                list.remove();
-                            });
-                            list.appendChild(li);
-                        });
-
-                        // Replace old dropdown if exists
-                        const oldList = nameInput.parentNode.querySelector('.suggestion-list');
-                        if (oldList) oldList.remove();
-                        nameInput.parentNode.appendChild(list);
-                    }
-                });
-        });
-    }
-}
-
-        // Event listeners
-        addRowBtn.addEventListener('click', addNewRow);
-        receivedInput.addEventListener('input', updateCalculations);
-
-        // Initialize first row
-        const initialRow = itemTableBody.querySelector('tr');
-        if (initialRow) {
-            attachInputListeners(initialRow);
-            attachDeleteListener(initialRow);
-            attachKeyboardFlow(initialRow);   
-            attachAutoFill(initialRow);
-            updateSerialNumbers();
-            updateCalculations();          
-        }        
-    }
-
-        document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('billingForm');
-        const saveBtn = document.getElementById('saveBtn');
-
-        // Prevent all form submissions from Enter or default browser behavior
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            submitBilling();
-        });     
-    });
-    
-// small helpers
-function q(sel){ return document.querySelector(sel); }
-function gid(id){ return document.getElementById(id); }
-function firstNonEmptyEl(...els){
-  for (const el of els){
-    if (el && typeof el.value !== 'undefined'){
-      const v = String(el.value).trim();
-      if (v) return v;
-    }
-  }
-  return '';
-}
-
-const enableGST = '{{ enable_gst|yesno:"true,false" }}'.toLowerCase() === 'true';
-
+// ===============================
+// BILLING SUBMISSION FUNCTIONS
+// ===============================
 function submitBilling() {
     if (!validateForm()) return;
     if (!validateAllRows()) return;
@@ -1054,206 +2054,270 @@ function submitBilling() {
     const items = collectItemData();
     const balance = parseFloat(q('input[name="balance"]').value) || 0;
     const cash = parseFloat(q('input[name="cash_amount"]').value) || 0;
-    const card = parseFloat(q('input[name="card_amount"]').value) || 0;
+    const card = parseFloat(q('input[name="card_amount"]')?.value) || 0;
     const billType = q('select[name="bill_type"]').value.trim().toLowerCase();
 
-    // 🔹 Payment validation
+    /* ================= PAYMENT VALIDATION ================= */
     if (balance > 0 && billType !== "credit") {
-        alert("⚠ Remaining balance detected! Bill Type must be 'Credit'.");
+        alert("⚠ Remaining balance! Bill Type must be Credit.");
         return;
-    } else if (balance === 0) {
+    }
+
+    if (balance === 0) {
         if (cash > 0 && card === 0 && billType !== "cash") {
-            alert("⚠ Cash amount entered! Bill Type must be 'Cash'."); return;
+            alert("⚠ Bill Type must be Cash."); return;
         }
         if (card > 0 && cash === 0 && billType !== "card") {
-            alert("⚠ Card amount entered! Bill Type must be 'Card'."); return;
+            alert("⚠ Bill Type must be Card."); return;
         }
         if (cash > 0 && card > 0 && billType !== "both cash & card") {
-            alert("⚠ Cash and Card entered together! Bill Type must be 'Both Cash & Card'."); return;
-        }
-        if (cash === 0 && card === 0 && billType !== "credit") {
-            alert("⚠ No payment entered! Bill Type must be 'Credit'."); return;
+            alert("⚠ Bill Type must be Both Cash & Card."); return;
         }
     }
 
-    // 🔹 Prepare bill data
+    /* ================= BILL DATA ================= */
     const billData = getBillingInfo(items);
     const discountPercent = parseFloat(gid('discount')?.value || 0);
     const discountAmount = billData.total_amount * discountPercent / 100;
     const totalAfterDiscount = billData.total_amount - discountAmount;
 
-    const printBill = confirm("Do you want to print the bill before saving?");
-    if (printBill) {
+    /* ================= PRINT CONFIRM ================= */
+    const doPrint = confirm("Do you want to print the bill?");
+    if (doPrint) {
         const printWindow = window.open('', '_blank', 'width=400,height=600');
-        if (printWindow) {
-            const companyName = gid("company_name").value;
-            const companyAddress = gid("company_address").value;
-            const companyGstin = gid("company_gstin").value;
-            const companyPhone = gid("company_phone").value;
-            const companyWebsite = gid("company_website").value;
+        if (!printWindow) {
+            alert("⚠ Popup blocked. Allow popups to print.");
+            return;
+        }       
 
-            let itemRows = '';
+        /* ===== ITEM ROWS ===== */
+        let itemRows = "";
+        billData.items.forEach(item => {
+            const qty = Number(item.qty);
+            const rate = Number(item.sellingprice);
+            const mrp = Number(item.mrsp);
+            const amt = qty * rate;
 
-            if (enableGST) {
-                // 🔹 GST calculation
-                billData.items.forEach(item => {
-                    const qty = Number(item.qty || 0);
-                    const amountInclTax = Number(item.sellingprice || 0) * qty;
-                    const rate = Number(item.sellingprice || 0);
-                    const taxRate = Number(item.tax || 0);
-                    const mrsp = Number(item.mrsp || 0);
-                    // const taxableRate = Number(item.sellingprice || 0) / (1 + taxRate / 100);
-                    // const cgst = (amountInclTax - (taxableRate * qty)) / 2;
-                    // const sgst = (amountInclTax - (taxableRate * qty)) / 2;
-
-                    itemRows += `
-                        <tr>
-                            <td>${item.item_name}</td>
-                            <td>${qty}</td>
-                            <td>${mrsp.toFixed(2)}</td>
-                            <td>${rate.toFixed(2)}</td>                            
-                            <td>${amountInclTax.toFixed(2)}</td>
-                        </tr>
-                    `;
-                });
-            } else {
-                // 🔹 Non-GST bill
-                billData.items.forEach(item => {
-                    const qty = Number(item.qty || 0);
-                    const mrsp = Number(item.mrsp || 0);
-                    const rate = Number(item.sellingprice || 0);
-                    const amount = rate * qty;
-
-                    itemRows += `
-                        <tr>
-                            <td>${item.item_name}</td>
-                            <td>${qty}</td>
-                            <td>${mrsp.toFixed(2)}</td>
-                            <td>${rate.toFixed(2)}</td>
-                            <td>${amount.toFixed(2)}</td>
-                        </tr>
-                    `;
-                });
-            }
-
-            // 🔹 Build HTML
-            const html = `
-                <html>
-                <head>
-                <title>Bill Preview</title>
-                <style>
-                    @media print {
-                        @page { size: 79mm auto; margin: 0; }
-                        body { width: 79mm; }
-                    }
-                    body { font-family: monospace; font-size: 12px; }
-                    h2 { text-align: center; margin: 0; white-space: pre-line; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-                    td { padding: 2px; }
-                    .line { border-top: 1px dashed #000; margin: 4px 0; }
-                </style>
-                </head>
-                <body>
-                    <h2>
-                        ${companyName}
-                        ${companyAddress}
-                        GSTIN : ${companyGstin}
-                        Phone : ${companyPhone}
-                        Website : ${companyWebsite}
-                    </h2>
-
-                    <div class="line"></div>
-                    <table>
-                        <tr>
-                            <td>B.No : ${billData.bill_no}</td>
-                            <td style="text-align:right;">Date : ${billData.date}</td>
-                        </tr>
-                        <tr>
-                            <td>To : ${billData.name}</td>
-                            <td style="text-align:right;">Time : ${billData.time}</td>
-                        </tr>
-                        <tr><td>Mobile : ${billData.phone}</td></tr>
-                    </table>
-
-                    <div class="line"></div>
-                    <table>
-                        ${enableGST ? `
-                        <tr>
-                            <td><strong>ITEM</strong></td>
-                            <td><strong>QTY</strong></td>
-                            <td><strong>MRP</strong></td>
-                            <td><strong>RATE</strong></td>                           
-                            <td><strong>AMOUNT</strong></td>
-                        </tr>` : `
-                        <tr>
-                            <td><strong>ITEM</strong></td>
-                            <td><strong>QTY</strong></td>
-                            <td><strong>MRP</strong></td>
-                            <td><strong>RATE</strong></td>
-                            <td><strong>AMOUNT</strong></td>
-                        </tr>`}
-                        ${itemRows}
-                    </table>
-
-                    <div class="line"></div>
-                    <table>
-                        <tr>
-                            <td>
-                                ${enableGST ? 
-                                    `Taxable: ${billData.totalTaxable.toFixed(2)} | CGST: ${billData.totalCGST.toFixed(2)} | SGST: ${billData.totalSGST.toFixed(2)} | Total: ${billData.total_amount.toFixed(2)}` 
-                                    : `Total: ${billData.total_amount.toFixed(2)}`}
-                            </td>
-                        </tr>
-                    </table>
-
-                    <div class="line"></div>
-                    <table>
-                        <tr>
-                            <td>Qty : ${billData.total_qty}</td>
-                            <td style="text-align:right;">Items : ${billData.items.length}</td>
-                        </tr>
-                    </table>
-
-                    <div class="line"></div>
-                    <table>
-                        <tr>
-                            <td colspan="2">Payment Mode : ${billData.payment_mode} ${billData.total_amount.toFixed(2)}</td>
-                        </tr>
-                    </table>
-
-                    <div class="line"></div>
-                    <table>
-                        <tr><td>Balance Amt : ${billData.balance.toFixed(2)}</td></tr>
-                    </table>
-
-                    <div class="line"></div>
-                    <table>
-                        <tr><td>Discount (${discountPercent}%):</td><td style="text-align:right;">${discountAmount.toFixed(2)}</td></tr>
-                        <tr><td>Grand Total:</td><td style="text-align:right;">${totalAfterDiscount.toFixed(2)}</td></tr>
-                        <tr><td>Today Points : ${billData.today_points.toFixed(2)}</td></tr>
-                        <tr><td>Total Points : ${(billData.old_points + billData.today_points).toFixed(2)}</td></tr>
-                    </table>
-                    <div class="line"></div>
-                </body>
-                </html>
+            itemRows += `
+                <tr>
+                    <td>${item.item_name}</td>
+                    <td>${qty}</td>
+                    <td>${mrp.toFixed(2)}</td>
+                    <td>${rate.toFixed(2)}</td>
+                    <td>${amt.toFixed(2)}</td>
+                </tr>
             `;
+        });
 
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
-        }
+        /* ===== PRINT HTML ===== */
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bill</title>
+
+<style>
+/* =========================
+   PRINT SETUP
+========================= */
+@media print {
+    @page {
+        size: 70mm auto;
+        margin: 0;
     }
-
-    // 🔹 Submit form
-    gid('billingForm').submit();
+    html, body {
+        margin: 0;
+        padding: 0;
+    }
 }
 
-// 🔹 Get billing info (shared for both GST and non-GST)
+/* =========================
+   BODY
+========================= */
+body {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 11px;
+
+    width: 63mm;          /* SAFE printable width */
+    margin-left: 7mm;     /* avoids left cutter dead-zone */
+
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+
+    padding-top: 1mm;
+    padding-bottom: 2mm;
+}
+
+/* =========================
+   HEADER
+========================= */
+h2 {
+    text-align: center;
+    margin: 0 0 4px 0;
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: bold;
+}
+
+/* =========================
+   TABLES
+========================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td, th {
+    padding: 1px 0;
+    font-size: 11px;
+}
+
+/* =========================
+   SEPARATOR
+========================= */
+.line {
+    border-top: 1px dashed #000;
+    margin: 4px 0;
+}
+
+/* =========================
+   FOOTER
+========================= */
+p {
+    margin: 4px 0 0 0;
+    text-align: center;
+    font-size: 11px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+<h2>
+${COMPANY.name}<br>
+${COMPANY.address}<br>
+${COMPANY.gstin ? "GSTIN : " + COMPANY.gstin + "<br>" : ""}
+${COMPANY.phone ? "Phone : " + COMPANY.phone : ""}
+</h2>
+
+<div class="line"></div>
+
+<!-- ================= BILL INFO ================= -->
+<table>
+<tr>
+    <td>Bill No :</td>
+    <td align="right">${billData.bill_no}</td>
+</tr>
+<tr>
+    <td>Date :</td>
+    <td align="right">${billData.date}</td>
+</tr>
+<tr>
+    <td>Customer :</td>
+    <td align="right">${billData.name}</td>
+</tr>
+<tr>
+    <td>Mobile :</td>
+    <td align="right">${billData.phone}</td>
+</tr>
+</table>
+
+<div class="line"></div>
+
+<!-- ================= ITEMS ================= -->
+<table>
+<tr>
+    <th align="left">ITEM</th>
+    <th align="right">QTY</th>
+    <th align="right">MRP</th>
+    <th align="right">RATE</th>
+    <th align="right">AMT</th>
+</tr>
+
+${itemRows}
+
+</table>
+
+<div class="line"></div>
+
+<!-- ================= TOTALS ================= -->
+<table>
+<tr>
+    <td>Total</td>
+    <td align="right">${billData.total_amount.toFixed(2)}</td>
+</tr>
+<tr>
+    <td>Discount</td>
+    <td align="right">${discountAmount.toFixed(2)}</td>
+</tr>
+<tr>
+    <td><b>Grand Total</b></td>
+    <td align="right"><b>${totalAfterDiscount.toFixed(2)}</b></td>
+</tr>
+<tr>
+    <td>Paid</td>
+    <td align="right">${(cash + card).toFixed(2)}</td>
+</tr>
+<tr>
+    <td>Balance</td>
+    <td align="right">${billData.balance.toFixed(2)}</td>
+</tr>
+</table>
+
+<div class="line"></div>
+
+<!-- ================= POINTS ================= -->
+<table>
+<tr>
+    <td>Old Points</td>
+    <td align="right">${billData.old_points.toFixed(2)}</td>
+</tr>
+<tr>
+    <td>Today's Points</td>
+    <td align="right">${billData.today_points.toFixed(2)}</td>
+</tr>
+<tr>
+    <td><b>Total Points</b></td>
+    <td align="right">
+        <b>${(billData.old_points + billData.today_points).toFixed(2)}</b>
+    </td>
+</tr>
+</table>
+
+<div class="line"></div>
+
+<p>Thank You! Visit Again</p>
+
+</body>
+</html>`;
+
+
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+
+        printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+        };
+    }
+
+    /* ================= FINAL SUBMIT ================= */
+    setTimeout(() => {
+        gid('billingForm').submit();
+    }, 3000);
+}
+
+// Get billing info
 function getBillingInfo(items) {
     let total_qty = 0, total_amount = 0, totalTaxable = 0, totalCGST = 0, totalSGST = 0, totalMRP = 0;
-    const today_points = parseFloat(document.getElementById('total_earned').value || 0);
-    const old_points = parseFloat(document.getElementById('points').value || 0);
+    
+    // Get points from display elements
+    const today_points = parseFloat(document.getElementById('total_earned')?.value || 0);
+    const old_points = parseFloat(document.getElementById('old_points')?.value || 0);
 
     items.forEach(i => {
         const qty = Number(i.qty || 0);
@@ -1278,8 +2342,8 @@ function getBillingInfo(items) {
         totalMRP += Number(i.mrsp || 0) * qty;
     });
 
-    const balance = parseFloat(document.querySelector('input[name="balance"]').value || 0);
-    const payment_mode = document.querySelector('select[name="bill_type"]').value;
+    const balance = parseFloat(document.querySelector('input[name="balance"]')?.value || 0);
+    const payment_mode = document.querySelector('select[name="bill_type"]')?.value || 'Cash';
 
     return {
         items,
@@ -1293,41 +2357,28 @@ function getBillingInfo(items) {
         payment_mode,
         today_points,
         old_points,
-        bill_no: document.querySelector('input[name="bill_no"]').value,
-        name: document.querySelector('input[name="name"]').value,
-        phone: document.querySelector('input[name="cell"]').value,
-        date: document.querySelector('input[name="date"]').value,
+        bill_no: BILL_NO,
+        name: document.getElementById('name')?.value || '',
+        phone: document.getElementById('cell')?.value || '',
+        date: BILL_DATE,
         time: new Date().toLocaleTimeString(),
     };
 }    
 
-// customer dropdown update
-document.addEventListener('DOMContentLoaded', function(){
-    const customerSelect = gid('customer');
-    if (!customerSelect) return;
-    customerSelect.addEventListener('change', function(){
-        const opt = this.options[this.selectedIndex];
-        const n = opt?.getAttribute('data-name') || '';
-        const c = opt?.getAttribute('data-cell') || '';
-        const a = opt?.getAttribute('data-address') || '';
-        gid('cust_name') && (gid('cust_name').value = n);
-        gid('cust_cell') && (gid('cust_cell').value = c);
-        gid('cust_address') && (gid('cust_address').value = a);
-    });
-});
-
-
-    function submitAsQuotation() {
+// ===============================
+// QUOTATION FUNCTIONS
+// ===============================
+function submitAsQuotation() {
     const billTypeSelect = document.querySelector('select[name="bill_type"]');
     
     // Check Bill Type
     if (billTypeSelect.value.toLowerCase() !== "credit") {
         alert("⚠️ Bill Type must be 'Credit' for a Quotation. Please change it to Credit.");
         billTypeSelect.focus();
-        return; // stop submission
+        return;
     }
 
-     if (!confirm("This sale will be moved to a quotation. Do you want to continue?")) {
+    if (!confirm("This sale will be moved to a quotation. Do you want to continue?")) {
         return;
     }        
 
@@ -1336,7 +2387,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const form = document.querySelector('form');
     const formData = new FormData(form);
 
-     // Ensure 'name' is included
+    // Ensure 'name' is included
     const customerName = document.getElementById('name').value;
     if (!customerName) {
         alert("Customer Name is required!");
@@ -1344,7 +2395,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     formData.set("name", customerName);
     
-    // Manually append all required fields (if not automatically included)
+    // Manually append all required fields
     const requiredFields = [
         'cell', 'address', 'date_joined',
         'sale_type', 'bill_type', 'counter', 'points', 'total_earned', 'discount'
@@ -1383,5 +2434,62 @@ document.addEventListener('DOMContentLoaded', function(){
         alert("Server error. Check console for details.");
     });
 }
+
+// ===============================
+// HELPER FUNCTIONS
+// ===============================
+function q(sel){ return document.querySelector(sel); }
+function gid(id){ return document.getElementById(id); }
+function firstNonEmptyEl(...els){
+    for (const el of els){
+        if (el && typeof el.value !== 'undefined'){
+            const v = String(el.value).trim();
+            if (v) return v;
+        }
+    }
+    return '';
+}
+
+// Customer dropdown update (if exists)
+document.addEventListener('DOMContentLoaded', function(){
+    const customerSelect = gid('customer');
+    if (!customerSelect) return;
+    customerSelect.addEventListener('change', function(){
+        const opt = this.options[this.selectedIndex];
+        const n = opt?.getAttribute('data-name') || '';
+        const c = opt?.getAttribute('data-cell') || '';
+        const a = opt?.getAttribute('data-address') || '';
+        gid('cust_name') && (gid('cust_name').value = n);
+        gid('cust_cell') && (gid('cust_cell').value = c);
+        gid('cust_address') && (gid('cust_address').value = a);
+    });
+});
+
+// ===============================
+// EDIT CUSTOMER FUNCTION
+// ===============================
+function editCustomer() {
+    const nameInput = document.getElementById('name');
+    const cellInput = document.getElementById('cell');
+    const addressInput = document.getElementById('address');
+    
+    if (!nameInput || !nameInput.value.trim()) {
+        alert("Please enter a customer name first");
+        return;
+    }
+    
+    // Open customer popup for editing
+    openCustomerPopup();
+    
+    // Pre-fill with current values
+    const popup_name = document.getElementById('popup_name');
+    const popup_address = document.getElementById('popup_address');
+    
+    if (popup_name && popup_address) {
+        popup_name.value = nameInput.value;
+        popup_address.value = addressInput.value || '';
+    }
+}
 </script>
 {% endblock %}
+

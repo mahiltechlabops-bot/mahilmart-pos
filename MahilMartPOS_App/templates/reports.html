@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<style>
+  .reports-wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .report-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    border: 1px solid #eef2f7;
+  }
+  .report-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .report-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .report-section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px;
+    margin-top: 18px;
+    border: 1px solid #eef2f7;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  }
+  .report-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .report-table th, .report-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #eef2f7;
+  }
+  .report-table th {
+    text-align: left;
+    color: #334155;
+    background: #f8fafc;
+  }
+  .muted {
+    color: #94a3b8;
+  }
+</style>
+
+<div class="reports-wrap">
+  <h2 style="margin-bottom: 12px; color:#0f172a;">Reports</h2>
+
+  <div class="report-grid">
+    <div class="report-card">
+      <h3>Total Sales</h3>
+      <div class="report-value">₹{{ total_sales|floatformat:2 }}</div>
+    </div>
+    <div class="report-card">
+      <h3>Total Discounts</h3>
+      <div class="report-value">₹{{ revenue.total_discounts|default:0|floatformat:2 }}</div>
+    </div>
+    <div class="report-card">
+      <h3>Revenue</h3>
+      <div class="report-value">₹{{ revenue.total_sales|default:0|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  <div class="report-section">
+    <h4>User-wise Transaction Report</h4>
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Total Sales</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in user_transactions %}
+        <tr>
+          <td>{{ row.created_by__username|default:"Unknown" }}</td>
+          <td>₹{{ row.total_sales|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" class="muted">No data available</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <h4>Customer Report (Purchases & Outstanding)</h4>
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Total Purchases</th>
+          <th>Outstanding</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in customer_report %}
+        <tr>
+          <td>{{ row.customer__name|default:"Walk-in" }}</td>
+          <td>{{ row.customer__cell|default:"-" }}</td>
+          <td>₹{{ row.total_purchases|floatformat:2 }}</td>
+          <td>₹{{ row.outstanding|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="muted">No data available</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <h4>Inventory Report (Low Stock / Out of Stock)</h4>
+    <div class="report-grid">
+      <div class="report-card">
+        <h3>Low Stock</h3>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Item</th>
+              <th>Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in low_stock %}
+            <tr>
+              <td>{{ row.code }}</td>
+              <td>{{ row.item_name }}</td>
+              <td>{{ row.total_qty }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="muted">No low stock items</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="report-card">
+        <h3>Out of Stock</h3>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Item</th>
+              <th>Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in out_of_stock %}
+            <tr>
+              <td>{{ row.code }}</td>
+              <td>{{ row.item_name }}</td>
+              <td>{{ row.total_qty }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="muted">No out-of-stock items</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
