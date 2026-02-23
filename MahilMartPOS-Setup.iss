@@ -5,6 +5,18 @@
 #define MyAppExeName "MahilMartPOS.exe"
 #define MyAppDirName "MahilMartPOS"
 #define SourceDir "."
+#define SignCertFile GetEnv("MM_CODESIGN_PFX")
+#define SignCertPassword GetEnv("MM_CODESIGN_PASSWORD")
+#define SignTimestampUrl GetEnv("MM_CODESIGN_TIMESTAMP_URL")
+#define SignToolExe GetEnv("MM_CODESIGN_TOOL_PATH")
+#if SignTimestampUrl == ""
+  #undef SignTimestampUrl
+  #define SignTimestampUrl "http://timestamp.digicert.com"
+#endif
+#if SignToolExe == ""
+  #undef SignToolExe
+  #define SignToolExe "signtool"
+#endif
 #ifexist "{#SourceDir}\assets\branding\app.ico"
   #define MyAppIconFile "{#SourceDir}\assets\branding\app.ico"
 #endif
@@ -26,6 +38,10 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+#if (SignCertFile != "") && (SignCertPassword != "")
+SignTool=codeSign $q{#SignToolExe}$q sign /f $q{#SignCertFile}$q /p $q{#SignCertPassword}$q /fd SHA256 /tr $q{#SignTimestampUrl}$q /td SHA256 $f
+SignedUninstaller=yes
+#endif
 #ifdef MyAppIconFile
 SetupIconFile={#MyAppIconFile}
 #endif
