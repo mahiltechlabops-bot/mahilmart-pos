@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% load permission_tags %}
+
+{% block style %}
+<style>
+/* ================================
+   PERMISSION CARD STYLING
+   ================================ */
+.permission-card {
+    background: white;
+    padding: 25px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+.permission-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.machine-card {
+    margin-top: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+.machine-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.machine-table th,
+.machine-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 14px;
+}
+
+.machine-table th {
+    color: #475569;
+    font-weight: 600;
+    background: #f8fbff;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-chip.status-live {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-chip.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* ================================
+   PERMISSION LINE (NORMAL)
+   ================================ */
+.toggle-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+    transition: background-color .25s ease, border-left .25s ease, padding-left .25s ease;
+}
+
+.toggle-group:last-child {
+    border-bottom: none;
+}
+
+/* ================================
+   HOVER EFFECT (UPDATED)
+   ================================ */
+.toggle-group:hover {
+    background: #f5faff;               /* Light hover effect */
+    border-left: 4px solid var(--accent);
+    padding-left: 10px;
+    cursor: pointer;
+}
+
+/* ================================
+   SWITCH BUTTON
+   ================================ */
+.switch-wrapper {
+    position: relative;
+    width: 48px;
+    height: 24px;
+}
+
+.switch-wrapper input {
+    display: none;
+}
+
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    background: #ccc;
+    border-radius: 30px;
+    width: 100%;
+    height: 100%;
+    transition: .2s;
+}
+
+.switch-slider::before {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: white;
+    top: 2px;
+    left: 2px;
+    border-radius: 50%;
+    transition: .2s;
+}
+
+/* When ON */
+.switch-wrapper input:checked + .switch-slider {
+    background: var(--accent);
+}
+
+.switch-wrapper input:checked + .switch-slider::before {
+    transform: translateX(24px);
+}
+
+/* ================================
+   SWITCH HOVER ANIMATION
+   ================================ */
+.switch-wrapper:hover .switch-slider::before {
+    transform: scale(1.12);
+}
+</style>
+    
+{% endblock %}
+
+
+{% block content %}
+<div class="container mt-4">
+
+    <h3 class="mb-3">Permission Settings</h3>
+
+    <!-- USER DROPDOWN -->
+    <form method="get" class="mb-3">
+        <label><strong>Select User:</strong></label>
+
+        <select name="user" onchange="this.form.submit()" class="form-select" style="width:250px; display:inline-block;">
+            {% for u in users %}
+                {% if not u.is_superuser %}
+                <option value="{{ u.id }}" {% if u.id == selected_user.id %}selected{% endif %}>
+                    {{ u.username }}
+                </option>
+                {% endif %}
+            {% endfor %}
+        </select>
+    </form>
+
+    <h5 class="mb-3">
+        Role:
+        {% if selected_user.is_staff %}
+            <span class="text-primary">Supervisor</span>
+        {% else %}
+            <span class="text-success">Cashier</span>
+        {% endif %}
+    </h5>
+
+    <div class="permission-card">
+        <div class="permission-title mb-3">
+            {% if selected_user.is_staff %}
+                Supervisor Permissions
+            {% else %}
+                Cashier Permissions
+            {% endif %}
+        </div>
+
+        {% for label, field in items.items %}
+        <div class="toggle-group">
+            <span>{{ label }}</span>
+
+            <label class="switch-wrapper">
+                <input type="checkbox"
+                       class="perm-toggle"
+                       data-field="{{ field }}"
+                       data-user="{{ selected_user.id }}"
+                       {% if perm|attr:field %}checked{% endif %}>
+                <span class="switch-slider"></span>
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="machine-card">
+        <div class="permission-title mb-3">Setup Computers</div>
+        <table class="machine-table">
+            <thead>
+                <tr>
+                    <th>Machine ID</th>
+                    <th>Alias</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for machine in registered_computers %}
+                <tr>
+                    <td>{{ machine.computer_name }}</td>
+                    <td>{{ machine.alias_name }}</td>
+                    <td>
+                        {% if machine.is_seen_in_logs %}
+                        <span class="status-chip status-live">Active</span>
+                        {% else %}
+                        <span class="status-chip status-pending">Setup only</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-muted">No setup computers found yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- AUTO-SAVE AJAX SCRIPT -->
+<!-- ========================= -->
+<script>
+document.querySelectorAll('.perm-toggle').forEach(toggle => {
+    toggle.addEventListener('change', function () {
+
+        const field = this.dataset.field;
+        const user_id = this.dataset.user;
+        const is_checked = this.checked ? "on" : "off";
+
+        fetch("{% url 'permission_settings' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                user: user_id,
+                field: field,
+                value: is_checked
+            })
+        });
+    });
+});
+</script>
+
+{% endblock %}

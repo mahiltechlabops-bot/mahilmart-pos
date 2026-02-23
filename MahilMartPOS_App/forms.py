@@ -245,6 +245,11 @@ class BillTypeForm(forms.ModelForm):
     class Meta:
         model = BillType
         fields = ['billtype_id', 'billtype']
+        widgets = {
+            'billtype_id': forms.NumberInput(attrs={'readonly': 'readonly'}),
+        }
+
+
 
 
 class PaymentModeForm(forms.ModelForm):
@@ -252,17 +257,16 @@ class PaymentModeForm(forms.ModelForm):
         model = PaymentMode
         fields = ['mode_id', 'mode_name']
         widgets = {
-            'mode_id': forms.NumberInput(attrs={'placeholder': 'Enter ID'}),
-            'mode_name': forms.TextInput(attrs={'placeholder': 'Enter Payment Mode'}),
+            'mode_id': forms.NumberInput(attrs={'readonly': 'readonly'}),
         }
+
 
 class CounterForm(forms.ModelForm):
     class Meta:
         model = Counter
         fields = ['counter_id', 'counter_name']
         widgets = {
-            'counter_id': forms.NumberInput(attrs={'placeholder': 'Enter ID'}),
-            'counter_name': forms.TextInput(attrs={'placeholder': 'Enter Counter Name'}),
+            'counter_id': forms.NumberInput(attrs={'readonly': 'readonly'}),
         }
 
 from .models import PointsConfig
@@ -292,3 +296,31 @@ class BarcodeLabelSizeForm(forms.ModelForm):
     class Meta:
         model = BarcodeLabelSize
         fields = ["name", "width_mm", "height_mm", "per_row", "per_column"]
+
+
+
+from django import forms
+from .models import CompanyDetails
+
+
+class CompanyNameForm(forms.ModelForm):
+    class Meta:
+        model = CompanyDetails
+        fields = ["company_name", "short_name", "print_name"]
+
+        widgets = {
+            "company_name": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Enter Company Name"
+            }),
+            "short_name": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "MM",
+                "maxlength": 5
+            }),
+            "print_name": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Optional Print Name"
+            }),
+        }
+        

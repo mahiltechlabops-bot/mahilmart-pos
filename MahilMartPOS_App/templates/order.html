@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
 <!DOCTYPE html>
 <html>
 <head>
@@ -138,7 +140,7 @@
                     <input type="number" name="advance" id="popup_advance" readonly><br><br>
                     
                     <label>Paid Amount:</label>
-                    <input type="number" name="paid_now" id="popup_paid_now"><br><br>
+                    <input type="number" name="paid_now" id="popup_paid_now" min="0" step="0.01" inputmode="decimal"><br><br>
       
                     <label>Due Balance:</label>
                     <input type="number" name="due_balance" id="popup_due" readonly><br><br>
@@ -149,9 +151,9 @@
             </div>
             
             <h2>Order Management</h2>
-            <a href="{% url 'create_order' %}">
-                <button>+ New Order</button>
-            </a>
+            <button type="button" disabled style="opacity: 0.6; cursor: not-allowed;">
+                + New Order
+            </button>
         </div>
 
         <form method="get" class="filters">
@@ -251,17 +253,40 @@
         document.getElementById('popup_due').value = due.toFixed(2);
     });
 
-    document.getElementById('popup_paid_now').addEventListener('input', function () {
-    const total = parseFloat(document.getElementById('popup_total').value) || 0;
-    const currentAdvance = parseFloat(document.getElementById('popup_advance').value) || 0;
-    const paidNow = parseFloat(this.value) || 0;
+    function sanitizeMoneyInput(value) {
+        let cleaned = value.replace(/[^0-9.]/g, '');
+        const parts = cleaned.split('.');
+        if (parts.length > 2) {
+            cleaned = parts[0] + '.' + parts.slice(1).join('');
+        }
+        const finalParts = cleaned.split('.');
+        if (finalParts.length === 2) {
+            finalParts[1] = finalParts[1].slice(0, 2);
+            cleaned = finalParts[0] + '.' + finalParts[1];
+        }
+        return cleaned;
+    }
 
-    const due = total - (currentAdvance + paidNow);
-    document.getElementById('popup_due').value = due.toFixed(2);
-});
+    document.getElementById('popup_paid_now').addEventListener('input', function () {
+        const sanitized = sanitizeMoneyInput(this.value);
+        if (sanitized !== this.value) {
+            this.value = sanitized;
+        }
+
+        const total = parseFloat(document.getElementById('popup_total').value) || 0;
+        const currentAdvance = parseFloat(document.getElementById('popup_advance').value) || 0;
+        const paidNow = parseFloat(sanitized) || 0;
+
+        const due = total - (currentAdvance + paidNow);
+        document.getElementById('popup_due').value = due.toFixed(2);
+    });
 
 </script>
 </body>
 </html>
 
+
+  </div>
+</div>
 {% endblock %}
+

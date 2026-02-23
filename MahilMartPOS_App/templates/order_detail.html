@@ -1,5 +1,3 @@
-{% extends 'base.html' %}
-
 {% block content %}
 <div class="container" style="max-width: 800px; margin: 40px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
     <h2 style="text-align: center; color: #0077b6; margin-bottom: 30px;">Order Details {{ order.id }}</h2>
@@ -15,7 +13,6 @@
     <p><strong>Expected Delivery:</strong> {{ order.expected_delivery_datetime|date:"d-m-Y H:i" }}</p>
     <p><strong>Delivery:</strong> {{ order.delivery }}</p>
     <p><strong>Delivery Charges:</strong> ₹{{ order.charges }}</p>
-
     <hr>
 
     <p><strong>Total Order Amount:</strong> ₹{{ order.total_order_amount }}</p>
@@ -67,4 +64,4 @@
 </div>
 
 </div>
-{% endblock %}
+{% endblock %} 

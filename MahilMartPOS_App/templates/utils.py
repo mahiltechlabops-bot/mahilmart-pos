@@ -25,3 +25,14 @@ def backup_postgres_db(db_name, user, password, host, port, backup_dir):
         return True, f"Backup created: {backup_file}"
     except subprocess.CalledProcessError as e:
         return False, f"Backup failed: {e}"
+    
+# def get_client_ip(request):
+#     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+#     if x_forwarded_for:
+#         return x_forwarded_for.split(",")[0]
+#     return request.META.get("REMOTE_ADDR", "")
+    
+
+# def get_machine_id(request):
+#     """Reads machine-id sent from browser (UUID saved in localStorage)"""
+#     return request.POST.get("machine_id") or "Unknown-Device"

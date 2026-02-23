@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="page-section form-page">
+  <div class="form-wrap">
 <div class="container mt-4">
   <h3>Edit Customer</h3>
   <form method="post">
@@ -40,4 +42,8 @@
     <a href="{% url 'customers' %}" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
+
+  </div>
+</div>
 {% endblock %}
+

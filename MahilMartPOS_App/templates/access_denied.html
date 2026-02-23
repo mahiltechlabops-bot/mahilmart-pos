@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.access-wrapper {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fb, #eef3ff);
+    padding: 20px;
+}
+
+.access-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 30px 40px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.access-badge {
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle at 30% 30%, #ff6b6b, #b91c1c);
+    opacity: 0.12;
+}
+
+.access-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 999px;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(248, 113, 113, 0.1);
+    color: #b91c1c;
+    font-size: 32px;
+}
+
+.access-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.access-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 18px;
+}
+
+.access-details {
+    font-size: 13px;
+    color: #4b5563;
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+}
+
+.access-details span {
+    display: block;
+}
+
+.access-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.access-btn-primary,
+.access-btn-secondary {
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.access-btn-primary {
+    background: #111827;
+    color: #f9fafb;
+}
+
+.access-btn-primary:hover {
+    background: #020617;
+}
+
+.access-btn-secondary {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.access-btn-secondary:hover {
+    background: #d1d5db;
+}
+
+.access-hint {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #9ca3af;
+}
+</style>
+
+<div class="access-wrapper">
+    <div class="access-card">
+        <div class="access-badge"></div>
+
+        <div class="access-icon">
+            <!-- Lock icon -->
+            <i class="fas fa-lock"></i>
+        </div>
+
+        <div class="access-title">Access Denied</div>
+        <div class="access-subtitle">
+            You don’t have permission to view this page.
+        </div>
+
+        <div class="access-details">
+            <span><strong>User:</strong> {{ request.user.username|default:"Guest" }}</span>
+            <span><strong>Path:</strong> {{ request.path }}</span>
+            <span><strong>Time:</strong> {{ now|default:None }}</span>
+        </div>
+
+        <div class="access-actions">
+            <a href="{% url 'dashboard' %}" class="access-btn-primary">
+                <i class="fas fa-home"></i> Go to Dashboard
+            </a>
+
+            <a href="mailto:{{ support_email|default:'mahiltechlab.ops@gmail.com' }}?subject=Access%20Request&body=Hi,%0D%0A%0D%0AI tried to access: {{ request.build_absolute_uri }}%0D%0AUser: {{ request.user.username }}%0D%0APlease review my access.%0D%0A"
+               class="access-btn-secondary">
+                <i class="fas fa-envelope"></i> Contact Admin
+            </a>
+        </div>
+
+        <div class="access-hint">
+            {% if email_disabled %}
+                Alert email is disabled in settings.
+            {% elif email_sent %}
+                An alert has been sent to the administrator for review.
+            {% else %}
+                Alert email could not be sent. Please contact the administrator.
+                {% if email_error %}
+                    <div style="margin-top:6px; color:#ef4444;">{{ email_error }}</div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

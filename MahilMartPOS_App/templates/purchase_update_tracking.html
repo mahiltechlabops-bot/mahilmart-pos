@@ -149,7 +149,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     // Refresh table
     refreshBtn.addEventListener('click', function () {
-        window.location.reload();
+        const url = new URL(window.location.href);
+        url.searchParams.set("_ts", Date.now().toString());
+        window.location.href = url.toString();
     });
      // Go back to purchase page (Django route, not static file)
       backBtn.addEventListener('click', function () {
